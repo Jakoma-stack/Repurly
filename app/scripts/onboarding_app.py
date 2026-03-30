@@ -3661,24 +3661,27 @@ def billing_create_checkout_session():
     company_name = form_data["company_name"]
     beta_notes = build_beta_notes(request.form)
 
-    with get_conn() as conn:
-        conn.execute(
-            """
-            INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(email) DO UPDATE SET
-                full_name=excluded.full_name,
-                company_name=excluded.company_name,
-                selected_plan=excluded.selected_plan,
-                beta_notes=excluded.beta_notes,
-                updated_at=CURRENT_TIMESTAMP
-            """,
-            (email, full_name, company_name, selected_plan, beta_notes),
-        )
-        conn.commit()
-        row = conn.execute("SELECT id FROM founding_user_signups WHERE email=?", (email,)).fetchone()
-
     try:
+        with get_conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(email) DO UPDATE SET
+                    full_name=excluded.full_name,
+                    company_name=excluded.company_name,
+                    selected_plan=excluded.selected_plan,
+                    beta_notes=excluded.beta_notes,
+                    updated_at=CURRENT_TIMESTAMP
+                """,
+                (email, full_name, company_name, selected_plan, beta_notes),
+            )
+            conn.commit()
+            row = conn.execute("SELECT id FROM founding_user_signups WHERE email=?", (email,)).fetchone()
+
+        if row is None:
+            raise RuntimeError("Unable to save your signup details before checkout. Please try again.")
+
         session = create_checkout_session(email=email, plan_name=selected_plan, signup_id=int(row["id"]), success_path="/signup/complete?session_id={CHECKOUT_SESSION_ID}")
         store_pending_checkout_context(
             email=email,
@@ -3695,6 +3698,24 @@ def billing_create_checkout_session():
             billing_state="",
             form_data=form_data,
             status_code=400,
+        )
+    except sqlite3.Error as exc:
+        app.logger.exception("Database error while starting checkout")
+        return render_beta_template(
+            saved=None,
+            errors=[f"Database error while starting checkout: {exc}"],
+            billing_state="",
+            form_data=form_data,
+            status_code=500,
+        )
+    except Exception as exc:
+        app.logger.exception("Unexpected error while starting checkout")
+        return render_beta_template(
+            saved=None,
+            errors=[f"Unable to start checkout: {exc}"],
+            billing_state="",
+            form_data=form_data,
+            status_code=500,
         )
 
     if wants_json_response():

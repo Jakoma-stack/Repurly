@@ -46,17 +46,79 @@ WORKSPACE_COLUMNS = {
 }
 
 
+CORE_RUNTIME_SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  company_name TEXT,
+  role TEXT NOT NULL DEFAULT 'customer',
+  status TEXT NOT NULL DEFAULT 'invited',
+  stripe_customer_id TEXT,
+  password_hash TEXT,
+  email_verified_at TEXT,
+  last_login_at TEXT,
+  invited_at TEXT,
+  activated_at TEXT,
+  is_ops_admin INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS founding_user_signups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  full_name TEXT,
+  company_name TEXT,
+  selected_plan TEXT,
+  beta_notes TEXT,
+  invite_status TEXT NOT NULL DEFAULT 'pending',
+  stripe_checkout_session_id TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  workspace_id INTEGER,
+  stripe_customer_id TEXT,
+  stripe_subscription_id TEXT UNIQUE,
+  stripe_price_id TEXT,
+  plan_name TEXT,
+  status TEXT,
+  billing_email TEXT,
+  started_at TEXT,
+  current_period_end TEXT,
+  cancel_at_period_end INTEGER NOT NULL DEFAULT 0,
+  metadata_json TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stripe_event_id TEXT NOT NULL UNIQUE,
+  event_type TEXT,
+  payload_hash TEXT,
+  payload_json TEXT,
+  processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+"""
+
+
 def table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
     return {row[1] for row in conn.execute(f"PRAGMA table_info({table_name})")}
 
 
 def ensure_runtime_schema(conn: sqlite3.Connection) -> None:
-    user_columns = table_columns(conn, "users")
+    conn.executescript(CORE_RUNTIME_SCHEMA)
+    existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+
+    user_columns = table_columns(conn, "users") if "users" in existing_tables else set()
     for column_name, column_def in AUTH_USER_COLUMNS.items():
         if column_name not in user_columns:
             conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_def}")
-
-    existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
     brand_columns = table_columns(conn, "brands") if "brands" in existing_tables else set()
     for column_name, column_def in BRAND_COLUMNS.items():
@@ -157,7 +219,6 @@ def ensure_runtime_schema(conn: sqlite3.Connection) -> None:
           FOREIGN KEY(user_id) REFERENCES users(id)
         );
         
-        CREATE INDEX IF NOT EXISTS idx_subscriptions_workspace ON subscriptions(workspace_id);
 
         CREATE TABLE IF NOT EXISTS campaign_templates (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -226,7 +287,11 @@ def ensure_runtime_schema(conn: sqlite3.Connection) -> None:
         """
     )
 
-    workspace_columns = table_columns(conn, "workspaces") if "workspaces" in {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")} else set()
+    refreshed_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    if "subscriptions" in refreshed_tables:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_subscriptions_workspace ON subscriptions(workspace_id)")
+
+    workspace_columns = table_columns(conn, "workspaces") if "workspaces" in refreshed_tables else set()
     for column_name, column_def in WORKSPACE_COLUMNS.items():
         if column_name not in workspace_columns:
             conn.execute(f"ALTER TABLE workspaces ADD COLUMN {column_name} {column_def}")

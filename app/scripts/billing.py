@@ -38,6 +38,9 @@ PLAN_ALIASES = {
     "founding_starter": "starter",
     "founding_growth": "growth",
     "founding_plus": "pro",
+    "linkedin-first": "starter",
+    "linkedin_first": "starter",
+    "linkedin first": "starter",
 }
 
 PLAN_TO_ENV = {
