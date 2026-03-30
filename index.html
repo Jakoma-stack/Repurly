@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Repurly | content workflow software for agencies</title>
-  <meta name="description" content="Repurly helps agencies plan, review, approve and publish LinkedIn content for multiple client brands from one clearer workflow. Built by Jakoma." />
+  <title>Repurly | agency content operations for LinkedIn</title>
+  <meta name="description" content="Repurly helps agencies plan, approve and publish LinkedIn content across multiple client brands from one controlled workflow. Join the beta and secure founding access." />
   <meta name="robots" content="index,follow" />
   <meta name="theme-color" content="#0f172a" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Repurly | content workflow software for agencies" />
-  <meta property="og:description" content="Run client publishing from one clean workflow with clearer approvals, fewer handoff mistakes and less operational mess." />
+  <meta property="og:title" content="Repurly | agency content operations for LinkedIn" />
+  <meta property="og:description" content="Reduce approval delays, avoid publishing errors and manage more client brands from one workflow." />
   <meta property="og:url" content="https://repurly.org/" />
   <meta property="og:site_name" content="Repurly" />
+  <meta property="og:image" content="https://repurly.org/assets/og-card.svg" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Repurly | content workflow software for agencies" />
-  <meta name="twitter:description" content="content workflow software for agencies, built by Jakoma." />
+  <meta name="twitter:title" content="Repurly | agency content operations for LinkedIn" />
+  <meta name="twitter:description" content="The LinkedIn workflow for agencies managing multiple client brands." />
+  <meta name="twitter:image" content="https://repurly.org/assets/og-card.svg" />
   <link rel="canonical" href="https://repurly.org/" />
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
-  <meta property="og:image" content="https://repurly.org/assets/og-card.svg" />
-  <meta name="twitter:image" content="https://repurly.org/assets/og-card.svg" />
   <style>
     :root {
-      --bg: #0b1020;
-      --bg-2: #121936;
-      --surface: rgba(255,255,255,0.7);
-      --surface-dark: rgba(15,23,42,0.72);
+      --bg: #07111f;
+      --bg-2: #0d1b30;
+      --bg-3: #f5f9ff;
+      --surface: rgba(255,255,255,0.88);
       --card: #ffffff;
       --text: #0f172a;
       --text-inverse: #f8fafc;
@@ -32,18 +32,16 @@
       --muted-inverse: #cbd5e1;
       --border: rgba(15,23,42,0.1);
       --border-dark: rgba(255,255,255,0.12);
-      --primary: #3b82f6;
+      --primary: #2563eb;
       --primary-2: #14b8a6;
-      --accent: #8b5cf6;
-      --highlight: #e0f2fe;
+      --accent: #7c3aed;
       --success: #16a34a;
-      --warning: #f59e0b;
       --max: 1180px;
       --radius-xl: 28px;
-      --radius-lg: 20px;
+      --radius-lg: 22px;
       --radius-md: 14px;
-      --shadow: 0 22px 60px rgba(8,17,31,0.16);
-      --shadow-strong: 0 28px 80px rgba(8,17,31,0.28);
+      --shadow: 0 22px 60px rgba(8,17,31,0.14);
+      --shadow-strong: 0 30px 80px rgba(8,17,31,0.28);
     }
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
@@ -52,38 +50,37 @@
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at top left, rgba(6,182,212,0.16), transparent 28%),
-        radial-gradient(circle at top right, rgba(124,58,237,0.16), transparent 22%),
-        linear-gradient(180deg, #f8fbff 0%, #edf5ff 100%);
+        radial-gradient(circle at top left, rgba(37,99,235,0.14), transparent 30%),
+        radial-gradient(circle at top right, rgba(124,58,237,0.12), transparent 24%),
+        linear-gradient(180deg, #f8fbff 0%, #eef5ff 100%);
+      line-height: 1.6;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
-      line-height: 1.6;
     }
     a { color: inherit; }
     img { max-width: 100%; height: auto; }
     .container { width: min(var(--max), calc(100% - 2rem)); margin: 0 auto; }
     .site-header {
-      position: sticky; top: 0; z-index: 50;
+      position: sticky; top: 0; z-index: 40;
       backdrop-filter: blur(16px);
-      background: rgba(248,251,255,0.78);
+      background: rgba(248,251,255,0.8);
       border-bottom: 1px solid rgba(15,23,42,0.07);
     }
     .nav {
       min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
     }
     .brand { text-decoration: none; display: inline-flex; flex-direction: column; gap: 0.1rem; }
-    .brand-name { font-size: 1.05rem; font-weight: 900; letter-spacing: 0.01em; }
+    .brand-name { font-size: 1.06rem; font-weight: 900; letter-spacing: 0.01em; }
     .brand-sub { font-size: 0.9rem; color: var(--muted); }
-    .brand-sub a { color: inherit; text-decoration: none; }
+    .brand-sub a { text-decoration: none; }
     .nav-links { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .nav-links a:not(.button) { text-decoration: none; font-size: 0.98rem; font-weight: 700; color: #334155; }
     .button {
       display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem;
       min-height: 52px; padding: 0.95rem 1.25rem; border-radius: 999px;
       text-decoration: none; font-weight: 800; letter-spacing: 0.01em;
+      border: 1px solid transparent; cursor: pointer;
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
-      border: 1px solid transparent;
-      cursor: pointer;
     }
     .button:hover, .button:focus-visible { transform: translateY(-1px); }
     .button-primary {
@@ -98,9 +95,9 @@
       box-shadow: 0 12px 28px rgba(8,17,31,0.08);
     }
     .button-dark {
-      background: rgba(15,23,42,0.9);
+      background: rgba(15,23,42,0.92);
       color: var(--text-inverse);
-      border-color: var(--border-dark);
+      border-color: rgba(255,255,255,0.1);
       box-shadow: 0 14px 34px rgba(8,17,31,0.22);
     }
     .hero {
@@ -108,75 +105,57 @@
       position: relative;
       overflow: hidden;
     }
-    .hero::before {
-      content: "";
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 75% 25%, rgba(37,99,235,0.16), transparent 18%),
-        radial-gradient(circle at 68% 18%, rgba(124,58,237,0.12), transparent 16%);
-      pointer-events: none;
-    }
     .hero-grid {
-      position: relative;
       display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
-      gap: 1.4rem;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 1.3rem;
       align-items: center;
+      position: relative;
     }
     .eyebrow {
       display: inline-flex; align-items: center; gap: 0.55rem;
       margin-bottom: 1rem; padding: 0.45rem 0.8rem; border-radius: 999px;
-      background: rgba(255,255,255,0.82);
+      background: rgba(255,255,255,0.84);
       border: 1px solid rgba(15,23,42,0.08);
       box-shadow: 0 10px 24px rgba(8,17,31,0.06);
-      font-size: 0.98rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
+      font-size: 0.96rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase;
     }
     .eyebrow .dot { width: 0.55rem; height: 0.55rem; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--accent)); }
     h1 {
       margin: 0 0 1rem;
-      font-size: clamp(2.8rem, 6vw, 5.2rem);
-      line-height: 0.98;
-      letter-spacing: -0.05em;
-      max-width: 12ch;
+      font-size: clamp(3rem, 6vw, 5.4rem);
+      line-height: 0.96;
+      letter-spacing: -0.055em;
+      max-width: 11ch;
     }
     .hero-copy {
-      font-size: clamp(1.14rem, 2vw, 1.35rem);
+      font-size: clamp(1.14rem, 2vw, 1.32rem);
       color: #334155;
       max-width: 42rem;
-      margin: 0 0 1.4rem;
+      margin: 0 0 1.3rem;
     }
-    .cta-row, .cta-row-tight {
-      display: flex; flex-wrap: wrap; gap: 0.85rem;
-    }
-    .hero-note {
-      margin-top: 1rem; font-size: 1rem; color: var(--muted);
-    }
-    .mini-proof {
+    .cta-row, .cta-row-tight { display: flex; flex-wrap: wrap; gap: 0.85rem; }
+    .hero-note { margin-top: 0.95rem; color: var(--muted); font-size: 0.98rem; }
+    .proof-strip {
       display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; margin-top: 1.4rem;
     }
-    .mini-proof .proof-card {
-      background: rgba(255,255,255,0.78); border: 1px solid rgba(15,23,42,0.08); border-radius: 16px;
+    .proof-item {
+      background: rgba(255,255,255,0.8); border: 1px solid rgba(15,23,42,0.08); border-radius: 16px;
       padding: 0.95rem 1rem; box-shadow: 0 12px 28px rgba(8,17,31,0.08);
     }
-    .proof-card strong { display: block; font-size: 1rem; }
+    .proof-item strong { display: block; font-size: 1rem; margin-bottom: 0.12rem; }
     .hero-panel {
-      background: linear-gradient(180deg, rgba(8,17,31,0.95), rgba(12,24,48,0.94));
+      background: linear-gradient(180deg, rgba(8,17,31,0.97), rgba(12,24,48,0.95));
       color: var(--text-inverse);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: var(--radius-xl);
-      padding: 1.3rem;
+      padding: 1.35rem;
       box-shadow: var(--shadow-strong);
     }
-    .hero-panel .label {
-      font-size: 0.92rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #93c5fd;
-    }
-    .hero-panel h2 {
-      font-size: 1.7rem; margin: 0.5rem 0 0.7rem; color: #fff;
-    }
+    .hero-panel .label { font-size: 0.9rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #93c5fd; }
+    .hero-panel h2 { font-size: 1.72rem; margin: 0.45rem 0 0.75rem; color: #fff; }
     .hero-panel p { color: var(--muted-inverse); margin: 0 0 1rem; }
-    .stack {
-      display: grid; gap: 0.85rem;
-    }
+    .stack { display: grid; gap: 0.85rem; }
     .stack-card {
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.08);
@@ -184,16 +163,14 @@
       padding: 1rem;
     }
     .stack-card strong { display: block; color: #fff; margin-bottom: 0.2rem; }
-    .platform-row {
-      display: flex; gap: 0.55rem; flex-wrap: wrap; margin-top: 1rem;
-    }
+    .platform-row { display: flex; gap: 0.55rem; flex-wrap: wrap; margin-top: 1rem; }
     .platform {
       display: inline-flex; padding: 0.45rem 0.7rem; border-radius: 999px;
       font-size: 0.92rem; font-weight: 800; background: rgba(255,255,255,0.08); color: #dbeafe; border: 1px solid rgba(255,255,255,0.1);
     }
     .announcement {
-      padding: 0.9rem 1rem; border-radius: 18px; background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.14);
-      color: #d1fae5; margin-top: 1rem; font-size: 0.98rem;
+      margin-top: 1rem; padding: 0.9rem 1rem; border-radius: 18px;
+      background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.16); color: #dcfce7;
     }
     .section { padding: 4.5rem 0; }
     .section-alt {
@@ -207,11 +184,9 @@
     .section-dark p, .section-dark li { color: var(--muted-inverse); }
     .section-dark .kicker { color: #7dd3fc; }
     .section-dark .card {
-      background: rgba(255,255,255,0.05);
-      border-color: rgba(255,255,255,0.09);
-      color: var(--text-inverse);
+      background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.09); color: var(--text-inverse);
     }
-    .section-dark .card p, .section-dark .card li, .section-dark .card .muted { color: var(--muted-inverse); }
+    .section-dark .card p, .section-dark .card li { color: var(--muted-inverse); }
     .kicker {
       margin: 0 0 0.5rem; font-size: 0.96rem; font-weight: 900; letter-spacing: 0.08em; text-transform: uppercase; color: #2563eb;
     }
@@ -221,9 +196,7 @@
     .lead {
       margin: 0; max-width: 48rem; color: var(--muted); font-size: clamp(1.08rem, 1.8vw, 1.24rem);
     }
-    .grid-2, .grid-3, .grid-4 {
-      display: grid; gap: 1rem; align-items: start;
-    }
+    .grid-2, .grid-3, .grid-4 { display: grid; gap: 1rem; align-items: start; }
     .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -240,58 +213,33 @@
     .feature-list li { padding-left: 1.45rem; position: relative; margin: 0.55rem 0; }
     .feature-list li::before { content: "•"; position: absolute; left: 0; top: 0; color: var(--primary); font-weight: 900; }
     .pricing-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 1rem; margin-top: 1.5rem; }
-    .pricing-card {
-      border-radius: 24px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid rgba(15,23,42,0.08);
-    }
-    .pricing-primary {
-      background: linear-gradient(135deg, #eff6ff, #eef2ff 48%, #f5f3ff 100%);
-    }
-    .pricing-secondary {
-      background: #ffffff;
-    }
-    .price {
-      font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1; letter-spacing: -0.05em; margin: 0.6rem 0;
-    }
+    .pricing-card { border-radius: 24px; padding: 1.5rem; box-shadow: var(--shadow); border: 1px solid rgba(15,23,42,0.08); }
+    .pricing-primary { background: linear-gradient(135deg, #eff6ff, #eef2ff 48%, #f5f3ff 100%); }
+    .pricing-secondary { background: #ffffff; }
     .badge {
       display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.7rem; border-radius: 999px;
       font-size: 0.92rem; font-weight: 800; background: rgba(37,99,235,0.1); color: #1d4ed8;
     }
-    .stats {
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-top: 1.5rem;
+    .price { font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1; letter-spacing: -0.05em; margin: 0.65rem 0; }
+    .check-row {
+      display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1rem; margin-top: 1.5rem;
     }
-    .stat {
+    .check-card {
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); border-radius: 18px; padding: 1rem;
     }
-    .stat strong { display: block; font-size: 2rem; color: #fff; line-height: 1; margin-bottom: 0.3rem; }
-    .roadmap {
-      display: grid; gap: 1rem; margin-top: 1.5rem;
-    }
-    .roadmap-step {
-      display: grid; grid-template-columns: auto 1fr; gap: 0.9rem; align-items: start;
-    }
-    .step-number {
-      width: 2.3rem; height: 2.3rem; border-radius: 50%; display: grid; place-items: center;
-      background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; font-weight: 900;
-      box-shadow: 0 12px 28px rgba(37,99,235,0.28);
-    }
+    .check-card strong { display: block; color: #fff; font-size: 1.08rem; margin-bottom: 0.2rem; }
     .faq-item + .faq-item { margin-top: 0.8rem; }
-    .legal-note {
-      margin-top: 1rem; font-size: 0.96rem; color: var(--muted);
-    }
-    footer {
-      padding: 2.5rem 0 4rem;
-      color: #334155;
-    }
+    .legal-note { margin-top: 1rem; font-size: 0.96rem; color: var(--muted); }
+    footer { padding: 2.5rem 0 4rem; color: #334155; }
     .footer-box {
-      background: rgba(255,255,255,0.7); border: 1px solid rgba(15,23,42,0.08); border-radius: 24px; padding: 1.25rem 1.3rem; box-shadow: var(--shadow);
+      background: rgba(255,255,255,0.72); border: 1px solid rgba(15,23,42,0.08); border-radius: 24px; padding: 1.25rem 1.3rem; box-shadow: var(--shadow);
     }
     .footer-links { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0.85rem 0 0; }
     .footer-links a { text-decoration: none; font-weight: 700; }
     .fine-print { font-size: 0.94rem; color: var(--muted); }
     @media (max-width: 960px) {
-      .hero-grid, .pricing-grid, .grid-4, .grid-3, .grid-2, .stats { grid-template-columns: 1fr; }
+      .hero-grid, .pricing-grid, .grid-4, .grid-3, .grid-2, .proof-strip, .check-row { grid-template-columns: 1fr; }
       .hero { padding-top: 4rem; }
-      .mini-proof { grid-template-columns: 1fr; }
     }
     @media (max-width: 760px) {
       .nav { align-items: flex-start; padding: 0.9rem 0; }
@@ -299,7 +247,6 @@
       .button { width: 100%; }
       .nav-links .button { width: auto; }
       .container { width: min(var(--max), calc(100% - 1.2rem)); }
-      .eyebrow { font-size: 0.92rem; }
       h1 { max-width: none; }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -313,14 +260,14 @@
     <div class="container nav">
       <a class="brand" href="https://repurly.org/">
         <span class="brand-name">Repurly</span>
-        <span class="brand-sub"><a href="https://jakoma.org/?utm_source=thereplury&utm_medium=referral&utm_campaign=brand_trust&utm_content=header_built_by">Built by Jakoma</a></span>
+        <span class="brand-sub"><a href="https://jakoma.org/?utm_source=repurly&utm_medium=referral&utm_campaign=brand_trust&utm_content=header_built_by">Built by Jakoma</a></span>
       </a>
       <nav class="nav-links" aria-label="Primary">
-        <a href="#why">Why it works</a>
+        <a href="#problem">Why agencies switch</a>
         <a href="#how">How it works</a>
         <a href="#beta">Beta</a>
         <a href="#faq">FAQ</a>
-        <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=thereplury&utm_medium=website&utm_campaign=beta_launch&utm_content=header_primary_cta">Book a demo</a>
+        <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=repurly&utm_medium=website&utm_campaign=beta_launch&utm_content=header_primary_cta">Join beta now</a>
       </nav>
     </div>
   </header>
@@ -329,76 +276,76 @@
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <div class="eyebrow"><span class="dot" aria-hidden="true"></span>content workflow software for agencies</div>
-          <h1>Run client LinkedIn publishing from one clean workflow.</h1>
-          <p class="hero-copy">Repurly helps agencies plan, review, approve and publish LinkedIn content for multiple client brands without scattered docs, missed approvals or account mix-ups.</p>
+          <div class="eyebrow"><span class="dot" aria-hidden="true"></span>agency content operations for LinkedIn</div>
+          <h1>Cut approval chaos and publish client LinkedIn content from one workflow.</h1>
+          <p class="hero-copy">Repurly gives agencies one controlled place to plan, draft, review, approve and publish LinkedIn content across multiple client brands without scattered docs, missed sign-off or wrong-account mistakes.</p>
           <div class="cta-row">
-            <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=thereplury&utm_medium=website&utm_campaign=beta_launch&utm_content=hero_primary_cta">Book a demo</a>
-            <a class="button button-secondary" href="#how">See how it works</a>
+            <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=repurly&utm_medium=website&utm_campaign=beta_launch&utm_content=hero_primary_cta">Join beta now</a>
+            <a class="button button-secondary" href="#how">See the workflow</a>
           </div>
-          <p class="hero-note">Built by <a href="https://jakoma.org/?utm_source=thereplury&utm_medium=referral&utm_campaign=brand_trust&utm_content=hero_built_by">Jakoma</a> for agencies that need tighter review and publishing control.</p>
-          <div class="mini-proof" aria-label="Key outcomes">
-            <div class="proof-card"><strong>One place to manage client posts</strong><span>Plan, review and publish without chasing drafts across tools.</span></div>
-            <div class="proof-card"><strong>Safer approvals</strong><span>Keep sign-off clearer before anything goes live.</span></div>
-            <div class="proof-card"><strong>Less operational mess</strong><span>Reduce handoff errors, missed posts and brand confusion.</span></div>
+          <p class="hero-note">Founding beta for agencies that want tighter approval control, cleaner delivery and a workflow they can actually scale.</p>
+          <div class="proof-strip" aria-label="Commercial outcomes">
+            <div class="proof-item"><strong>Reduce approval delays</strong><span>Keep review status visible so content stops getting stuck in chat threads and docs.</span></div>
+            <div class="proof-item"><strong>Avoid publishing errors</strong><span>Lower the risk of wrong-brand posts, missed edits and last-minute account confusion.</span></div>
+            <div class="proof-item"><strong>Handle more client brands</strong><span>Run a cleaner process without adding more operational overhead.</span></div>
           </div>
         </div>
-        <aside class="hero-panel" aria-label="Beta positioning">
-          <div class="label">Early access beta</div>
-          <h2>LinkedIn-first now. Broader channel support later.</h2>
-          <p>The beta is focused on the workflow agencies need most: planning, review, approval and publish-ready output for LinkedIn. Wider channel support comes after the core engine is proven.</p>
+        <aside class="hero-panel" aria-label="Offer summary">
+          <div class="label">Founding beta access</div>
+          <h2>Built for agencies first. Narrow by design.</h2>
+          <p>Repurly starts with the highest-friction use case: agencies managing LinkedIn content across multiple client brands. That makes the promise simpler, sharper and easier to trust.</p>
           <div class="stack">
             <div class="stack-card">
-              <strong>What beta users get</strong>
-              <span>Early access, direct product feedback loops and a clearer route into future founding-agency pricing.</span>
+              <strong>What you get now</strong>
+              <span>A LinkedIn-first workflow for planning, drafting, approval and publish-ready output with direct onboarding support.</span>
             </div>
             <div class="stack-card">
-              <strong>What makes it useful</strong>
-              <span>One operational flow for multi-brand LinkedIn publishing instead of spreadsheets, scattered notes and risky last-minute edits.</span>
+              <strong>Why buy early</strong>
+              <span>Secure founding access, shape the roadmap early and lock in a closer relationship before wider rollout.</span>
             </div>
           </div>
           <div class="platform-row">
             <span class="platform">LinkedIn first</span>
-            <span class="platform">Multi-brand workflow</span>
-            <span class="platform">Approval control</span>
+            <span class="platform">Multi-brand control</span>
+            <span class="platform">Approval visibility</span>
             <span class="platform">Publish-ready output</span>
           </div>
-          <div class="announcement">Start with the channel most agencies already sell through. Expand only after the workflow is strong enough to keep.</div>
+          <div class="announcement">This is not a generic social tool. It is a tighter operating layer for agency LinkedIn delivery.</div>
         </aside>
       </div>
     </section>
 
-    <section class="section section-alt" id="why">
+    <section class="section section-alt" id="problem">
       <div class="container">
-        <p class="kicker">Why agencies need this</p>
-        <h2>Keep planning, review and publishing in one place.</h2>
-        <p class="lead">Managing LinkedIn content across several clients usually means too many spreadsheets, docs, messages and last-minute edits. Repurly gives you one clearer workflow so planning, approval and publishing stay easier to control.</p>
+        <p class="kicker">Why agencies switch</p>
+        <h2>The real cost is not writing content. It is managing the handoff mess around it.</h2>
+        <p class="lead">Most agencies are not blocked by ideas. They are blocked by approvals buried in messages, edits split across docs, unclear ownership and last-minute publishing risk. Repurly turns that chaos into one controlled flow.</p>
         <div class="grid-3" style="margin-top:1.5rem;">
           <div class="card">
-            <h3>One place to manage client posts</h3>
-            <p>Bring planning, review notes, captions and approval status into one operational flow.</p>
+            <h3>Approval bottlenecks</h3>
+            <p>Content slows down when comments, edits and sign-off live in different places.</p>
             <ul class="feature-list">
-              <li>Less switching between tools and tabs</li>
-              <li>Clearer visibility across multiple client brands</li>
-              <li>Fewer hidden drafts and lost edits</li>
+              <li>See what is waiting, approved or blocked</li>
+              <li>Reduce back-and-forth across tools</li>
+              <li>Shorten the path to publish</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Safer approvals</h3>
-            <p>Make it easier to see what is ready, what still needs review and what should not go live yet.</p>
+            <h3>Publishing risk</h3>
+            <p>Client work becomes fragile when teams rely on memory, tabs and manual checks.</p>
             <ul class="feature-list">
-              <li>Approval checkpoints built into the workflow</li>
-              <li>Better control before publishing</li>
-              <li>Less risk of avoidable client mistakes</li>
+              <li>Lower wrong-brand publishing risk</li>
+              <li>Catch version confusion earlier</li>
+              <li>Keep control before anything goes live</li>
             </ul>
           </div>
           <div class="card">
-            <h3>Less operational mess</h3>
-            <p>Turn recurring content work into a process your team can keep using, not just a burst of good intentions.</p>
+            <h3>Operational drag</h3>
+            <p>As client count grows, messy systems quietly eat margin and team confidence.</p>
             <ul class="feature-list">
-              <li>More consistent publishing rhythm</li>
-              <li>Cleaner handoffs between team members</li>
-              <li>More confidence when managing several brands at once</li>
+              <li>Support more client brands cleanly</li>
+              <li>Reduce admin overhead per post</li>
+              <li>Create a process your team can repeat</li>
             </ul>
           </div>
         </div>
@@ -408,90 +355,76 @@
     <section class="section" id="how">
       <div class="container">
         <p class="kicker">How it works</p>
-        <h2>A four-step workflow your team can actually keep using.</h2>
-        <p class="lead">Repurly is designed as an operating flow, not just a prompt box. That matters because consistent publishing depends on sequence, clarity and approval control.</p>
+        <h2>A four-step workflow designed to improve speed, control and delivery confidence.</h2>
+        <p class="lead">Repurly is built as a real operating sequence, not just a prompt box. That matters when multiple people, client brands and approvals all sit between draft and publish.</p>
         <div class="grid-4" style="margin-top:1.5rem;">
-          <div class="card"><h3>1. Plan content</h3><p>Map posts to content themes, client priorities and campaign intent before drafting begins.</p></div>
-          <div class="card"><h3>2. Draft faster</h3><p>Generate stronger first drafts inside a structured workflow instead of starting from a blank page every time.</p></div>
-          <div class="card"><h3>3. Approve clearly</h3><p>Review content, capture changes and keep sign-off visible before anything is queued.</p></div>
-          <div class="card"><h3>4. Publish with confidence</h3><p>Move approved posts into a cleaner publishing flow with fewer manual mistakes.</p></div>
+          <div class="card"><h3>1. Plan by client</h3><p>Map content to accounts, campaigns and priorities before drafting starts.</p></div>
+          <div class="card"><h3>2. Draft faster</h3><p>Create stronger first drafts inside a structure your team can repeat.</p></div>
+          <div class="card"><h3>3. Approve clearly</h3><p>Keep changes, review status and sign-off visible in one place.</p></div>
+          <div class="card"><h3>4. Publish cleanly</h3><p>Move approved posts into a safer publishing flow with less manual risk.</p></div>
         </div>
       </div>
     </section>
 
     <section class="section section-dark">
       <div class="container">
-        <p class="kicker">What beta focuses on</p>
-        <h2>Prove the agency workflow before expanding the product.</h2>
-        <p class="lead">The current beta is deliberately narrow. That keeps the promise believable and gives agencies something practical to test right now: a safer LinkedIn workflow for multiple client brands.</p>
-        <div class="roadmap">
-          <div class="roadmap-step">
-            <div class="step-number">1</div>
-            <div class="card"><h3>Get the workflow right</h3><p>Tighten planning, drafting, review and approval before chasing more channels.</p></div>
-          </div>
-          <div class="roadmap-step">
-            <div class="step-number">2</div>
-            <div class="card"><h3>Learn from agency usage</h3><p>Use real beta demand to improve retention, reporting and commercial fit.</p></div>
-          </div>
-          <div class="roadmap-step">
-            <div class="step-number">3</div>
-            <div class="card"><h3>Expand carefully</h3><p>Add new channels only where they strengthen the workflow instead of creating more operational noise.</p></div>
-          </div>
-        </div>
-        <div class="stats" aria-label="Product direction metrics">
-          <div class="stat"><strong>LinkedIn</strong><span>first channel in beta</span></div>
-          <div class="stat"><strong>Multi-brand</strong><span>review and publishing flow</span></div>
-          <div class="stat"><strong>1 workflow</strong><span>to prove before platform sprawl</span></div>
+        <p class="kicker">Why the beta is narrow</p>
+        <h2>We are proving one painful use case properly before expanding.</h2>
+        <p class="lead">Repurly starts with a believable wedge: LinkedIn workflow management for agencies. That focus makes the product easier to adopt, easier to judge and easier to pay for.</p>
+        <div class="check-row" aria-label="Beta justification">
+          <div class="check-card"><strong>Sharper promise</strong><span>One channel, one buyer, one urgent operational problem.</span></div>
+          <div class="check-card"><strong>Faster learning</strong><span>Real agency feedback tightens onboarding, retention and packaging faster.</span></div>
+          <div class="check-card"><strong>Better expansion</strong><span>New channels come later only if they strengthen the workflow, not dilute it.</span></div>
         </div>
       </div>
     </section>
 
     <section class="section section-alt" id="beta">
       <div class="container">
-        <p class="kicker">Beta access</p>
-        <h2>Request access to the agency beta.</h2>
-        <p class="lead">The beta is the clearest next step for agencies that want a tighter LinkedIn workflow today. Apply now, tell us how you manage client publishing, and we will prioritise the best-fit teams for onboarding.</p>
+        <p class="kicker">Founding beta</p>
+        <h2>Join early if your agency wants a tighter LinkedIn operating layer now.</h2>
+        <p class="lead">This beta is best for agencies already feeling approval drag, publishing risk or team handoff issues across multiple client brands. Access is selective so onboarding quality stays high.</p>
         <div class="pricing-grid">
           <div class="pricing-card pricing-primary">
             <span class="badge">Best next step</span>
-            <h3 style="margin:0.8rem 0 0;">Book a demo</h3>
-            <div class="price">Now</div>
-            <p>Use the beta to replace scattered operational work with one cleaner content workflow across multiple client brands.</p>
+            <h3 style="margin:0.8rem 0 0;">Join beta now</h3>
+            <div class="price">Founding access</div>
+            <p>Move from scattered operational work to one clearer LinkedIn workflow with closer onboarding and earlier roadmap influence.</p>
             <ul class="feature-list">
-              <li>Apply for early access today</li>
-              <li>Share feedback that shapes the roadmap</li>
-              <li>Stay first in line for future founding-agency pricing</li>
+              <li>Secure paid early access</li>
+              <li>Get closer founder-level feedback loops</li>
+              <li>Strengthen your workflow before wider rollout</li>
             </ul>
             <div class="cta-row-tight" style="margin-top:1rem;">
-              <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=thereplury&utm_medium=website&utm_campaign=beta_launch&utm_content=beta_section_primary">Book a demo</a>
-              <a class="button button-secondary" href="mailto:support@repurly.org?subject=Repurly%20beta%20support&utm_source=thereplury&utm_medium=email_link&utm_campaign=beta_launch&utm_content=beta_section_support">Email support</a>
+              <a class="button button-primary" href="https://beta.repurly.org/beta?utm_source=repurly&utm_medium=website&utm_campaign=beta_launch&utm_content=beta_section_primary">Join beta now</a>
+              <a class="button button-secondary" href="mailto:support@repurly.org?subject=Repurly%20walkthrough%20request&utm_source=repurly&utm_medium=email_link&utm_campaign=walkthrough_request&utm_content=beta_section_secondary">Request a walkthrough</a>
             </div>
           </div>
           <div class="pricing-card pricing-secondary">
-            <span class="badge">What to expect</span>
-            <h3 style="margin:0.8rem 0 0;">Manual onboarding while beta is small</h3>
-            <p>Pricing is not public yet. We are reviewing agencies manually while we tighten the workflow, improve the product and identify the strongest commercial rollout.</p>
+            <span class="badge">What buyers should know</span>
+            <h3 style="margin:0.8rem 0 0;">Selective onboarding while the founding cohort is small</h3>
+            <p>Repurly is intentionally keeping the first paid cohort focused. That protects product quality, gives early customers more influence and helps shape a stronger commercial rollout from real usage.</p>
             <ul class="feature-list">
-              <li>Start with the best-fit agency users</li>
-              <li>Refine onboarding and workflow quality</li>
-              <li>Launch paid plans from real usage, not guesswork</li>
+              <li>Best fit for agencies handling more than one LinkedIn brand</li>
+              <li>Closer support than a broad self-serve launch</li>
+              <li>Commercial packaging shaped by live customer demand</li>
             </ul>
-            <a class="button button-dark" style="margin-top:1rem;" href="mailto:support@repurly.org?subject=Repurly%20founding%20agency%20interest&utm_source=thereplury&utm_medium=email_link&utm_campaign=founding_interest&utm_content=waitlist_cta">Founding agency interest</a>
+            <a class="button button-dark" style="margin-top:1rem;" href="mailto:support@repurly.org?subject=Repurly%20founding%20agency%20interest&utm_source=repurly&utm_medium=email_link&utm_campaign=founding_interest&utm_content=waitlist_cta">Talk about fit</a>
           </div>
         </div>
-        <p class="legal-note">CTA links use UTM parameters so website traffic can be attributed correctly inside the beta environment.</p>
+        <p class="legal-note">Primary CTA language now matches a payment-led beta journey. The walkthrough CTA is there for buyers who need a lower-friction conversation first.</p>
       </div>
     </section>
 
     <section class="section">
       <div class="container">
-        <p class="kicker">Who it is for</p>
-        <h2>Best fit for agencies managing LinkedIn for more than one brand.</h2>
+        <p class="kicker">Best-fit buyers</p>
+        <h2>Strongest fit for teams where LinkedIn delivery is already operationally painful.</h2>
         <div class="grid-2" style="margin-top:1.5rem;">
-          <div class="card"><h3>Boutique social agencies</h3><p>Keep client planning, approval and publishing more controlled without adding more admin.</p></div>
-          <div class="card"><h3>Content and ghostwriting teams</h3><p>Manage reviews and sign-off more clearly when posts move through several hands.</p></div>
-          <div class="card"><h3>Founder-led agencies</h3><p>Replace scattered docs and messages with a workflow you can actually sustain.</p></div>
-          <div class="card"><h3>Small in-house teams with multiple brand lines</h3><p>Use the same workflow discipline when more than one voice or offer has to be managed.</p></div>
+          <div class="card"><h3>Boutique social agencies</h3><p>Run client approvals and publishing with less switching, less chasing and better visibility.</p></div>
+          <div class="card"><h3>Content and ghostwriting teams</h3><p>Keep drafts, feedback and sign-off cleaner when several people touch each post.</p></div>
+          <div class="card"><h3>Founder-led agencies</h3><p>Replace fragile systems with an operating layer that feels easier to trust as you grow.</p></div>
+          <div class="card"><h3>Small in-house multi-brand teams</h3><p>Use the same approval discipline when more than one audience, offer or brand voice is in play.</p></div>
         </div>
       </div>
     </section>
@@ -499,12 +432,12 @@
     <section class="section section-alt" id="faq">
       <div class="container">
         <p class="kicker">FAQ</p>
-        <h2>Questions serious buyers usually ask first.</h2>
+        <h2>Questions serious buyers ask before they commit.</h2>
         <div class="grid-2" style="margin-top:1.4rem;">
-          <div class="card faq-item"><h3>Is Repurly only for LinkedIn?</h3><p>Repurly is LinkedIn-first in beta so the workflow can be made strong before expanding to other channels.</p></div>
-          <div class="card faq-item"><h3>Who is Repurly for?</h3><p>Agencies and teams managing content for multiple client brands.</p></div>
-          <div class="card faq-item"><h3>Is pricing live yet?</h3><p>Not publicly. We are onboarding beta users first and shaping pricing from real usage.</p></div>
-          <div class="card faq-item"><h3>Who built Repurly?</h3><p>Repurly is built by <a href="https://jakoma.org/?utm_source=thereplury&utm_medium=referral&utm_campaign=brand_trust&utm_content=faq_built_by">Jakoma</a>.</p></div>
+          <div class="card faq-item"><h3>Is Repurly only for LinkedIn?</h3><p>Repurly is LinkedIn-first in the current beta so the workflow can be made commercially strong before wider channel expansion.</p></div>
+          <div class="card faq-item"><h3>Who is it for?</h3><p>Agencies and teams managing LinkedIn content for multiple client brands where approval control and publishing reliability matter.</p></div>
+          <div class="card faq-item"><h3>Why pay early?</h3><p>Early customers get closer onboarding, stronger feedback access and a chance to shape the product before broader rollout.</p></div>
+          <div class="card faq-item"><h3>Who built Repurly?</h3><p>Repurly is built by <a href="https://jakoma.org/?utm_source=repurly&utm_medium=referral&utm_campaign=brand_trust&utm_content=faq_built_by">Jakoma</a>.</p></div>
         </div>
       </div>
     </section>
@@ -513,13 +446,13 @@
   <footer>
     <div class="container">
       <div class="footer-box">
-        <p><strong>Repurly</strong> is built by <a href="https://jakoma.org/?utm_source=thereplury&utm_medium=referral&utm_campaign=brand_trust&utm_content=footer_built_by">Jakoma</a>.</p>
-        <p class="fine-print">The site avoids non-essential cookies and embedded third-party trackers by default. Privacy, terms and direct support links are below.</p>
+        <p><strong>Repurly</strong> is built by <a href="https://jakoma.org/?utm_source=repurly&utm_medium=referral&utm_campaign=brand_trust&utm_content=footer_built_by">Jakoma</a>.</p>
+        <p class="fine-print">The site avoids non-essential cookies and embedded third-party trackers by default. Privacy, terms and support links are below.</p>
         <div class="footer-links">
           <a href="/privacy.html">Privacy notice</a>
           <a href="/terms.html">Terms of use</a>
-          <a href="mailto:support@repurly.org?subject=Repurly%20privacy%20enquiry&utm_source=thereplury&utm_medium=email_link&utm_campaign=privacy_contact&utm_content=footer">Privacy contact</a>
-          <a href="mailto:support@repurly.org?subject=Repurly%20beta%20support&utm_source=thereplury&utm_medium=email_link&utm_campaign=beta_support&utm_content=footer">Beta support</a>
+          <a href="mailto:support@repurly.org?subject=Repurly%20privacy%20enquiry&utm_source=repurly&utm_medium=email_link&utm_campaign=privacy_contact&utm_content=footer">Privacy contact</a>
+          <a href="mailto:support@repurly.org?subject=Repurly%20beta%20support&utm_source=repurly&utm_medium=email_link&utm_campaign=beta_support&utm_content=footer">Beta support</a>
         </div>
         <p class="fine-print">© <span id="year"></span> Repurly. All rights reserved.</p>
       </div>
