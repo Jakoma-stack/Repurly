@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Analytics | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><div class="eyebrow">Workspace analytics</div><h2>{{ workspace.display_name }}</h2><p>Track output by campaign, format, timing and queue health so planning gets smarter over time.</p></div>
+  {% if can_export %}<div class="actions"><a href="/workspace/analytics/export.csv" class="button-link secondary">Export CSV</a></div>{% endif %}
+</div>
+<div class="stats-grid" style="margin-bottom:18px;">
+  <div class="card"><h3>Brands</h3><p class="metric-value">{{ reporting_summary.brand_count }}</p></div>
+  <div class="card"><h3>Total scheduled</h3><p class="metric-value">{{ reporting_summary.total_posts }}</p></div>
+  <div class="card"><h3>Posted</h3><p class="metric-value">{{ reporting_summary.posted_posts }}</p></div>
+  <div class="card"><h3>Ready</h3><p class="metric-value">{{ reporting_summary.ready_posts }}</p></div>
+  <div class="card"><h3>Failed</h3><p class="metric-value">{{ reporting_summary.failed_posts }}</p></div>
+  <div class="card"><h3>Seats</h3><p class="metric-value">{{ reporting_summary.seat_summary.seats_used }}/{{ reporting_summary.seat_summary.seat_limit }}</p></div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel"><h3>Campaign mix</h3><div class="insight-list">{% for item in reporting_summary.campaign_breakdown %}<div class="insight-item"><strong>{{ item.label }}</strong><div class="subtle">{{ item.count }} post(s)</div></div>{% else %}<div class="empty-state"><strong>No campaign labels yet.</strong><p class="muted">Use campaign labels in the content studio so output ties back to strategy here.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Format mix</h3><div class="insight-list">{% for item in reporting_summary.format_breakdown %}<div class="insight-item"><strong>{{ item.label|replace('_',' ')|title }}</strong><div class="subtle">{{ item.count }} post(s)</div></div>{% else %}<div class="empty-state"><strong>No format data yet.</strong><p class="muted">Once drafts are created, Repurly shows how content mix is distributed.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Best time signals</h3><div class="insight-list">{% for item in reporting_summary.best_time_windows %}<div class="insight-item"><strong>{{ item.label }}</strong><div class="subtle">Used {{ item.count }} time(s)</div></div>{% else %}<div class="empty-state"><strong>No time data yet.</strong><p class="muted">As your queue grows, your strongest posting windows appear here.</p></div>{% endfor %}</div></div>
+  </div>
+  <div class="stack">
+    <div class="panel"><h3>Planning feedback loop</h3><div class="insight-list">{% for item in reporting_summary.feedback_loop %}<div class="insight-item"><strong>{{ item.label|replace('_',' ')|title }}</strong><p style="margin:8px 0 0;">{{ item.insight }}</p></div>{% else %}<div class="empty-state"><strong>No insights yet.</strong><p class="muted">Create and schedule a few posts so Repurly can surface better planning guidance.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Recent queue</h3><table><tr><th>Post</th><th>Brand</th><th>Date</th><th>Status</th></tr>{% for item in reporting_summary.upcoming_posts %}<tr><td>{{ item.post_id }}</td><td>{{ item.brand }}</td><td>{{ item.post_date }} {{ item.post_time }}</td><td>{{ item.status }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No scheduled posts yet.</td></tr>{% endfor %}</table></div>
+  </div>
+</div>
+{% endblock %}

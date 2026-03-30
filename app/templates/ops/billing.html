@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Billing & customer access{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Phase 3</div>
+    <h2>Billing, customer access and workspace gating</h2>
+    <p>Approve signups, create invite links, sync live Stripe status, and confirm subscription state before paid workspace access is enforced.</p>
+  </div>
+</div>
+{% if saved == 'invite_created' %}
+  <div class="note success">Invite link created for {{ target_email }}{% if workspace_name %} and linked to {{ workspace_name }}{% endif %}.</div>
+{% elif saved == 'reset_link_created' %}
+  <div class="note success">Password reset link created for {{ target_email }}.</div>
+{% elif saved == 'billing_synced' %}
+  <div class="note success">Stripe billing synced for {{ target_email }}.</div>
+{% elif saved == 'billing_sync_error' %}
+  <div class="note error">Stripe billing sync failed for {{ target_email }}{% if error %}: {{ error }}{% endif %}</div>
+{% endif %}
+{% if invite_link %}
+  <div class="panel" style="margin-bottom:16px;">
+    <h3>Manual invite link</h3>
+    <p class="muted">Copy this invite link and send it manually. This keeps account activation moving while transactional email is still off.</p>
+    <pre>{{ invite_link }}</pre>
+  </div>
+{% endif %}
+{% if reset_link %}
+  <div class="panel" style="margin-bottom:16px;">
+    <h3>Manual reset link</h3>
+    <p class="muted">Use this for customers who have lost access before automated reset emails are added.</p>
+    <pre>{{ reset_link }}</pre>
+  </div>
+{% endif %}
+<div class="grid-2">
+  <div class="panel">
+    <h3>Signups and customer accounts</h3>
+    <table>
+      <tr><th>Agency</th><th>Plan</th><th>Invite</th><th>User</th><th>Workspace</th><th>Subscription</th><th>Actions</th></tr>
+      {% for row in signups %}
+        <tr>
+          <td>
+            <strong>{{ row.company_name or row.full_name }}</strong><br>
+            <span class="muted">{{ row.email }}</span>
+          </td>
+          <td>{{ row.selected_plan or 'starter' }}</td>
+          <td>
+            <div>{{ row.invite_status }}</div>
+            <div class="muted">{{ row.created_at }}</div>
+          </td>
+          <td>
+            <div>{{ row.user_status or 'not created' }}</div>
+            <div class="muted">{{ row.user_role or '—' }}</div>
+          </td>
+          <td>
+            <div>{{ row.workspace_display_name or 'not linked yet' }}</div>
+            <div class="muted">{{ row.membership_role or '—' }}</div>
+          </td>
+          <td>
+            <div>{{ row.subscription_plan or "—" }}</div>
+            <div class="muted">{{ row.subscription_status or "no paid access" }}</div>
+          </td>
+          <td>
+            <div class="actions">
+              <form method="post" action="/ops/signups/{{ row.id }}/invite" class="inline">
+                <button type="submit">Create invite</button>
+              </form>
+              <form method="post" action="/ops/signups/{{ row.id }}/sync-billing" class="inline">
+                <button type="submit" class="secondary">Sync Stripe</button>
+              </form>
+              {% if row.user_id and row.user_status == 'active' %}
+                <form method="post" action="/ops/users/{{ row.user_id }}/reset-link" class="inline">
+                  <button type="submit" class="secondary">Reset link</button>
+                </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="muted">No founding user signups yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Recent subscriptions</h3>
+      <table>
+        <tr><th>Customer</th><th>Plan</th><th>Status</th><th>Period end</th><th>Email</th></tr>
+        {% for row in subscriptions %}
+          <tr><td>{{ row.stripe_customer_id or '—' }}</td><td>{{ row.plan_name or '—' }}</td><td>{{ row.status }}</td><td>{{ row.current_period_end or '—' }}</td><td>{{ row.billing_email or '—' }}</td></tr>
+        {% else %}<tr><td colspan="5" class="muted">No subscriptions recorded yet.</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Go-live rule</h3>
+      <p class="muted">Keep billing enforcement off until Stripe checkout, webhook delivery, and the sync action all agree on the same subscription state. Once that is stable, customer workspaces can be enforced without manual checks.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

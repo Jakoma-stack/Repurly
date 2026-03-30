@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Publish attempts{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Publish attempts</h2>
+    <p>Recent publish activity with filters for status and brand.</p>
+  </div>
+</div>
+<form method="get" class="filters panel">
+  <label>Status<input name="status" value="{{ filters.status }}" placeholder="success"></label>
+  <label>Brand<input name="brand" value="{{ filters.brand }}" placeholder="jakoma"></label>
+  <div class="actions"><button type="submit">Apply filters</button></div>
+</form>
+<div class="panel">
+  <table>
+    <tr><th>Post</th><th>Brand</th><th>Status</th><th>Platform post id</th><th>Updated</th><th>Error</th></tr>
+    {% for row in attempts %}
+      <tr>
+        <td><a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a></td>
+        <td>{{ row.brand_slug }}</td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.platform_post_id or '—' }}</td>
+        <td>{{ row.updated_at }}</td>
+        <td>{{ row.error_message or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">No publish attempts match the current filters.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

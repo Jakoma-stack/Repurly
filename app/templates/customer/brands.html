@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Brands | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Workspace brands</div>
+    <h2>{{ workspace.display_name }}</h2>
+    <p>Create and manage client brands inside this workspace without going back to ops.</p>
+  </div>
+</div>
+{% if saved == 'brand_saved' %}<div class="note success">Brand saved.</div>{% endif %}
+{% if saved == 'brand_archived' %}<div class="note success">Brand archived.</div>{% endif %}
+{% if saved == 'brand_restored' %}<div class="note success">Brand restored.</div>{% endif %}
+{% if saved == 'error' %}<div class="note error">{{ error or 'We could not save that brand.' }}</div>{% endif %}
+<div class="grid-2">
+  <div class="panel">
+    <h3>{{ 'Edit brand' if editing_brand else 'Add a brand' }}</h3>
+    {% if manage_brands %}
+    <form method="post" action="/workspace/brands">
+      {% if editing_brand %}<input type="hidden" name="brand_id" value="{{ editing_brand.id }}" />{% endif %}
+      <label>Brand slug<input name="slug" value="{{ editing_brand.slug if editing_brand else '' }}" required /></label>
+      <label>Display name<input name="display_name" value="{{ editing_brand.display_name if editing_brand else '' }}" required /></label>
+      <label>Website<input name="website" value="{{ editing_brand.website if editing_brand else '' }}" placeholder="https://example.com" /></label>
+      <label>Contact email<input name="contact_email" type="email" value="{{ editing_brand.contact_email if editing_brand else '' }}" /></label>
+      <label>Tone<input name="tone" value="{{ editing_brand.tone if editing_brand else '' }}" placeholder="Confident, clear, technical" /></label>
+      <label>Audience<input name="audience" value="{{ editing_brand.audience if editing_brand else '' }}" placeholder="Marketing managers, founders" /></label>
+      <label>Primary CTA<input name="primary_cta" value="{{ editing_brand.primary_cta if editing_brand else '' }}" /></label>
+      <label>Secondary CTA<input name="secondary_cta" value="{{ editing_brand.secondary_cta if editing_brand else '' }}" /></label>
+      <div class="field-help">Tip: keep tone, audience and CTA focused on one customer type. The AI content tools use these fields to draft and schedule posts for you.</div>
+      <div class="actions" style="margin-top:14px;"><button type="submit" name="action" value="save">{{ 'Save brand' if editing_brand else 'Create brand' }}</button><button type="submit" name="action" value="continue_assets" class="secondary">Save and continue to assets</button><button type="submit" name="action" value="continue_content" class="secondary">Save and continue to content</button></div>
+    </form>
+    {% else %}
+      <p class="muted">Only workspace owners or admins can add or edit brands.</p>
+    {% endif %}
+  </div>
+  <div class="panel">
+    <h3>Current brands</h3>
+    <table>
+      <tr><th>Brand</th><th>Status</th><th>Website</th><th>Posts</th><th>Actions</th></tr>
+      {% for brand in brands %}
+        <tr>
+          <td>{{ brand.display_name }}</td>
+          <td>{{ brand.brand_status or 'active' }}</td>
+          <td>{{ brand.website or '—' }}</td>
+          <td>{{ brand.scheduled_posts }}</td>
+          <td>
+            <div class="actions">
+              <a href="/workspace/brands?brand_id={{ brand.id }}">Edit</a>
+              {% if manage_brands %}
+                {% if (brand.brand_status or 'active') == 'archived' %}
+                  <form method="post" action="/workspace/brands/{{ brand.id }}/restore" class="inline"><button type="submit" class="secondary">Restore</button></form>
+                {% else %}
+                  <form method="post" action="/workspace/brands/{{ brand.id }}/archive" class="inline"><button type="submit" class="secondary">Archive</button></form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="muted">No brands created yet.</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+{% endblock %}

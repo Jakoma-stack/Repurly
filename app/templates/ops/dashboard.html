@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Ops dashboard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Ops dashboard</h2>
+    <p>High-signal snapshot of review queue, failures, publish activity, and billing intake.</p>
+  </div>
+</div>
+<div class="cards">
+  <div class="card"><div class="muted">Brands</div><h3>{{ summary.brands }}</h3></div>
+  <div class="card"><div class="muted">Scheduled posts</div><h3>{{ summary.scheduled_posts }}</h3></div>
+  <div class="card"><div class="muted">Ready to publish</div><h3>{{ summary.ready_to_publish }}</h3></div>
+  <div class="card"><div class="muted">Pending review</div><h3>{{ summary.pending_review }}</h3></div>
+  <div class="card"><div class="muted">Failed posts</div><h3>{{ summary.failed_posts }}</h3></div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Status counts</h3>
+      <table>
+        <tr><th>Status</th><th>Count</th></tr>
+        {% for row in status_counts %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Approval counts</h3>
+      <table>
+        <tr><th>Approval</th><th>Count</th></tr>
+        {% for row in approval_counts %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Recent failed posts</h3>
+      <table>
+        <tr><th>Post</th><th>Brand</th><th>Date</th><th>Error</th></tr>
+        {% for row in recent_failures %}
+          <tr>
+            <td><a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a></td>
+            <td>{{ row.brand }}</td>
+            <td>{{ row.post_date }} {{ row.post_time }}</td>
+            <td>{{ row.last_publish_error or '—' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="muted">No recent failed posts.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Posts by brand</h3>
+      <table>
+        <tr><th>Brand</th><th>Count</th></tr>
+        {% for row in brand_counts %}<tr><td>{{ row.label }}</td><td>{{ row.count }}</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Recent publish attempts</h3>
+      <table>
+        <tr><th>Post</th><th>Status</th><th>Time</th></tr>
+        {% for row in recent_attempts %}
+          <tr><td><a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a></td><td>{{ row.status }}</td><td>{{ row.updated_at }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">No publish attempts yet.</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Recent audit events</h3>
+      <table>
+        <tr><th>Event</th><th>Post</th><th>Time</th></tr>
+        {% for row in recent_audit %}
+          <tr><td>{{ row.event_type }}</td><td>{% if row.post_id %}<a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a>{% else %}—{% endif %}</td><td>{{ row.created_at }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">No audit events yet.</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Recent signups</h3>
+      <table>
+        <tr><th>Name</th><th>Email</th><th>Plan</th></tr>
+        {% for row in recent_signups %}
+          <tr><td>{{ row.full_name }}</td><td>{{ row.email }}</td><td>{{ row.selected_plan or '—' }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">No signups yet.</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

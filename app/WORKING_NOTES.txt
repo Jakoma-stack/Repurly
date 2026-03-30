@@ -1,0 +1,18 @@
+brand slug: jakoma
+LinkedIn live posting works: yes
+first live post date: 2026-03-27
+token env var used: JAKOMA_LINKEDIN_ACCESS_TOKEN
+dry-run setting for live test: LINKEDIN_DRY_RUN=false
+audit verified: yes
+publish attempts verified: yes
+
+First live single-image LinkedIn post: success
+Text posting: proven live and repeatable
+Single-image posting: proven live
+Current blocker area remaining: Stripe verification, deployment, pilot runbook
+
+Must persist on hosted app:
+- database/socials_scheduler.db
+- data/social_post_schedule.csv
+- config/brands/*.json
+- content/... assets and captions
