@@ -8,3 +8,11 @@ __pycache__/
 *.db
 *.sqlite
 .DS_Store
+
+node_modules/
+.next/
+dist/
+build/
+.vercel/
+coverage/
+*.log
