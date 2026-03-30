@@ -1930,23 +1930,26 @@ def workspace_assets_upload():
     asset_dir = CONTENT_DIR / brand["slug"] / "workspace_assets"
     asset_dir.mkdir(parents=True, exist_ok=True)
     saved_count = 0
-    with get_conn() as conn:
-        for storage in uploaded_files:
-            if storage is None or not getattr(storage, "filename", ""):
-                continue
-            output_name = build_unique_upload_name(asset_dir, storage.filename)
-            mime_type, asset_kind, _size_bytes = validate_uploaded_asset(storage, output_name)
-            target_path = asset_dir / output_name
-            storage.save(target_path)
-            conn.execute(
-                """
-                INSERT INTO assets (brand_id, file_name, file_path, mime_type, asset_kind, status, alt_text, asset_tags_json)
-                VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
-                """,
-                (brand["id"], output_name, str(target_path), mime_type, asset_kind, f"{brand['display_name']} brand asset", json.dumps([slugify(str(brand['display_name'])).replace('-', ''), 'brand', 'asset'])),
-            )
-            saved_count += 1
-        conn.commit()
+    try:
+        with get_conn() as conn:
+            for storage in uploaded_files:
+                if storage is None or not getattr(storage, "filename", ""):
+                    continue
+                output_name = build_unique_upload_name(asset_dir, storage.filename)
+                mime_type, asset_kind, _size_bytes = validate_uploaded_asset(storage, output_name)
+                target_path = asset_dir / output_name
+                storage.save(target_path)
+                conn.execute(
+                    """
+                    INSERT INTO assets (brand_id, file_name, file_path, mime_type, asset_kind, status, alt_text, asset_tags_json)
+                    VALUES (?, ?, ?, ?, ?, 'active', ?, ?)
+                    """,
+                    (brand["id"], output_name, str(target_path), mime_type, asset_kind, f"{brand['display_name']} brand asset", json.dumps([slugify(str(brand['display_name'])).replace('-', ''), 'brand', 'asset'])),
+                )
+                saved_count += 1
+            conn.commit()
+    except ValueError as exc:
+        return redirect(url_for("workspace_assets_page", saved="error", error=str(exc)))
     if not saved_count:
         return redirect(url_for("workspace_assets_page", saved="error", error="We could not save any files from that upload."))
     record_audit_event(
@@ -5439,8 +5442,8 @@ def validate_uploaded_asset(storage: Any, target_name: str) -> tuple[str, str, i
 
     mime_type = detect_upload_mime_type(target_name, getattr(storage, "mimetype", ""))
     asset_kind = classify_asset_kind(mime_type)
-    if asset_kind not in {"image", "video"}:
-        raise ValueError("Only image and video uploads are supported by the current content workflow.")
+    if asset_kind not in {"image", "video", "document"}:
+        raise ValueError("Only image, video, and PDF uploads are supported right now.")
 
     size_bytes = uploaded_file_size(storage)
     if size_bytes > UPLOAD_MAX_BYTES:

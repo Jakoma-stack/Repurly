@@ -16,3 +16,9 @@ Must persist on hosted app:
 - data/social_post_schedule.csv
 - config/brands/*.json
 - content/... assets and captions
+
+2026-03-30 user testing notes
+- Uploading assets feels like one batch may overwrite or is awkward. Improve with clearer individual uploads, asset delete, and safer append behavior.
+- Registration should capture LinkedIn details or at least prompt for them during onboarding before posting setup.
+- Password reset email did not work in testing and needs investigation.
+- PDF asset uploads triggered a server error. Fix applied in this build to allow PDF uploads in the workspace asset flow and return a user-facing validation message instead of a 500 if upload validation fails.
