@@ -5,7 +5,7 @@
   <div>
     <div class="eyebrow">Workspace brands</div>
     <h2>{{ workspace.display_name }}</h2>
-    <p>Create and manage client brands inside this workspace without going back to ops.</p>
+    <p>Create and manage client brands inside this workspace and capture the LinkedIn posting details each brand will need later.</p>
   </div>
 </div>
 {% if saved == 'brand_saved' %}<div class="note success">Brand saved.</div>{% endif %}
@@ -23,43 +23,51 @@
       <label>Website<input name="website" value="{{ editing_brand.website if editing_brand else default_brand_values.website }}" placeholder="https://example.com" /></label>
       <label>Contact email<input name="contact_email" type="email" value="{{ editing_brand.contact_email if editing_brand else default_brand_values.contact_email }}" /></label>
       <label>Tone<input name="tone" value="{{ editing_brand.tone if editing_brand else '' }}" placeholder="Confident, clear, technical" /></label>
-      <label>Audience<input name="audience" value="{{ editing_brand.audience if editing_brand else '' }}" placeholder="Marketing managers, founders" /></label>
+      <label>Audience<input name="audience" value="{{ editing_brand.audience if editing_brand else '' }}" placeholder="Founders, operators, decision-makers" /></label>
       <label>Primary CTA<input name="primary_cta" value="{{ editing_brand.primary_cta if editing_brand else '' }}" /></label>
       <label>Secondary CTA<input name="secondary_cta" value="{{ editing_brand.secondary_cta if editing_brand else '' }}" /></label>
       <div class="field-help">Tip: keep tone, audience and CTA focused on one customer type. The AI content tools use these fields to draft and schedule posts for you.</div>
-      {% if default_brand_values.linkedin_profile_url or default_brand_values.linkedin_company_url %}<div class="field-help">Signup captured LinkedIn details for this workspace. Founder profile: {{ default_brand_values.linkedin_profile_url or "—" }}{% if default_brand_values.linkedin_company_url %}<br>Company page: {{ default_brand_values.linkedin_company_url }}{% endif %}</div>{% endif %}
+      <div class="panel" style="margin-top:14px; background:var(--surface-2); box-shadow:none;">
+        <div class="section-header"><h3 style="margin:0;">LinkedIn publishing setup</h3><a class="button-link ghost" href="/workspace/linkedin-setup{% if editing_brand %}?brand_id={{ editing_brand.id }}{% endif %}">Open dedicated setup page</a></div>
+        <p class="muted">Use this to capture the real details needed for posting later: profile or page URL, author URN, and the Render environment variable that stores the access token.</p>
+        <div class="grid-2">
+          <label>LinkedIn profile URL<input name="linkedin_profile_url" value="{{ linkedin_setup_defaults.profile_url }}" placeholder="https://www.linkedin.com/in/your-name"></label>
+          <label>LinkedIn company page URL<input name="linkedin_company_url" value="{{ linkedin_setup_defaults.company_url }}" placeholder="https://www.linkedin.com/company/your-page"></label>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <label>Posting identity<select name="linkedin_identity_type"><option value="person" {% if linkedin_setup_defaults.identity_type == 'person' %}selected{% endif %}>Personal profile</option><option value="organization" {% if linkedin_setup_defaults.identity_type == 'organization' %}selected{% endif %}>Company page</option></select></label>
+          <label>Setup path<select name="linkedin_connection_mode"><option value="manual" {% if linkedin_setup_defaults.connection_mode == 'manual' %}selected{% endif %}>I will self-configure the token and URN</option><option value="setup_fee" {% if linkedin_setup_defaults.connection_mode == 'setup_fee' %}selected{% endif %}>Handle this inside the setup fee</option></select></label>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <label>LinkedIn author URN<input name="linkedin_author_urn" value="{{ editing_brand.linkedin_author_urn if editing_brand else default_brand_values.linkedin_author_urn }}" placeholder="urn:li:person:... or urn:li:organization:..."></label>
+          <label>Token environment variable<input name="linkedin_token_env" value="{{ editing_brand.linkedin_token_env if editing_brand else default_brand_values.linkedin_token_env }}" placeholder="LINKEDIN_ACCESS_TOKEN"></label>
+        </div>
+        <label style="margin-top:12px;">Setup notes<textarea name="linkedin_setup_notes" placeholder="Use this for page-role checks, setup-fee notes, or what still needs doing.">{{ linkedin_setup_defaults.setup_notes }}</textarea></label>
+      </div>
       <div class="actions" style="margin-top:14px;"><button type="submit" name="action" value="save">{{ 'Save brand' if editing_brand else 'Create brand' }}</button><button type="submit" name="action" value="continue_assets" class="secondary">Save and continue to assets</button><button type="submit" name="action" value="continue_content" class="secondary">Save and continue to content</button></div>
     </form>
-    {% else %}
-      <p class="muted">Only workspace owners or admins can add or edit brands.</p>
-    {% endif %}
+    {% else %}<p class="muted">Only workspace owners or admins can add or edit brands.</p>{% endif %}
   </div>
   <div class="panel">
     <h3>Current brands</h3>
     <table>
-      <tr><th>Brand</th><th>Status</th><th>Website</th><th>Posts</th><th>Actions</th></tr>
+      <tr><th>Brand</th><th>Status</th><th>LinkedIn</th><th>Posts</th><th>Actions</th></tr>
       {% for brand in brands %}
+        {% set li = brand_linkedin_summaries.get(brand.id) %}
         <tr>
           <td>{{ brand.display_name }}</td>
           <td>{{ brand.brand_status or 'active' }}</td>
-          <td>{{ brand.website or '—' }}</td>
+          <td>{% if li.ready %}Ready{% elif li.status == 'setup_requested' %}Setup fee{% elif li.status == 'details_captured' %}Details captured{% else %}Pending{% endif %}</td>
           <td>{{ brand.scheduled_posts }}</td>
           <td>
             <div class="actions">
               <a href="/workspace/brands?brand_id={{ brand.id }}">Edit</a>
-              {% if manage_brands %}
-                {% if (brand.brand_status or 'active') == 'archived' %}
-                  <form method="post" action="/workspace/brands/{{ brand.id }}/restore" class="inline"><button type="submit" class="secondary">Restore</button></form>
-                {% else %}
-                  <form method="post" action="/workspace/brands/{{ brand.id }}/archive" class="inline"><button type="submit" class="secondary">Archive</button></form>
-                {% endif %}
-              {% endif %}
+              <a href="/workspace/linkedin-setup?brand_id={{ brand.id }}">LinkedIn setup</a>
+              {% if manage_brands %}{% if (brand.brand_status or 'active') == 'archived' %}<form method="post" action="/workspace/brands/{{ brand.id }}/restore" class="inline"><button type="submit" class="secondary">Restore</button></form>{% else %}<form method="post" action="/workspace/brands/{{ brand.id }}/archive" class="inline"><button type="submit" class="secondary">Archive</button></form>{% endif %}{% endif %}
             </div>
           </td>
         </tr>
-      {% else %}
-        <tr><td colspan="5" class="muted">No brands created yet.</td></tr>
-      {% endfor %}
+      {% else %}<tr><td colspan="5" class="muted">No brands created yet.</td></tr>{% endfor %}
     </table>
   </div>
 </div>

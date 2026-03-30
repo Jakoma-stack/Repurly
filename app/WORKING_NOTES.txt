@@ -23,3 +23,7 @@ User observations / next fixes
 - when registering, it didn't as for my linked in details, which would be needed to post
 - password reset email didn't work
 - PDF upload caused a 500 and signed the user out of the flow; fixed by allowing PDFs in validation and handling upload errors gracefully.
+
+- Added LinkedIn setup flow so brands can store profile/page URLs, author URN, token env name, and whether this is a setup-fee task.
+
+- LinkedIn OAuth connect flow added: workspace-level token capture, callback route, disconnect, and brand readiness states.

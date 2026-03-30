@@ -4,6 +4,7 @@ import argparse
 import json
 import mimetypes
 import os
+import sqlite3
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,6 +13,7 @@ from typing import Any
 import requests
 
 from config import (
+    APP_DB,
     ELIGIBLE_POSTING_STATUSES,
     OPTIONAL_SCHEDULE_COLUMNS,
     POSTING_ALLOWED_APPROVAL_STATUSES,
@@ -84,6 +86,34 @@ def normalise_linkedin_author_urn(value: str) -> str:
     return raw
 
 
+def db_stored_linkedin_token_for_brand(brand_slug: str) -> str:
+    if not APP_DB.exists():
+        return ""
+    try:
+        with sqlite3.connect(APP_DB) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                """
+                SELECT ei.metadata_json
+                FROM brands b
+                JOIN engagement_integrations ei ON ei.workspace_id = b.workspace_id AND lower(ei.platform)='linkedin'
+                WHERE b.slug=?
+                ORDER BY ei.id DESC
+                LIMIT 1
+                """,
+                (brand_slug,),
+            ).fetchone()
+    except sqlite3.Error:
+        return ""
+    if row is None:
+        return ""
+    try:
+        data = json.loads(row["metadata_json"] or "{}")
+    except Exception:
+        return ""
+    return str((data or {}).get("access_token") or "").strip()
+
+
 def resolve_linkedin_credentials(brand: str) -> tuple[str, str]:
     brand_config = get_brand_config(brand)
 
@@ -100,7 +130,13 @@ def resolve_linkedin_credentials(brand: str) -> tuple[str, str]:
         )
 
     token_env_name = (brand_config.get("linkedin_token_env") or "").strip()
-    if token_env_name:
+    if token_env_name == "__db_linkedin_token__":
+        access_token = db_stored_linkedin_token_for_brand(str(brand_config.get("brand") or brand).strip())
+        if not access_token and not linkedin_dry_run_enabled():
+            raise RuntimeError(
+                f"Brand '{brand}' expects a LinkedIn token stored in the workspace integration, but none was found."
+            )
+    elif token_env_name:
         access_token = os.getenv(token_env_name, "").strip()
         if not access_token and not linkedin_dry_run_enabled():
             raise RuntimeError(
@@ -112,7 +148,7 @@ def resolve_linkedin_credentials(brand: str) -> tuple[str, str]:
     if not linkedin_dry_run_enabled() and not access_token:
         raise RuntimeError(
             f"No LinkedIn access token available for brand '{brand}'. "
-            "Set a global LINKEDIN_ACCESS_TOKEN or add linkedin_token_env to the brand config."
+            "Set a global LINKEDIN_ACCESS_TOKEN, a brand token env var, or connect LinkedIn in the workspace."
         )
 
     return author_urn, access_token

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import calendar
+import hashlib
 import hmac
 import json
 import mimetypes
 import os
 import random
+import secrets
 import shutil
 import sqlite3
 from collections import defaultdict
@@ -20,6 +22,7 @@ from flask import Flask, Response, abort, g, jsonify, redirect, render_template,
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
+from werkzeug.datastructures import MultiDict
 
 from billing import (
     create_billing_portal_session,
@@ -51,6 +54,11 @@ from config import (
     ALLOWED_UPLOAD_EXTENSIONS,
     APP_BASE_URL,
     APP_DB,
+    LINKEDIN_API_VERSION,
+    LINKEDIN_CLIENT_ID,
+    LINKEDIN_CLIENT_SECRET,
+    LINKEDIN_OAUTH_SCOPES,
+    LINKEDIN_REDIRECT_PATH,
     CONTENT_DIR,
     DEFAULT_WORKSPACE_ALLOWED_DOMAIN,
     ELIGIBLE_POSTING_STATUSES,
@@ -833,6 +841,208 @@ def fetch_workspace_brands(workspace_id: int) -> list[dict[str, Any]]:
     )
 
 
+def brand_linkedin_setup_summary(brand_row: dict[str, Any] | sqlite3.Row | None) -> dict[str, Any]:
+    if brand_row is None:
+        return {"profile_url": "", "company_url": "", "identity_type": "person", "connection_mode": "manual", "setup_notes": "", "status": "pending", "ready": False}
+    settings = {}
+    raw_settings = brand_row.get("settings_json") if isinstance(brand_row, dict) else brand_row["settings_json"]
+    if raw_settings:
+        try:
+            settings = json.loads(raw_settings)
+        except Exception:
+            settings = {}
+    profile_url = str(settings.get("linkedin_profile_url") or "").strip()
+    company_url = str(settings.get("linkedin_company_url") or "").strip()
+    identity_type = str(settings.get("linkedin_identity_type") or "person").strip().lower()
+    connection_mode = str(settings.get("linkedin_connection_mode") or "manual").strip().lower()
+    setup_notes = str(settings.get("linkedin_setup_notes") or "").strip()
+    author_urn = str((brand_row.get("linkedin_author_urn") if isinstance(brand_row, dict) else brand_row["linkedin_author_urn"]) or "").strip()
+    token_env = str((brand_row.get("linkedin_token_env") if isinstance(brand_row, dict) else brand_row["linkedin_token_env"]) or "").strip()
+    if author_urn and token_env:
+        status = "ready"
+    elif connection_mode == "setup_fee":
+        status = "setup_requested"
+    elif connection_mode == "oauth":
+        status = "token_connected"
+    elif profile_url or company_url:
+        status = "details_captured"
+    else:
+        status = "pending"
+    return {
+        "profile_url": profile_url,
+        "company_url": company_url,
+        "identity_type": identity_type if identity_type in {"person", "organization"} else "person",
+        "connection_mode": connection_mode if connection_mode in {"manual", "setup_fee", "oauth"} else "manual",
+        "setup_notes": setup_notes,
+        "status": status,
+        "ready": bool(author_urn and token_env),
+    }
+
+
+def linkedin_redirect_uri() -> str:
+    return f"{APP_BASE_URL}{LINKEDIN_REDIRECT_PATH if LINKEDIN_REDIRECT_PATH.startswith('/') else '/' + LINKEDIN_REDIRECT_PATH}"
+
+
+def linkedin_oauth_configured() -> bool:
+    return bool(LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET)
+
+
+def linkedin_authorize_url(*, state: str) -> str:
+    scope = "%20".join(LINKEDIN_OAUTH_SCOPES)
+    from urllib.parse import quote
+    redirect_uri = quote(linkedin_redirect_uri(), safe='')
+    return (
+        "https://www.linkedin.com/oauth/v2/authorization"
+        f"?response_type=code&client_id={LINKEDIN_CLIENT_ID}&redirect_uri={redirect_uri}&state={state}&scope={scope}"
+    )
+
+
+def exchange_linkedin_oauth_code(code: str) -> dict[str, Any]:
+    response = requests.post(
+        "https://www.linkedin.com/oauth/v2/accessToken",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": linkedin_redirect_uri(),
+            "client_id": LINKEDIN_CLIENT_ID,
+            "client_secret": LINKEDIN_CLIENT_SECRET,
+        },
+        timeout=30,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def linkedin_rest_headers(access_token: str, *, json_content: bool = True) -> dict[str, str]:
+    headers = {
+        "Authorization": f"Bearer {access_token}",
+        "Linkedin-Version": LINKEDIN_API_VERSION,
+        "X-Restli-Protocol-Version": "2.0.0",
+    }
+    if json_content:
+        headers["Content-Type"] = "application/json"
+    return headers
+
+
+def fetch_linkedin_member_profile(access_token: str) -> dict[str, Any]:
+    response = requests.get(
+        "https://api.linkedin.com/rest/identityMe",
+        headers=linkedin_rest_headers(access_token, json_content=False),
+        timeout=30,
+    )
+    response.raise_for_status()
+    data = response.json()
+    basic = data.get("basicInfo") or {}
+    first_name = basic.get("firstName")
+    if isinstance(first_name, dict):
+        first_name = next(iter(first_name.values()), "")
+    last_name = basic.get("lastName")
+    if isinstance(last_name, dict):
+        last_name = next(iter(last_name.values()), "")
+    return {
+        "member_id": str(data.get("id") or "").strip(),
+        "profile_url": str(basic.get("profileUrl") or "").strip(),
+        "display_name": " ".join(part for part in [str(first_name or '').strip(), str(last_name or '').strip()] if part).strip(),
+        "raw": data,
+    }
+
+
+def fetch_or_create_workspace_integration(workspace_id: int, platform: str = "linkedin") -> dict[str, Any]:
+    existing = fetch_rows("SELECT * FROM engagement_integrations WHERE workspace_id=? AND lower(platform)=lower(?) ORDER BY id DESC LIMIT 1", (workspace_id, platform))
+    if existing:
+        return existing[0]
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO engagement_integrations (workspace_id, platform, connection_label, status, sync_mode, auto_reply_enabled, auto_dm_enabled, moderation_level, metadata_json, created_at, updated_at)
+            VALUES (?, ?, ?, 'disconnected', 'manual_review', 0, 0, 'balanced', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            (workspace_id, platform, 'LinkedIn'),
+        )
+        conn.commit()
+    created = fetch_rows("SELECT * FROM engagement_integrations WHERE workspace_id=? AND lower(platform)=lower(?) ORDER BY id DESC LIMIT 1", (workspace_id, platform))
+    return created[0] if created else {}
+
+
+def integration_metadata_dict(integration_row: dict[str, Any] | sqlite3.Row | None) -> dict[str, Any]:
+    if integration_row is None:
+        return {}
+    raw = integration_row.get("metadata_json") if isinstance(integration_row, dict) else integration_row["metadata_json"]
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_workspace_integration_metadata(integration_id: int, metadata: dict[str, Any], *, status: str | None = None, connection_label: str | None = None, synced: bool = False) -> None:
+    with get_conn() as conn:
+        fields = ["metadata_json=?", "updated_at=CURRENT_TIMESTAMP"]
+        params: list[Any] = [json.dumps(metadata)]
+        if status is not None:
+            fields.append("status=?")
+            params.append(status)
+        if connection_label is not None:
+            fields.append("connection_label=?")
+            params.append(connection_label)
+        if synced:
+            fields.append("last_synced_at=CURRENT_TIMESTAMP")
+        params.append(integration_id)
+        conn.execute(f"UPDATE engagement_integrations SET {', '.join(fields)} WHERE id=?", params)
+        conn.commit()
+
+
+def update_brand_linkedin_connection(brand_id: int, *, author_urn: str | None = None, token_env: str | None = None, profile_url: str | None = None, identity_type: str | None = None, connection_mode: str | None = None, setup_notes_append: str | None = None) -> None:
+    with get_conn() as conn:
+        row = conn.execute("SELECT settings_json FROM brands WHERE id=?", (brand_id,)).fetchone()
+        if row is None:
+            return
+        try:
+            settings = json.loads(row["settings_json"] or "{}")
+            if not isinstance(settings, dict):
+                settings = {}
+        except Exception:
+            settings = {}
+        if profile_url is not None:
+            settings["linkedin_profile_url"] = profile_url
+        if identity_type is not None:
+            settings["linkedin_identity_type"] = identity_type
+        if connection_mode is not None:
+            settings["linkedin_connection_mode"] = connection_mode
+        if setup_notes_append:
+            existing = str(settings.get("linkedin_setup_notes") or "").strip()
+            settings["linkedin_setup_notes"] = ((existing + "\n" + setup_notes_append).strip() if existing else setup_notes_append)
+        conn.execute(
+            "UPDATE brands SET linkedin_author_urn=COALESCE(?, linkedin_author_urn), linkedin_token_env=COALESCE(?, linkedin_token_env), settings_json=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            (author_urn, token_env, json.dumps(settings), brand_id),
+        )
+        conn.commit()
+
+
+def linkedin_brand_connection_state(workspace_id: int, brands: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
+    integration = fetch_or_create_workspace_integration(workspace_id)
+    meta = integration_metadata_dict(integration)
+    token_present = bool(str(meta.get("access_token") or "").strip())
+    expires_at = str(meta.get("expires_at") or "").strip()
+    status = str((integration or {}).get("status") or "disconnected").strip().lower()
+    result: dict[int, dict[str, Any]] = {}
+    for brand in brands:
+        summary = brand_linkedin_setup_summary(brand)
+        identity_type = summary.get("identity_type") or "person"
+        author_urn = str(brand.get("linkedin_author_urn") or "").strip()
+        if token_present and identity_type == 'person' and author_urn:
+            summary["ready"] = True
+            summary["status"] = 'ready'
+        elif token_present:
+            summary["status"] = 'token_connected' if status == 'connected' else summary["status"]
+        summary["token_connected"] = token_present
+        summary["expires_at"] = expires_at
+        result[int(brand["id"])] = summary
+    return result
+
+
 def fetch_latest_subscription(*, user_id: int, email: str, workspace_id: int | None = None) -> sqlite3.Row | None:
     lowered_email = (email or "").strip().lower()
     clauses = ["user_id=?"]
@@ -1113,6 +1323,7 @@ def inject_nav() -> dict[str, Any]:
             ("/account/billing", "Billing"),
             ("/workspace/team", "Team"),
             ("/workspace/brands", "Brands"),
+            ("/workspace/linkedin-setup", "LinkedIn setup"),
             ("/workspace/assets", "Assets"),
             ("/workspace/content", "Content & schedule"),
             ("/workspace/engagement", "Engagement"),
@@ -1365,6 +1576,7 @@ def getting_started():
         """,
         (workspace["id"],),
     ) if workspace is not None else []
+    linkedin_ready_count = sum(1 for brand in brands if brand_linkedin_setup_summary(brand).get("ready"))
     return render_template(
         "customer/getting_started.html",
         user=customer,
@@ -1373,10 +1585,12 @@ def getting_started():
         brands=brands,
         assets=assets,
         generated_posts=generated_posts,
+        linkedin_ready_count=linkedin_ready_count,
         step_state={
             "workspace": workspace is not None,
             "paid": bool(subscription and subscription_allows_workspace_access(subscription.get("status"))),
             "brands": bool(brands),
+            "linkedin": bool(linkedin_ready_count),
             "assets": bool(assets),
             "posts": bool(generated_posts),
         },
@@ -1767,6 +1981,170 @@ def workspace_settings():
     )
 
 
+@app.route("/workspace/linkedin-setup", methods=["GET", "POST"])
+@customer_login_required
+def workspace_linkedin_setup():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    if request.method == "POST":
+        if not current_customer_can_manage_brands():
+            abort(403)
+        brand_id_raw = (request.form.get("brand_id") or "").strip()
+        if not brand_id_raw.isdigit():
+            return redirect(url_for("workspace_linkedin_setup", saved="error", error="Select a valid brand first."))
+        brand = fetch_workspace_brand_by_id(int(workspace["id"]), int(brand_id_raw))
+        if brand is None:
+            return redirect(url_for("workspace_linkedin_setup", saved="error", error="That brand was not found in this workspace."))
+        merged = MultiDict()
+        for key in ("brand_id", "linkedin_profile_url", "linkedin_company_url", "linkedin_identity_type", "linkedin_connection_mode", "linkedin_author_urn", "linkedin_token_env", "linkedin_setup_notes"):
+            merged[key] = (request.form.get(key) or "").strip()
+        merged["slug"] = brand["slug"]
+        merged["display_name"] = brand["display_name"] or ""
+        merged["website"] = brand["website"] or ""
+        merged["contact_email"] = brand["contact_email"] or ""
+        merged["tone"] = brand["tone"] or ""
+        merged["audience"] = brand["audience"] or ""
+        merged["primary_cta"] = brand["primary_cta"] or ""
+        merged["secondary_cta"] = brand["secondary_cta"] or ""
+        merged["action"] = "save"
+        original_form = request.form
+        request.form = merged
+        try:
+            return workspace_brands_save()
+        finally:
+            request.form = original_form
+
+    brands = fetch_workspace_brands(int(workspace["id"]))
+    selected_brand_id = (request.args.get("brand_id") or "").strip()
+    selected_brand = None
+    if selected_brand_id.isdigit():
+        selected_brand = fetch_workspace_brand_by_id(int(workspace["id"]), int(selected_brand_id))
+    if selected_brand is None and brands:
+        selected_brand = fetch_workspace_brand_by_id(int(workspace["id"]), int(brands[0]["id"]))
+    brand_linkedin_summaries = linkedin_brand_connection_state(int(workspace["id"]), brands)
+    linkedin_setup_defaults = brand_linkedin_summaries.get(int(selected_brand["id"]), brand_linkedin_setup_summary(selected_brand)) if selected_brand else brand_linkedin_setup_summary(None)
+    integration = fetch_or_create_workspace_integration(int(workspace["id"]))
+    integration_meta = integration_metadata_dict(integration)
+    return render_template(
+        "customer/linkedin_setup.html",
+        workspace=workspace,
+        brands=brands,
+        selected_brand=selected_brand,
+        linkedin_setup_defaults=linkedin_setup_defaults,
+        brand_linkedin_summaries=brand_linkedin_summaries,
+        manage_brands=current_customer_can_manage_brands(),
+        saved=(request.args.get("saved") or "").strip().lower(),
+        error=(request.args.get("error") or "").strip(),
+        linkedin_oauth_configured=linkedin_oauth_configured(),
+        linkedin_redirect_uri=linkedin_redirect_uri(),
+        linkedin_scopes=LINKEDIN_OAUTH_SCOPES,
+        integration=integration,
+        integration_meta=integration_meta,
+    )
+
+
+@app.route("/workspace/linkedin/connect")
+@customer_login_required
+def workspace_linkedin_connect():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    if not current_customer_can_manage_brands():
+        abort(403)
+    brand_id_raw = (request.args.get("brand_id") or "").strip()
+    if not brand_id_raw.isdigit():
+        return redirect(url_for("workspace_linkedin_setup", saved="error", error="Choose a brand first."))
+    brand = fetch_workspace_brand_by_id(int(workspace["id"]), int(brand_id_raw))
+    if brand is None:
+        return redirect(url_for("workspace_linkedin_setup", saved="error", error="That brand was not found in this workspace."))
+    if not linkedin_oauth_configured():
+        return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id_raw, saved="error", error="LinkedIn OAuth is not configured yet. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET on Render first."))
+    state = secrets.token_urlsafe(24)
+    session["linkedin_oauth_state"] = state
+    session["linkedin_oauth_brand_id"] = int(brand_id_raw)
+    session["linkedin_oauth_workspace_id"] = int(workspace["id"])
+    return redirect(linkedin_authorize_url(state=state))
+
+
+@app.route(LINKEDIN_REDIRECT_PATH)
+@customer_login_required
+def linkedin_oauth_callback():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    brand_id = int(session.get("linkedin_oauth_brand_id") or 0)
+    workspace_id = int(session.get("linkedin_oauth_workspace_id") or 0)
+    expected_state = str(session.get("linkedin_oauth_state") or "")
+    returned_state = (request.args.get("state") or "").strip()
+    oauth_error = (request.args.get("error") or "").strip()
+    if oauth_error:
+        return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id or None, saved="error", error=f"LinkedIn did not complete authorization: {oauth_error}"))
+    if not expected_state or expected_state != returned_state:
+        return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id or None, saved="error", error="LinkedIn authorization state did not match. Please try connecting again."))
+    if workspace_id != int(workspace["id"]):
+        return redirect(url_for("workspace_linkedin_setup", saved="error", error="LinkedIn authorization was started for a different workspace. Please try again."))
+    brand = fetch_workspace_brand_by_id(int(workspace["id"]), brand_id) if brand_id else None
+    if brand is None:
+        return redirect(url_for("workspace_linkedin_setup", saved="error", error="The selected brand could not be found. Please start LinkedIn setup again."))
+    code = (request.args.get("code") or "").strip()
+    if not code:
+        return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id, saved="error", error="LinkedIn did not return an authorization code."))
+    try:
+        token_data = exchange_linkedin_oauth_code(code)
+        access_token = str(token_data.get("access_token") or "").strip()
+        expires_in = int(token_data.get("expires_in") or 0)
+        profile = fetch_linkedin_member_profile(access_token)
+    except Exception as exc:
+        return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id, saved="error", error=f"LinkedIn connection failed: {exc}"))
+    member_id = str(profile.get("member_id") or "").strip()
+    author_urn = f"urn:li:person:{member_id}" if member_id else ""
+    integration = fetch_or_create_workspace_integration(int(workspace["id"]))
+    metadata = integration_metadata_dict(integration)
+    metadata.update({
+        "access_token": access_token,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(seconds=max(expires_in, 0))).replace(microsecond=0).isoformat() if expires_in else "",
+        "member_id": member_id,
+        "member_author_urn": author_urn,
+        "member_profile_url": profile.get("profile_url") or "",
+        "member_display_name": profile.get("display_name") or "",
+        "oauth_scopes": list(LINKEDIN_OAUTH_SCOPES),
+        "connected_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+    })
+    save_workspace_integration_metadata(int(integration["id"]), metadata, status="connected", connection_label=(profile.get("display_name") or "LinkedIn"), synced=True)
+    summary = brand_linkedin_setup_summary(brand)
+    setup_note = "OAuth connected successfully. Member token stored in workspace integration. For company-page posting, add the organization URN after confirming page admin rights."
+    update_brand_linkedin_connection(
+        brand_id,
+        author_urn=author_urn if summary.get("identity_type") == "person" else None,
+        token_env="__db_linkedin_token__",
+        profile_url=profile.get("profile_url") or summary.get("profile_url") or "",
+        identity_type=summary.get("identity_type") or "person",
+        connection_mode="oauth",
+        setup_notes_append=setup_note,
+    )
+    session.pop("linkedin_oauth_state", None)
+    session.pop("linkedin_oauth_brand_id", None)
+    session.pop("linkedin_oauth_workspace_id", None)
+    return redirect(url_for("workspace_linkedin_setup", brand_id=brand_id, saved="oauth_connected"))
+
+
+@app.route("/workspace/linkedin/disconnect", methods=["POST"])
+@customer_login_required
+def workspace_linkedin_disconnect():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    if not current_customer_can_manage_brands():
+        abort(403)
+    integration = fetch_or_create_workspace_integration(int(workspace["id"]))
+    metadata = integration_metadata_dict(integration)
+    for key in ("access_token", "expires_at", "member_id", "member_author_urn", "member_profile_url", "member_display_name", "connected_at"):
+        metadata.pop(key, None)
+    save_workspace_integration_metadata(int(integration["id"]), metadata, status="disconnected", connection_label="LinkedIn")
+    return redirect(url_for("workspace_linkedin_setup", saved="oauth_disconnected"))
+
+
 @app.route("/workspace/brands", methods=["GET"])
 @customer_login_required
 def workspace_brands_page():
@@ -1792,7 +2170,16 @@ def workspace_brands_page():
         "contact_email": email,
         "linkedin_profile_url": signup_metadata.get("linkedin_profile_url", ""),
         "linkedin_company_url": signup_metadata.get("linkedin_company_url", ""),
+        "linkedin_identity_type": "person",
+        "linkedin_connection_mode": "manual",
+        "linkedin_setup_notes": "",
+        "linkedin_author_urn": "",
+        "linkedin_token_env": "LINKEDIN_ACCESS_TOKEN",
     }
+    linkedin_setup_defaults = brand_linkedin_setup_summary(editing_brand) if editing_brand is not None else brand_linkedin_setup_summary(default_brand_values)
+    if editing_brand is None:
+        linkedin_setup_defaults["profile_url"] = default_brand_values["linkedin_profile_url"]
+        linkedin_setup_defaults["company_url"] = default_brand_values["linkedin_company_url"]
     return render_template(
         "customer/brands.html",
         workspace=workspace,
@@ -1802,6 +2189,8 @@ def workspace_brands_page():
         saved=(request.args.get("saved") or "").strip().lower(),
         error=(request.args.get("error") or "").strip(),
         default_brand_values=default_brand_values,
+        linkedin_setup_defaults=linkedin_setup_defaults,
+        brand_linkedin_summaries={int(item["id"]): brand_linkedin_setup_summary(item) for item in brands},
     )
 
 
@@ -1827,6 +2216,19 @@ def workspace_brands_save():
     secondary_cta = (request.form.get("secondary_cta") or "").strip()
     if not slug or not display_name:
         return redirect(url_for("workspace_brands_page", saved="error", error="Brand slug and display name are required."))
+    linkedin_profile_url = (request.form.get("linkedin_profile_url") or "").strip()
+    linkedin_company_url = (request.form.get("linkedin_company_url") or "").strip()
+    linkedin_identity_type = (request.form.get("linkedin_identity_type") or "person").strip().lower()
+    linkedin_connection_mode = (request.form.get("linkedin_connection_mode") or "manual").strip().lower()
+    linkedin_setup_notes = (request.form.get("linkedin_setup_notes") or "").strip()
+    linkedin_author_urn = (request.form.get("linkedin_author_urn") or "").strip()
+    linkedin_token_env = (request.form.get("linkedin_token_env") or "").strip()
+    if linkedin_identity_type not in {"person", "organization"}:
+        linkedin_identity_type = "person"
+    if linkedin_connection_mode not in {"manual", "setup_fee"}:
+        linkedin_connection_mode = "manual"
+    if linkedin_connection_mode == "manual" and (bool(linkedin_author_urn) ^ bool(linkedin_token_env)):
+        return redirect(url_for("workspace_brands_page", saved="error", error="For self-setup, add both the LinkedIn author URN and token environment variable name, or leave both blank until you are ready."))
     config = {
         "brand": slug,
         "display_name": display_name,
@@ -1840,27 +2242,32 @@ def workspace_brands_save():
         "hashtags": [],
         "posting_goals": [],
         "content_pillars": [],
-        "linkedin_author_urn": "",
-        "linkedin_token_env": "",
+        "linkedin_profile_url": linkedin_profile_url,
+        "linkedin_company_url": linkedin_company_url,
+        "linkedin_identity_type": linkedin_identity_type,
+        "linkedin_connection_mode": linkedin_connection_mode,
+        "linkedin_setup_notes": linkedin_setup_notes,
+        "linkedin_author_urn": linkedin_author_urn,
+        "linkedin_token_env": linkedin_token_env,
     }
     save_brand_config(slug, config)
     with get_conn() as conn:
         if brand_id is None:
             conn.execute(
                 """
-                INSERT INTO brands (workspace_id, slug, display_name, website, contact_email, brand_status, tone, audience, primary_cta, secondary_cta, default_platforms_json, hashtags_json, posting_goals_json, content_pillars_json, settings_json)
-                VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, '[]', '[]', '[]', '[]', ?)
-                ON CONFLICT(slug) DO UPDATE SET workspace_id=excluded.workspace_id, display_name=excluded.display_name, website=excluded.website, contact_email=excluded.contact_email, brand_status='active', tone=excluded.tone, audience=excluded.audience, primary_cta=excluded.primary_cta, secondary_cta=excluded.secondary_cta, settings_json=excluded.settings_json, updated_at=CURRENT_TIMESTAMP
+                INSERT INTO brands (workspace_id, slug, display_name, website, contact_email, brand_status, tone, audience, primary_cta, secondary_cta, default_platforms_json, hashtags_json, posting_goals_json, content_pillars_json, linkedin_author_urn, linkedin_token_env, settings_json)
+                VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, '[]', '[]', '[]', '[]', ?, ?, ?)
+                ON CONFLICT(slug) DO UPDATE SET workspace_id=excluded.workspace_id, display_name=excluded.display_name, website=excluded.website, contact_email=excluded.contact_email, brand_status='active', tone=excluded.tone, audience=excluded.audience, primary_cta=excluded.primary_cta, secondary_cta=excluded.secondary_cta, linkedin_author_urn=excluded.linkedin_author_urn, linkedin_token_env=excluded.linkedin_token_env, settings_json=excluded.settings_json, updated_at=CURRENT_TIMESTAMP
                 """,
-                (workspace["id"], slug, display_name, website, contact_email, tone, audience, primary_cta, secondary_cta, json.dumps(config)),
+                (workspace["id"], slug, display_name, website, contact_email, tone, audience, primary_cta, secondary_cta, linkedin_author_urn, linkedin_token_env, json.dumps(config)),
             )
         else:
             conn.execute(
                 """
-                UPDATE brands SET slug=?, display_name=?, website=?, contact_email=?, tone=?, audience=?, primary_cta=?, secondary_cta=?, brand_status='active', settings_json=?, updated_at=CURRENT_TIMESTAMP
+                UPDATE brands SET slug=?, display_name=?, website=?, contact_email=?, tone=?, audience=?, primary_cta=?, secondary_cta=?, brand_status='active', linkedin_author_urn=?, linkedin_token_env=?, settings_json=?, updated_at=CURRENT_TIMESTAMP
                 WHERE id=? AND workspace_id=?
                 """,
-                (slug, display_name, website, contact_email, tone, audience, primary_cta, secondary_cta, json.dumps(config), brand_id, workspace["id"]),
+                (slug, display_name, website, contact_email, tone, audience, primary_cta, secondary_cta, linkedin_author_urn, linkedin_token_env, json.dumps(config), brand_id, workspace["id"]),
             )
         conn.commit()
     record_audit_event(
