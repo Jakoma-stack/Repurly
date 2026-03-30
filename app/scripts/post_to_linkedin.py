@@ -135,7 +135,16 @@ def determine_linkedin_asset_mode(post_type: str, asset_filename: str) -> str:
     post_type = (post_type or "").strip().lower()
     if post_type == "text" or not assets:
         return "text"
+    if post_type == "video":
+        return "video"
+    if post_type == "single_image":
+        return "single_image"
+    if post_type == "carousel":
+        return "carousel"
     if len(assets) == 1:
+        suffix = Path(assets[0]).suffix.lower()
+        if suffix in {".mp4", ".mov", ".m4v"}:
+            return "video"
         return "single_image"
     return "carousel"
 
@@ -436,16 +445,16 @@ def validate_linkedin_post_row(row: dict[str, Any] | Any) -> dict[str, Any]:
     asset_names = normalise_asset_filenames(row.get("asset_filename", ""))
     asset_paths = [content_folder / "assets" / name for name in asset_names]
 
-    if asset_mode == "single_image" and len(asset_paths) != 1:
-        raise RuntimeError("Single-image post must resolve to exactly one asset file.")
+    if asset_mode in {"single_image", "video"} and len(asset_paths) != 1:
+        raise RuntimeError("Single-asset image or video post must resolve to exactly one asset file.")
     if asset_mode == "carousel" and len(asset_paths) < 2:
         raise RuntimeError("Carousel post must resolve to at least two asset files.")
     if asset_mode != "text":
         missing_assets = [path.as_posix() for path in asset_paths if not path.exists()]
         if missing_assets:
             raise FileNotFoundError(f"Missing asset files: {', '.join(missing_assets)}")
-        if asset_mode == "carousel" and not linkedin_dry_run_enabled():
-            raise NotImplementedError("Live LinkedIn carousel upload is not implemented yet.")
+        if asset_mode in {"carousel", "video"} and not linkedin_dry_run_enabled():
+            raise NotImplementedError("Live LinkedIn carousel and video upload are not implemented yet.")
 
     return {
         "brand": brand,

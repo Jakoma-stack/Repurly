@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Automation Rules | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Automation controls</div>
+    <h2>Guardrails for reply assist and lead routing</h2>
+    <p>These rules keep comment suggestions, DM drafts, and lead scoring brand-safe by default. The release remains approval-led rather than fully autonomous.</p>
+  </div>
+</div>
+{% if saved %}
+  <div class="note success" style="margin-bottom:18px;">Rule updated.</div>
+{% endif %}
+<div class="cards">
+  <div class="card"><h3>Enabled rules</h3><p class="metric-value">{{ metrics.active_rules }}</p><div class="muted">Currently switched on</div></div>
+  <div class="card"><h3>Hot leads</h3><p class="metric-value">{{ metrics.hot_leads }}</p><div class="muted">Being routed by score</div></div>
+  <div class="card"><h3>Channels</h3><p class="metric-value">{{ metrics.connected_channels }}</p><div class="muted">Available for sync</div></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px; align-items:start;">
+  <div class="panel">
+    <h3>Connection defaults</h3>
+    {% for integration in integrations %}
+      <div class="kv" style="margin-top:12px;">
+        <div>Platform</div><div>{{ integration.platform|upper }}</div>
+        <div>Auto reply</div><div>{{ 'On' if integration.auto_reply_enabled else 'Off' }}</div>
+        <div>Auto DM</div><div>{{ 'On' if integration.auto_dm_enabled else 'Off' }}</div>
+        <div>Moderation</div><div>{{ integration.moderation_level|title }}</div>
+      </div>
+    {% else %}
+      <p class="muted">No integration defaults configured.</p>
+    {% endfor %}
+  </div>
+</div>
+<div class="stack">
+  {% for rule in rules %}
+    <div class="panel">
+      <div class="section-header">
+        <div>
+          <div class="eyebrow">{{ rule.rule_type|replace('_', ' ')|title }}</div>
+          <h3 style="font-size:24px; margin:8px 0 6px; color:var(--text); text-transform:none; letter-spacing:-.02em;">{{ rule.rule_name }}</h3>
+        </div>
+        <div class="actions">
+          <span class="status-pill {{ 'ok' if rule.is_enabled else 'warn' }}">{{ 'Enabled' if rule.is_enabled else 'Disabled' }}</span>
+          <form method="post" action="/workspace/automation-rules/{{ rule.id }}/toggle" style="display:inline;">
+            <button type="submit" class="secondary">{{ 'Disable' if rule.is_enabled else 'Enable' }}</button>
+          </form>
+        </div>
+      </div>
+      <div class="kv">
+        <div>Trigger</div><div>{{ rule.trigger_condition or 'Not set' }}</div>
+        <div>Action</div><div>{{ rule.action_summary or 'Not set' }}</div>
+        <div>Approval mode</div><div>{{ rule.approval_mode|replace('_', ' ')|title }}</div>
+      </div>
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <strong>No automation rules yet.</strong>
+      <p class="muted">Rules will appear here once engagement assist is enabled for the workspace.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

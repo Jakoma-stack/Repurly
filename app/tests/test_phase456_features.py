@@ -110,3 +110,79 @@ def test_workspace_analytics_and_export_load(phase456_client):
     assert b"Workspace analytics" in analytics.data
     assert export.status_code == 200
     assert export.mimetype == "text/csv"
+
+
+def test_growth_engagement_sync_and_reply_flow(phase456_client):
+    client, db_path, workspace_id = phase456_client
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO brands (workspace_id, slug, display_name, website, primary_cta, tone) VALUES (?, 'repurly-main', 'Repurly Main', 'https://repurly.org', 'Book a demo', 'Clear and commercial')",
+        (workspace_id,),
+    )
+    conn.commit()
+    conn.close()
+
+    engagement = client.get('/workspace/engagement')
+    assert engagement.status_code == 200
+    assert b'Engagement inbox' in engagement.data
+
+    sync_response = client.post('/workspace/engagement/sync', follow_redirects=False)
+    assert sync_response.status_code == 302
+
+    conn = sqlite3.connect(db_path)
+    comment_id = conn.execute("SELECT id FROM engagement_comments WHERE workspace_id=? ORDER BY id DESC LIMIT 1", (workspace_id,)).fetchone()[0]
+    conn.close()
+
+    generate_response = client.post(f'/workspace/engagement/{comment_id}/generate', follow_redirects=False)
+    assert generate_response.status_code == 302
+
+    conn = sqlite3.connect(db_path)
+    reply_option = conn.execute("SELECT reply_options_json FROM engagement_comments WHERE id=?", (comment_id,)).fetchone()[0]
+    conn.close()
+    assert 'Book a demo' in reply_option or 'workflow' in reply_option
+
+
+def test_growth_lead_detail_note_and_rule_toggle(phase456_client):
+    client, db_path, workspace_id = phase456_client
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        "INSERT INTO brands (workspace_id, slug, display_name, website, primary_cta, tone) VALUES (?, 'growth-brand', 'Growth Brand', 'https://example.com', 'Book a demo', 'Professional')",
+        (workspace_id,),
+    )
+    brand_id = conn.execute("SELECT id FROM brands WHERE workspace_id=? ORDER BY id DESC LIMIT 1", (workspace_id,)).fetchone()[0]
+    conn.execute(
+        "INSERT INTO engagement_comments (workspace_id, brand_id, commenter_name, comment_text, intent_label, intent_score, reply_options_json, suggested_dm_text) VALUES (?, ?, 'Lead Person', 'Interested in pricing', 'hot', 90, '[]', 'Hello there')",
+        (workspace_id, brand_id),
+    )
+    comment_id = conn.execute("SELECT id FROM engagement_comments WHERE workspace_id=? ORDER BY id DESC LIMIT 1", (workspace_id,)).fetchone()[0]
+    conn.execute(
+        "INSERT INTO lead_pipeline (workspace_id, brand_id, comment_id, lead_name, stage, intent_score) VALUES (?, ?, ?, 'Lead Person', 'new', 90)",
+        (workspace_id, brand_id, comment_id),
+    )
+    conn.execute(
+        "INSERT INTO engagement_rules (workspace_id, rule_name, rule_type, is_enabled) VALUES (?, 'Test rule', 'reply_assist', 1)",
+        (workspace_id,),
+    )
+    conn.commit()
+    lead_id = conn.execute("SELECT id FROM lead_pipeline WHERE workspace_id=? ORDER BY id DESC LIMIT 1", (workspace_id,)).fetchone()[0]
+    rule_id = conn.execute("SELECT id FROM engagement_rules WHERE workspace_id=? ORDER BY id DESC LIMIT 1", (workspace_id,)).fetchone()[0]
+    conn.close()
+
+    detail = client.get(f'/workspace/leads/{lead_id}')
+    assert detail.status_code == 200
+    assert b'Lead detail' in detail.data
+
+    note_response = client.post(f'/workspace/leads/{lead_id}/note', data={'note_text': 'Follow up on Thursday'}, follow_redirects=False)
+    assert note_response.status_code == 302
+
+    toggle_response = client.post(f'/workspace/automation-rules/{rule_id}/toggle', follow_redirects=False)
+    assert toggle_response.status_code == 302
+
+    conn = sqlite3.connect(db_path)
+    note_value = conn.execute("SELECT notes FROM lead_pipeline WHERE id=?", (lead_id,)).fetchone()[0]
+    enabled_value = conn.execute("SELECT is_enabled FROM engagement_rules WHERE id=?", (rule_id,)).fetchone()[0]
+    activity_count = conn.execute("SELECT COUNT(*) FROM lead_activity WHERE lead_id=?", (lead_id,)).fetchone()[0]
+    conn.close()
+    assert note_value == 'Follow up on Thursday'
+    assert enabled_value == 0
+    assert activity_count >= 1

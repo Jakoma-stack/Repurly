@@ -335,3 +335,113 @@ CREATE TABLE IF NOT EXISTS email_delivery_log (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_email_delivery_log_recipient ON email_delivery_log(recipient_email);
+
+
+CREATE TABLE IF NOT EXISTS engagement_comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  brand_id INTEGER,
+  platform TEXT NOT NULL DEFAULT 'linkedin',
+  commenter_name TEXT NOT NULL,
+  commenter_handle TEXT,
+  source_post_title TEXT,
+  comment_text TEXT NOT NULL,
+  sentiment TEXT NOT NULL DEFAULT 'neutral',
+  intent_label TEXT NOT NULL DEFAULT 'cold',
+  intent_score INTEGER NOT NULL DEFAULT 0,
+  reply_options_json TEXT NOT NULL DEFAULT '[]',
+  selected_reply_text TEXT,
+  suggested_dm_text TEXT,
+  reply_status TEXT NOT NULL DEFAULT 'new',
+  dm_status TEXT NOT NULL DEFAULT 'not_started',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id),
+  FOREIGN KEY(brand_id) REFERENCES brands(id)
+);
+CREATE INDEX IF NOT EXISTS idx_engagement_comments_workspace ON engagement_comments(workspace_id);
+
+CREATE TABLE IF NOT EXISTS engagement_reply_drafts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  comment_id INTEGER NOT NULL,
+  workspace_id INTEGER NOT NULL,
+  reply_text TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft',
+  approved_by_user_id INTEGER,
+  approved_at TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(comment_id) REFERENCES engagement_comments(id),
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id),
+  FOREIGN KEY(approved_by_user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS lead_pipeline (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  brand_id INTEGER,
+  comment_id INTEGER,
+  lead_name TEXT NOT NULL,
+  lead_handle TEXT,
+  stage TEXT NOT NULL DEFAULT 'new',
+  intent_score INTEGER NOT NULL DEFAULT 0,
+  owner_name TEXT,
+  next_action TEXT,
+  last_contact_at TEXT,
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id),
+  FOREIGN KEY(brand_id) REFERENCES brands(id),
+  FOREIGN KEY(comment_id) REFERENCES engagement_comments(id)
+);
+CREATE INDEX IF NOT EXISTS idx_lead_pipeline_workspace ON lead_pipeline(workspace_id);
+
+CREATE TABLE IF NOT EXISTS engagement_rules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  rule_name TEXT NOT NULL,
+  rule_type TEXT NOT NULL DEFAULT 'reply_assist',
+  trigger_condition TEXT,
+  action_summary TEXT,
+  approval_mode TEXT NOT NULL DEFAULT 'approval_required',
+  is_enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
+);
+CREATE INDEX IF NOT EXISTS idx_engagement_rules_workspace ON engagement_rules(workspace_id);
+
+
+CREATE TABLE IF NOT EXISTS engagement_integrations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  platform TEXT NOT NULL DEFAULT 'linkedin',
+  connection_label TEXT,
+  status TEXT NOT NULL DEFAULT 'demo',
+  sync_mode TEXT NOT NULL DEFAULT 'manual_review',
+  auto_reply_enabled INTEGER NOT NULL DEFAULT 0,
+  auto_dm_enabled INTEGER NOT NULL DEFAULT 0,
+  moderation_level TEXT NOT NULL DEFAULT 'balanced',
+  last_synced_at TEXT,
+  metadata_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id)
+);
+CREATE INDEX IF NOT EXISTS idx_engagement_integrations_workspace ON engagement_integrations(workspace_id);
+
+CREATE TABLE IF NOT EXISTS lead_activity (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workspace_id INTEGER NOT NULL,
+  lead_id INTEGER NOT NULL,
+  comment_id INTEGER,
+  activity_type TEXT NOT NULL DEFAULT 'note',
+  activity_text TEXT NOT NULL,
+  created_by_user_id INTEGER,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(workspace_id) REFERENCES workspaces(id),
+  FOREIGN KEY(lead_id) REFERENCES lead_pipeline(id),
+  FOREIGN KEY(comment_id) REFERENCES engagement_comments(id),
+  FOREIGN KEY(created_by_user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_lead_activity_lead ON lead_activity(lead_id);

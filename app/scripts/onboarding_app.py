@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+import requests
 from flask import Flask, Response, abort, g, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.exceptions import RequestEntityTooLarge
@@ -1112,6 +1113,9 @@ def inject_nav() -> dict[str, Any]:
             ("/workspace/brands", "Brands"),
             ("/workspace/assets", "Assets"),
             ("/workspace/content", "Content & schedule"),
+            ("/workspace/engagement", "Engagement"),
+            ("/workspace/leads", "Leads"),
+            ("/workspace/automation-rules", "Automation rules"),
             ("/workspace/analytics", "Analytics"),
             ("/workspace/help", "Help"),
             ("/workspace/settings", "Settings"),
@@ -2001,7 +2005,8 @@ def posting_format_choices() -> list[tuple[str, str]]:
     return [
         ("text", "Text only"),
         ("single_image", "Single image"),
-        ("carousel", "Carousel"),
+        ("video", "Video"),
+        ("carousel", "Carousel / multi-asset"),
     ]
 
 
@@ -2036,6 +2041,7 @@ def fetch_workspace_assets(workspace_id: int, brand_id: int | None = None) -> li
     for row in rows:
         row["asset_tags"] = [str(item).strip() for item in parse_json_array(row.get("asset_tags_json") or "[]") if str(item).strip()]
         row["thumbnail_url"] = _asset_thumbnail_url(row)
+        row["preview_is_image"] = row.get("asset_kind") == "image"
     return rows
 
 
@@ -2073,8 +2079,13 @@ def _smart_asset_suggestions(assets: list[dict[str, Any]], text_seed: str, post_
         alt_text = str(asset.get("alt_text") or "").lower()
         if alt_text and alt_text in seed:
             score += 5
-        if post_type in {"single_image", "carousel"} and asset.get("asset_kind") == "image":
-            score += 2
+        asset_kind = str(asset.get("asset_kind") or "").lower()
+        if post_type == "single_image" and asset_kind == "image":
+            score += 3
+        elif post_type == "video" and asset_kind == "video":
+            score += 3
+        elif post_type == "carousel" and asset_kind in {"image", "video"}:
+            score += 3
         ranked.append((score, asset))
     ranked.sort(key=lambda item: (-item[0], -(item[1].get("id") or 0)))
     return [item[1] for item in ranked[:6] if item[0] > 0] or [item[1] for item in ranked[:3]]
@@ -2177,6 +2188,7 @@ def _enrich_generated_post(post: dict[str, Any]) -> dict[str, Any]:
         for row in rows:
             row["asset_tags"] = [str(item).strip() for item in parse_json_array(row.get("asset_tags_json") or "[]") if str(item).strip()]
             row["thumbnail_url"] = _asset_thumbnail_url(row)
+        row["preview_is_image"] = row.get("asset_kind") == "image"
         enriched["thumbnail_assets"] = rows
     else:
         enriched["thumbnail_assets"] = []
@@ -2220,6 +2232,32 @@ def fetch_workspace_generated_post(workspace_id: int, draft_id: int) -> dict[str
     if not rows:
         return None
     return _enrich_generated_post(rows[0])
+
+
+def _validate_post_assets(post_type: str, asset_rows: list[dict[str, Any]], *, context: str = "post") -> list[str]:
+    errors: list[str] = []
+    post_type = (post_type or "text").strip().lower()
+    asset_kinds = [str(row.get("asset_kind") or "").lower() for row in asset_rows]
+    if post_type == "text":
+        if asset_rows:
+            errors.append(f"Text-only {context}s should not have assets attached. Switch the format to single image, video, or carousel.")
+        return errors
+    if post_type == "single_image":
+        if len(asset_rows) != 1 or asset_kinds != ["image"]:
+            errors.append("Single-image posts need exactly one selected image asset.")
+        return errors
+    if post_type == "video":
+        if len(asset_rows) != 1 or asset_kinds != ["video"]:
+            errors.append("Video posts need exactly one selected video asset.")
+        return errors
+    if post_type == "carousel":
+        if len(asset_rows) < 2:
+            errors.append("Carousel posts need at least two selected visual assets.")
+        elif any(kind not in {"image", "video"} for kind in asset_kinds):
+            errors.append("Carousel posts only support image or video assets.")
+        return errors
+    errors.append("Choose whether this is a text, image, video, or carousel post.")
+    return errors
 
 
 def _workspace_asset_rows_for_ids(workspace_id: int, brand_id: int, asset_ids: list[int]) -> list[dict[str, Any]]:
@@ -2630,23 +2668,18 @@ def workspace_content_save():
     errors: list[str] = []
     if not caption_text:
         errors.append("Add the post copy before saving.")
-    if post_type not in {"text", "single_image", "carousel"}:
-        errors.append("Choose whether this is a text, image or carousel post.")
+    if post_type not in {"text", "single_image", "video", "carousel"}:
+        errors.append("Choose whether this is a text, image, video or carousel post.")
     if not topic:
         topic = hook or f"{brand_dict.get('display_name') or 'Brand'} update"
-    if post_type == "text" and asset_rows:
-        errors.append("Text-only posts should not have image assets attached. Switch the format to single image or carousel.")
-    if post_type == "single_image" and len(asset_rows) != 1:
-        errors.append("Single-image posts need exactly one selected asset.")
-    if post_type == "carousel" and len(asset_rows) < 2:
-        errors.append("Carousel posts need at least two selected assets.")
+    errors.extend(_validate_post_assets(post_type, asset_rows))
     if action in {"submit_review", "schedule_publish"}:
         if not post_date:
             errors.append("Choose a schedule date before submitting this post.")
         if not post_time:
             errors.append("Choose a schedule time before submitting this post.")
-    if action == "schedule_publish" and post_type == "carousel" and not env_flag("LINKEDIN_DRY_RUN", True):
-        errors.append("Live carousel publishing is not enabled yet. Save the draft or submit it for review instead.")
+    if action == "schedule_publish" and post_type in {"carousel", "video"} and not env_flag("LINKEDIN_DRY_RUN", True):
+        errors.append("Live carousel and video publishing are not enabled yet. Save the draft or submit it for review instead.")
 
     if errors:
         draft_param = draft_id_raw if draft_id_raw.isdigit() else ""
@@ -2848,6 +2881,8 @@ def workspace_content_generate():
     frequency = (request.form.get("frequency") or "custom_count").strip().lower()
     time_mode = (request.form.get("time_mode") or "same_time").strip().lower()
     action = (request.form.get("action") or "generate_drafts").strip().lower()
+    overwrite_mode = (request.form.get("overwrite_mode") or "create_new").strip().lower()
+    target_draft_raw = (request.form.get("target_draft_id") or "").strip()
     count_raw = (request.form.get("count") or "5").strip()
     try:
         count = max(1, min(28, int(count_raw)))
@@ -2866,26 +2901,35 @@ def workspace_content_generate():
     time_mode = time_mode if time_mode in {"same_time", "staggered", "smart_random"} else "same_time"
     if delivery_mode not in {"save_draft", "submit_review", "schedule_publish"}:
         delivery_mode = "save_draft"
-    if post_type not in {"text", "single_image", "carousel"}:
+    if post_type not in {"text", "single_image", "video", "carousel"}:
         post_type = "text"
+    if overwrite_mode not in {"create_new", "overwrite_selected"}:
+        overwrite_mode = "create_new"
 
     selected_asset_ids = [int(item) for item in request.form.getlist("asset_ids") if str(item).isdigit()]
     asset_rows = _workspace_asset_rows_for_ids(int(workspace["id"]), int(brand["id"]), selected_asset_ids)
     errors: list[str] = []
-    if post_type == "text" and asset_rows:
-        errors.append("Text-only generated posts should not have assets selected.")
-    if post_type == "single_image" and len(asset_rows) != 1:
-        errors.append("Single-image generation needs exactly one selected asset.")
-    if post_type == "carousel" and len(asset_rows) < 2:
-        errors.append("Carousel generation needs at least two selected assets.")
+    errors.extend(_validate_post_assets(post_type, asset_rows, context="generated post"))
     if delivery_mode in {"submit_review", "schedule_publish"} and not post_date:
         errors.append("Choose a start date when you want generated posts added to the schedule.")
     if frequency != "custom_count" and delivery_mode == "save_draft" and not brief:
         errors.append("Add a campaign brief so the AI can vary the generated posts across the chosen cadence.")
-    if delivery_mode == "schedule_publish" and post_type == "carousel" and not env_flag("LINKEDIN_DRY_RUN", True):
-        errors.append("Live carousel publishing is not enabled yet. Save the drafts or submit them for review instead.")
+    target_draft = None
+    if overwrite_mode == "overwrite_selected":
+        if not target_draft_raw.isdigit():
+            errors.append("Choose an existing draft to overwrite, or switch overwrite off.")
+        else:
+            target_draft = fetch_workspace_generated_post(int(workspace["id"]), int(target_draft_raw))
+            if target_draft is None:
+                errors.append("The selected draft could not be found in this workspace.")
+            elif str(target_draft.get("brand_id") or "") != str(brand["id"]):
+                errors.append("You can only overwrite a draft from the same brand.")
+        count = 1
+    if delivery_mode == "schedule_publish" and post_type in {"carousel", "video"} and not env_flag("LINKEDIN_DRY_RUN", True):
+        errors.append("Live carousel and video publishing are not enabled yet. Save the drafts or submit them for review instead.")
     if errors:
-        return redirect(url_for("workspace_content_page", saved="error", error=" ".join(errors)))
+        draft_param = target_draft_raw if overwrite_mode == "overwrite_selected" and target_draft_raw.isdigit() else ""
+        return redirect(url_for("workspace_content_page", draft=draft_param, saved="error", error=" ".join(errors)))
 
     blueprints = _ai_blueprints_for_brand(brand=brand, workspace=workspace, brief=brief, count=count)
     base_date = None
@@ -2908,33 +2952,62 @@ def workspace_content_generate():
     first_draft_id: int | None = None
     with get_conn() as conn:
         for idx, blueprint in enumerate(blueprints):
-            post_id = _new_customer_post_id(str(brand.get("slug") or brand.get("display_name") or "brand"))
-            conn.execute(
-                """
-                INSERT INTO generated_posts (brand_id, post_id, platform, post_type, topic, hook, body_points_json, cta, hashtags_json, caption_text, generation_mode, approval_status, asset_ids_json, review_notes, prompt_brief, planner_label, last_saved_at)
-                VALUES (?, ?, 'linkedin', ?, ?, ?, ?, ?, ?, ?, 'ai_assisted', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                """,
-                (
-                    brand["id"],
-                    post_id,
-                    post_type,
-                    blueprint["topic"],
-                    blueprint["hook"],
-                    json.dumps(blueprint["body_points"]),
-                    blueprint["cta"],
-                    json.dumps(blueprint["hashtags"]),
-                    blueprint["caption_text"],
-                    "draft" if delivery_mode == "save_draft" else ("submitted" if delivery_mode == "submit_review" else "approved"),
-                    json.dumps(selected_asset_ids),
-                    f"AI-assisted draft generated from brand settings and brief: {brief or blueprint['label']}",
-                    brief,
-                    campaign or cadence_label,
-                ),
-            )
-            draft_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+            approval_value = "draft" if delivery_mode == "save_draft" else ("submitted" if delivery_mode == "submit_review" else "approved")
+            if overwrite_mode == "overwrite_selected" and target_draft is not None:
+                draft_id = int(target_draft["id"])
+                post_id = str(target_draft.get("post_id") or _new_customer_post_id(str(brand.get("slug") or brand.get("display_name") or "brand")))
+                conn.execute(
+                    """
+                    UPDATE generated_posts
+                    SET brand_id=?, post_type=?, topic=?, hook=?, body_points_json=?, cta=?, hashtags_json=?, caption_text=?, generation_mode='ai_assisted', approval_status=?, asset_ids_json=?, review_notes=?, prompt_brief=?, planner_label=?, last_saved_at=CURRENT_TIMESTAMP
+                    WHERE id=?
+                    """,
+                    (
+                        brand["id"],
+                        post_type,
+                        blueprint["topic"],
+                        blueprint["hook"],
+                        json.dumps(blueprint["body_points"]),
+                        blueprint["cta"],
+                        json.dumps(blueprint["hashtags"]),
+                        blueprint["caption_text"],
+                        approval_value,
+                        json.dumps(selected_asset_ids),
+                        f"AI-assisted draft overwritten from brand settings and brief: {brief or blueprint['label']}",
+                        brief,
+                        campaign or cadence_label,
+                        draft_id,
+                    ),
+                )
+                _remove_schedule_for_post(conn, post_id)
+            else:
+                post_id = _new_customer_post_id(str(brand.get("slug") or brand.get("display_name") or "brand"))
+                conn.execute(
+                    """
+                    INSERT INTO generated_posts (brand_id, post_id, platform, post_type, topic, hook, body_points_json, cta, hashtags_json, caption_text, generation_mode, approval_status, asset_ids_json, review_notes, prompt_brief, planner_label, last_saved_at)
+                    VALUES (?, ?, 'linkedin', ?, ?, ?, ?, ?, ?, ?, 'ai_assisted', ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    """,
+                    (
+                        brand["id"],
+                        post_id,
+                        post_type,
+                        blueprint["topic"],
+                        blueprint["hook"],
+                        json.dumps(blueprint["body_points"]),
+                        blueprint["cta"],
+                        json.dumps(blueprint["hashtags"]),
+                        blueprint["caption_text"],
+                        approval_value,
+                        json.dumps(selected_asset_ids),
+                        f"AI-assisted draft generated from brand settings and brief: {brief or blueprint['label']}",
+                        brief,
+                        campaign or cadence_label,
+                    ),
+                )
+                draft_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+                created += 1
             if first_draft_id is None:
                 first_draft_id = draft_id
-            created += 1
             draft = fetch_workspace_generated_post(int(workspace["id"]), draft_id)
             if draft is None:
                 continue
@@ -2959,19 +3032,30 @@ def workspace_content_generate():
                     scheduled += 1
         conn.commit()
 
+    result_count = 1 if overwrite_mode == "overwrite_selected" and target_draft is not None else created
+    result_verb = "Overwrote" if overwrite_mode == "overwrite_selected" and target_draft is not None else "Generated"
     record_audit_event(
         "workspace_posts_generated",
         actor=(customer.get("email") or "workspace_admin"),
-        message=f"Generated {created} AI-assisted draft post(s) for {(brand.get('display_name') or brand.get('slug') or 'brand')}.",
-        payload={"workspace_id": workspace["id"], "brand_id": brand["id"], "count": created, "brief": brief, "delivery_mode": delivery_mode, "action": action, "post_type": post_type, "frequency": frequency, "time_mode": time_mode},
+        message=f"{result_verb} {result_count} AI-assisted draft post(s) for {(brand.get('display_name') or brand.get('slug') or 'brand')}.",
+        payload={"workspace_id": workspace["id"], "brand_id": brand["id"], "count": result_count, "brief": brief, "delivery_mode": delivery_mode, "action": action, "post_type": post_type, "frequency": frequency, "time_mode": time_mode, "overwrite_mode": overwrite_mode, "target_draft_id": int(target_draft_raw) if target_draft_raw.isdigit() else None},
     )
     if scheduled:
-        message = f"Generated and scheduled {scheduled} post(s) using the {cadence_label} plan. Open the queue below to review them."
+        if overwrite_mode == "overwrite_selected" and target_draft is not None:
+            message = f"AI regenerated the selected draft, overwrote its existing content, and scheduled it using the {cadence_label} plan."
+        else:
+            message = f"Generated and scheduled {scheduled} post(s) using the {cadence_label} plan. Open the queue below to review them."
         return redirect(url_for("workspace_content_page", draft=first_draft_id, saved="scheduled", message=message))
     if review_only:
-        message = f"Generated {review_only} AI-assisted post(s) and sent them for review using the {cadence_label} plan."
+        if overwrite_mode == "overwrite_selected" and target_draft is not None:
+            message = f"AI regenerated the selected draft, overwrote its existing content, and sent it for review using the {cadence_label} plan."
+        else:
+            message = f"Generated {review_only} AI-assisted post(s) and sent them for review using the {cadence_label} plan."
         return redirect(url_for("workspace_content_page", draft=first_draft_id, saved="submitted", message=message))
-    message = f"Generated {created} AI-assisted draft post(s) using the {cadence_label} plan. Open a draft below and overwrite any copy you want to change."
+    if overwrite_mode == "overwrite_selected" and target_draft is not None:
+        message = "AI regenerated the selected draft and overwrote its existing content. Review and refine it below."
+    else:
+        message = f"Generated {created} AI-assisted draft post(s) using the {cadence_label} plan. Open a draft below and overwrite any copy you want to change."
     return redirect(url_for("workspace_content_page", draft=first_draft_id, saved="generated", message=message))
 
 
@@ -3170,6 +3254,687 @@ def workspace_content_bulk_reschedule():
         conn.commit()
     record_audit_event("workspace_posts_bulk_rescheduled", actor=(customer.get("email") or "workspace_admin"), message=f"Bulk rescheduled {updated} post(s).", payload={"workspace_id": workspace["id"], "draft_ids": draft_ids, "frequency": frequency, "time_mode": time_mode})
     return redirect(url_for("workspace_content_page", saved="scheduled", message=f"Bulk rescheduled {updated} post(s)."))
+
+
+
+
+def _parse_json_list(value: Any) -> list[Any]:
+    if isinstance(value, list):
+        return value
+    raw = (value or "").strip() if isinstance(value, str) else value
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, list) else []
+    except Exception:
+        return []
+
+
+def workspace_engagement_summary(workspace_id: int) -> dict[str, Any]:
+    comments = fetch_rows(
+        """
+        SELECT c.*, b.display_name AS brand_name
+        FROM engagement_comments c
+        LEFT JOIN brands b ON b.id = c.brand_id
+        WHERE c.workspace_id=?
+        ORDER BY
+          CASE c.intent_label WHEN 'hot' THEN 0 WHEN 'warm' THEN 1 WHEN 'nurture' THEN 2 ELSE 3 END,
+          c.created_at DESC,
+          c.id DESC
+        """,
+        (workspace_id,),
+    )
+    leads = fetch_rows(
+        """
+        SELECT l.*, c.commenter_name, c.comment_text, b.display_name AS brand_name
+        FROM lead_pipeline l
+        LEFT JOIN engagement_comments c ON c.id = l.comment_id
+        LEFT JOIN brands b ON b.id = l.brand_id
+        WHERE l.workspace_id=?
+        ORDER BY
+          CASE l.stage WHEN 'qualified' THEN 0 WHEN 'contacted' THEN 1 WHEN 'new' THEN 2 WHEN 'nurture' THEN 3 ELSE 4 END,
+          l.intent_score DESC,
+          l.updated_at DESC,
+          l.id DESC
+        """,
+        (workspace_id,),
+    )
+    rules = fetch_rows(
+        "SELECT * FROM engagement_rules WHERE workspace_id=? ORDER BY id ASC",
+        (workspace_id,),
+    )
+    comments_total = len(comments)
+    pending_replies = sum(1 for item in comments if (item.get('reply_status') or '').lower() != 'sent')
+    hot_leads = sum(1 for item in leads if (item.get('stage') or '').lower() in {'new', 'contacted', 'qualified'} and int(item.get('intent_score') or 0) >= 70)
+    reply_ready = []
+    for item in comments:
+        options = _parse_json_list(item.get('reply_options_json'))
+        if options:
+            enriched = dict(item)
+            enriched['reply_options'] = options
+            reply_ready.append(enriched)
+    return {
+        'comments': comments,
+        'leads': leads,
+        'rules': rules,
+        'metrics': {
+            'comments_total': comments_total,
+            'pending_replies': pending_replies,
+            'hot_leads': hot_leads,
+            'active_rules': sum(1 for item in rules if int(item.get('is_enabled') or 0) == 1),
+        },
+        'reply_ready': reply_ready[:8],
+    }
+
+
+def _utcnow_z() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace('+00:00', 'Z')
+
+
+def _first_name(value: str) -> str:
+    cleaned = (value or '').strip()
+    return cleaned.split()[0] if cleaned else 'there'
+
+
+def ensure_workspace_engagement_setup(workspace_id: int) -> None:
+    existing = fetch_rows("SELECT id FROM engagement_integrations WHERE workspace_id=? LIMIT 1", (workspace_id,))
+    if existing:
+        return
+    now = _utcnow_z()
+    with get_conn() as conn:
+        conn.execute(
+            """
+            INSERT INTO engagement_integrations (workspace_id, platform, connection_label, status, sync_mode, auto_reply_enabled, auto_dm_enabled, moderation_level, last_synced_at, metadata_json, created_at, updated_at)
+            VALUES (?, 'linkedin', 'Primary founder account', 'demo_ready', 'manual_review', 0, 0, 'balanced', ?, ?, ?, ?)
+            """,
+            (workspace_id, now, json.dumps({'source': 'seed', 'webhook_ready': True, 'dm_assist_ready': True}), now, now),
+        )
+        conn.commit()
+
+
+def _score_comment_intent(comment_text: str) -> tuple[str, int, str]:
+    text = (comment_text or '').strip().lower()
+    if not text:
+        return 'cold', 10, 'neutral'
+    hot_tokens = ['price', 'pricing', 'demo', 'interested', 'dm me', 'send details', 'how much', 'book', 'trial']
+    warm_tokens = ['workflow', 'tool', 'stack', 'reviewing', 'quarter', 'curious', 'plug into', 'team']
+    spam_tokens = ['promo', 'bitcoin', 'agency for you', 'guaranteed followers']
+    hot_hits = sum(1 for token in hot_tokens if token in text)
+    warm_hits = sum(1 for token in warm_tokens if token in text)
+    spam_hits = sum(1 for token in spam_tokens if token in text)
+    sentiment = 'positive' if any(token in text for token in ['love', 'great', 'useful', 'exactly', 'interested']) else 'neutral'
+    if spam_hits:
+        return 'cold', 5, 'spam'
+    if hot_hits:
+        return 'hot', min(96, 74 + hot_hits * 8 + warm_hits * 2), sentiment
+    if warm_hits:
+        return 'warm', min(72, 46 + warm_hits * 7), sentiment
+    return 'nurture', 34 if '?' in text else 22, sentiment
+
+
+def _generate_reply_options_with_ai(*, commenter_name: str, comment_text: str, brand_name: str, tone: str, primary_cta: str) -> list[str]:
+    if not OPENAI_API_KEY:
+        return []
+    payload = {
+        'model': 'gpt-4.1-mini',
+        'input': [
+            {
+                'role': 'system',
+                'content': [
+                    {'type': 'input_text', 'text': 'You write concise, professional social media replies for SaaS founders. Return JSON with key options containing exactly 3 safe reply strings under 220 characters each.'}
+                ],
+            },
+            {
+                'role': 'user',
+                'content': [
+                    {'type': 'input_text', 'text': f'Brand: {brand_name}\nTone: {tone or "clear and helpful"}\nPrimary CTA: {primary_cta or "book a demo"}\nCommenter: {commenter_name}\nComment: {comment_text}'}
+                ],
+            },
+        ],
+        'text': {'format': {'type': 'json_schema', 'name': 'reply_options', 'schema': {'type': 'object', 'properties': {'options': {'type': 'array', 'items': {'type': 'string'}, 'minItems': 3, 'maxItems': 3}}, 'required': ['options'], 'additionalProperties': False}}},
+    }
+    try:
+        response = requests.post(
+            'https://api.openai.com/v1/responses',
+            headers={'Authorization': f'Bearer {OPENAI_API_KEY}', 'Content-Type': 'application/json'},
+            data=json.dumps(payload),
+            timeout=12,
+        )
+        response.raise_for_status()
+        data = response.json()
+        raw_text = data.get('output_text') or ''
+        parsed = json.loads(raw_text) if raw_text else {}
+        options = parsed.get('options') if isinstance(parsed, dict) else []
+        return [str(item).strip() for item in options if str(item).strip()][:3]
+    except Exception:
+        return []
+
+
+def _build_reply_options(*, commenter_name: str, comment_text: str, brand_name: str, tone: str, primary_cta: str, intent_label: str) -> list[str]:
+    ai_options = _generate_reply_options_with_ai(
+        commenter_name=commenter_name,
+        comment_text=comment_text,
+        brand_name=brand_name,
+        tone=tone,
+        primary_cta=primary_cta,
+    )
+    if ai_options:
+        return ai_options
+    first_name = _first_name(commenter_name)
+    cta = primary_cta or 'book a demo'
+    if intent_label == 'hot':
+        return [
+            f"Thanks {first_name} — yes, I can send details and pricing. If useful, the fastest next step is to {cta.lower()}.",
+            f"Appreciate it {first_name}. Happy to send the short version with workflow, pricing bands, and what setup looks like.",
+            f"Absolutely — I can outline how {brand_name} handles content, engagement, and lead routing without adding more admin overhead.",
+        ]
+    if intent_label == 'warm':
+        return [
+            f"Thanks {first_name} — good question. {brand_name} is designed to help content teams and founders keep publishing and follow-up in one place.",
+            f"Appreciate it {first_name}. We can share the workflow we use and where the engagement inbox fits if that helps.",
+            f"Helpful prompt, thanks. We usually recommend starting with reply assist first, then adding lead routing once the team is ready.",
+        ]
+    return [
+        f"Thanks {first_name} — appreciate you reading. Happy to keep sharing what is working for {brand_name}.",
+        f"Appreciate it {first_name}. We are building this to keep content and follow-up cleaner for lean teams.",
+        f"Thanks {first_name}. We will keep posting more of the operator playbook behind this workflow.",
+    ]
+
+
+def _build_dm_draft(*, commenter_name: str, source_post_title: str, brand_name: str, intent_label: str) -> str:
+    first_name = _first_name(commenter_name)
+    if intent_label == 'hot':
+        return f"Hi {first_name}, thanks for commenting on our post about {source_post_title}. I can send a concise overview of the {brand_name} workflow, pricing, and what rollout usually looks like. Want the quick summary or a demo outline?"
+    if intent_label == 'warm':
+        return f"Hi {first_name}, thanks for the comment on {source_post_title}. Sharing a quick note in case it helps: we usually start teams on reply assist and lead scoring, then layer in DM follow-up once the workflow is stable."
+    return f"Hi {first_name}, thanks again for engaging with our post on {source_post_title}. Happy to send over more examples when useful."
+
+
+def _log_lead_activity(conn: sqlite3.Connection, *, workspace_id: int, lead_id: int, comment_id: int | None, activity_type: str, activity_text: str, created_by_user_id: int | None = None) -> None:
+    conn.execute(
+        """
+        INSERT INTO lead_activity (workspace_id, lead_id, comment_id, activity_type, activity_text, created_by_user_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """,
+        (workspace_id, lead_id, comment_id, activity_type, activity_text, created_by_user_id, _utcnow_z()),
+    )
+
+
+def ensure_workspace_growth_seed_data(workspace_id: int) -> None:
+    ensure_workspace_engagement_setup(workspace_id)
+    existing = fetch_rows("SELECT id FROM engagement_comments WHERE workspace_id=? LIMIT 1", (workspace_id,))
+    if existing:
+        return
+    brands = fetch_rows("SELECT id, display_name, primary_cta, tone FROM brands WHERE workspace_id=? ORDER BY id ASC", (workspace_id,))
+    if not brands:
+        return
+    now = _utcnow_z()
+    sample_comments = [
+        {
+            'commenter_name': 'Olivia Grant',
+            'commenter_handle': '@oliviagrantops',
+            'platform': 'linkedin',
+            'source_post_title': 'Operational content workflows for founders',
+            'comment_text': 'This is exactly what we need. How much is it and can you send details?',
+            'lead_stage': 'new',
+            'dm_status': 'ready',
+        },
+        {
+            'commenter_name': 'Marcus Bell',
+            'commenter_handle': '@marcusbell',
+            'platform': 'linkedin',
+            'source_post_title': 'How to repurpose a single founder post',
+            'comment_text': 'Interested. Happy for you to DM me the workflow you use.',
+            'lead_stage': 'contacted',
+            'dm_status': 'drafted',
+        },
+        {
+            'commenter_name': 'Priya Shah',
+            'commenter_handle': '@priyashahgrowth',
+            'platform': 'linkedin',
+            'source_post_title': 'AI assisted content ops stack',
+            'comment_text': 'Love this. We are reviewing tools next quarter so keep me posted.',
+            'lead_stage': 'nurture',
+            'dm_status': 'not_started',
+        },
+        {
+            'commenter_name': 'Dan Morris',
+            'commenter_handle': '@danmorrisrevops',
+            'platform': 'linkedin',
+            'source_post_title': 'From comments to pipeline',
+            'comment_text': 'Can this plug into our outbound workflow or is it only for content teams?',
+            'lead_stage': 'new',
+            'dm_status': 'ready',
+        },
+    ]
+    with get_conn() as conn:
+        for index, comment in enumerate(sample_comments):
+            brand = brands[index % len(brands)]
+            intent_label, intent_score, sentiment = _score_comment_intent(comment['comment_text'])
+            reply_options = _build_reply_options(
+                commenter_name=comment['commenter_name'],
+                comment_text=comment['comment_text'],
+                brand_name=str(brand['display_name']),
+                tone=str(brand.get('tone') or 'clear and commercial'),
+                primary_cta=str(brand.get('primary_cta') or 'Book a demo'),
+                intent_label=intent_label,
+            )
+            dm_draft = _build_dm_draft(
+                commenter_name=comment['commenter_name'],
+                source_post_title=comment['source_post_title'],
+                brand_name=str(brand['display_name']),
+                intent_label=intent_label,
+            )
+            conn.execute(
+                """
+                INSERT INTO engagement_comments (workspace_id, brand_id, platform, commenter_name, commenter_handle, source_post_title, comment_text, sentiment, intent_label, intent_score, reply_options_json, suggested_dm_text, reply_status, dm_status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', ?, ?, ?)
+                """,
+                (
+                    workspace_id, int(brand['id']), comment['platform'], comment['commenter_name'], comment['commenter_handle'],
+                    comment['source_post_title'], comment['comment_text'], sentiment, intent_label, intent_score, json.dumps(reply_options), dm_draft,
+                    comment['dm_status'], now, now,
+                ),
+            )
+            comment_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+            conn.execute(
+                """
+                INSERT INTO lead_pipeline (workspace_id, brand_id, comment_id, lead_name, lead_handle, stage, intent_score, owner_name, next_action, last_contact_at, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    workspace_id, int(brand['id']), comment_id, comment['commenter_name'], comment['commenter_handle'], comment['lead_stage'], intent_score,
+                    'Founder queue', 'Review reply and send DM', now if comment['lead_stage'] == 'contacted' else '', 'Seeded demo lead for the engagement workspace.', now, now,
+                ),
+            )
+            lead_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+            _log_lead_activity(conn, workspace_id=workspace_id, lead_id=lead_id, comment_id=comment_id, activity_type='system', activity_text='Lead created from engagement signal.')
+        conn.execute(
+            """
+            INSERT INTO engagement_rules (workspace_id, rule_name, rule_type, trigger_condition, action_summary, approval_mode, is_enabled, created_at, updated_at)
+            VALUES
+            (?, 'High-intent comment routing', 'lead_scoring', 'intent_score >= 80 OR comment contains price, demo, interested, DM me', 'Route to hot lead queue and prepare DM draft', 'approval_required', 1, ?, ?),
+            (?, 'Warm comment nurture', 'reply_assist', 'intent_score between 50 and 79', 'Generate three reply options and schedule follow-up reminder', 'approval_required', 1, ?, ?),
+            (?, 'Low-value comment filter', 'moderation', 'sentiment = spam OR intent_score < 20', 'Hide from lead inbox and mark as filtered', 'automatic', 1, ?, ?)
+            """,
+            (workspace_id, now, now, workspace_id, now, now, workspace_id, now, now),
+        )
+        conn.commit()
+
+
+def sync_workspace_demo_engagement(workspace_id: int) -> int:
+    ensure_workspace_growth_seed_data(workspace_id)
+    brands = fetch_rows("SELECT id, display_name, primary_cta, tone FROM brands WHERE workspace_id=? ORDER BY id ASC", (workspace_id,))
+    if not brands:
+        return 0
+    today_key = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    existing = fetch_rows("SELECT id FROM engagement_comments WHERE workspace_id=? AND source_post_title LIKE ?", (workspace_id, f'%{today_key}%'))
+    if existing:
+        with get_conn() as conn:
+            conn.execute("UPDATE engagement_integrations SET last_synced_at=?, updated_at=? WHERE workspace_id=?", (_utcnow_z(), _utcnow_z(), workspace_id))
+            conn.commit()
+        return 0
+    inbound = [
+        ('Ava Collins', '@avacollins', f'Founder pipeline ideas {today_key}', 'Curious how this handles approval before any reply goes out.'),
+        ('Noah Reed', '@noahreedgrowth', f'Lead capture workflow {today_key}', 'This looks useful. Do you support agencies managing multiple brands?'),
+    ]
+    inserted = 0
+    with get_conn() as conn:
+        for index, (name, handle, title, text_value) in enumerate(inbound):
+            brand = brands[index % len(brands)]
+            intent_label, intent_score, sentiment = _score_comment_intent(text_value)
+            reply_options = _build_reply_options(
+                commenter_name=name,
+                comment_text=text_value,
+                brand_name=str(brand['display_name']),
+                tone=str(brand.get('tone') or 'clear and commercial'),
+                primary_cta=str(brand.get('primary_cta') or 'Book a demo'),
+                intent_label=intent_label,
+            )
+            dm_draft = _build_dm_draft(commenter_name=name, source_post_title=title, brand_name=str(brand['display_name']), intent_label=intent_label)
+            now = _utcnow_z()
+            conn.execute(
+                """
+                INSERT INTO engagement_comments (workspace_id, brand_id, platform, commenter_name, commenter_handle, source_post_title, comment_text, sentiment, intent_label, intent_score, reply_options_json, suggested_dm_text, reply_status, dm_status, created_at, updated_at)
+                VALUES (?, ?, 'linkedin', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'suggested', 'ready', ?, ?)
+                """,
+                (workspace_id, int(brand['id']), name, handle, title, text_value, sentiment, intent_label, intent_score, json.dumps(reply_options), dm_draft, now, now),
+            )
+            comment_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+            conn.execute(
+                """
+                INSERT INTO lead_pipeline (workspace_id, brand_id, comment_id, lead_name, lead_handle, stage, intent_score, owner_name, next_action, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Founder queue', 'Review fresh comment and approve best reply', 'Synced from engagement connector.', ?, ?)
+                """,
+                (workspace_id, int(brand['id']), comment_id, name, handle, 'new' if intent_score >= 55 else 'nurture', intent_score, now, now),
+            )
+            lead_id = int(conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+            _log_lead_activity(conn, workspace_id=workspace_id, lead_id=lead_id, comment_id=comment_id, activity_type='sync', activity_text='Imported from engagement sync.')
+            inserted += 1
+        conn.execute("UPDATE engagement_integrations SET status='connected', last_synced_at=?, updated_at=? WHERE workspace_id=?", (_utcnow_z(), _utcnow_z(), workspace_id))
+        conn.commit()
+    return inserted
+
+
+def workspace_engagement_summary(workspace_id: int) -> dict[str, Any]:
+    comments = fetch_rows(
+        """
+        SELECT c.*, b.display_name AS brand_name
+        FROM engagement_comments c
+        LEFT JOIN brands b ON b.id = c.brand_id
+        WHERE c.workspace_id=?
+        ORDER BY
+          CASE c.intent_label WHEN 'hot' THEN 0 WHEN 'warm' THEN 1 WHEN 'nurture' THEN 2 ELSE 3 END,
+          c.created_at DESC,
+          c.id DESC
+        """,
+        (workspace_id,),
+    )
+    leads = fetch_rows(
+        """
+        SELECT l.*, c.commenter_name, c.comment_text, c.suggested_dm_text, c.reply_status, b.display_name AS brand_name
+        FROM lead_pipeline l
+        LEFT JOIN engagement_comments c ON c.id = l.comment_id
+        LEFT JOIN brands b ON b.id = l.brand_id
+        WHERE l.workspace_id=?
+        ORDER BY
+          CASE l.stage WHEN 'qualified' THEN 0 WHEN 'contacted' THEN 1 WHEN 'new' THEN 2 WHEN 'nurture' THEN 3 ELSE 4 END,
+          l.intent_score DESC,
+          l.updated_at DESC,
+          l.id DESC
+        """,
+        (workspace_id,),
+    )
+    rules = fetch_rows("SELECT * FROM engagement_rules WHERE workspace_id=? ORDER BY id ASC", (workspace_id,))
+    integrations = fetch_rows("SELECT * FROM engagement_integrations WHERE workspace_id=? ORDER BY id ASC", (workspace_id,))
+    recent_activity = fetch_rows(
+        """
+        SELECT a.*, l.lead_name
+        FROM lead_activity a
+        LEFT JOIN lead_pipeline l ON l.id = a.lead_id
+        WHERE a.workspace_id=?
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT 8
+        """,
+        (workspace_id,),
+    )
+    comments_total = len(comments)
+    pending_replies = sum(1 for item in comments if (item.get('reply_status') or '').lower() != 'sent')
+    hot_leads = sum(1 for item in leads if (item.get('stage') or '').lower() in {'new', 'contacted', 'qualified'} and int(item.get('intent_score') or 0) >= 70)
+    qualified_leads = sum(1 for item in leads if (item.get('stage') or '').lower() == 'qualified')
+    reply_ready = []
+    for item in comments:
+        options = _parse_json_list(item.get('reply_options_json'))
+        enriched = dict(item)
+        enriched['reply_options'] = options
+        reply_ready.append(enriched)
+    return {
+        'comments': comments,
+        'leads': leads,
+        'rules': rules,
+        'integrations': integrations,
+        'recent_activity': recent_activity,
+        'metrics': {
+            'comments_total': comments_total,
+            'pending_replies': pending_replies,
+            'hot_leads': hot_leads,
+            'qualified_leads': qualified_leads,
+            'active_rules': sum(1 for item in rules if int(item.get('is_enabled') or 0) == 1),
+            'connected_channels': sum(1 for item in integrations if (item.get('status') or '').lower() in {'connected', 'demo_ready'}),
+        },
+        'reply_ready': reply_ready[:8],
+    }
+
+
+def fetch_workspace_lead_detail(workspace_id: int, lead_id: int) -> dict[str, Any] | None:
+    rows = fetch_rows(
+        """
+        SELECT l.*, c.comment_text, c.commenter_name, c.commenter_handle, c.source_post_title, c.selected_reply_text, c.suggested_dm_text, c.reply_status, c.dm_status, b.display_name AS brand_name
+        FROM lead_pipeline l
+        LEFT JOIN engagement_comments c ON c.id = l.comment_id
+        LEFT JOIN brands b ON b.id = l.brand_id
+        WHERE l.workspace_id=? AND l.id=?
+        LIMIT 1
+        """,
+        (workspace_id, lead_id),
+    )
+    return rows[0] if rows else None
+
+
+@app.get("/workspace/engagement")
+@customer_login_required
+def workspace_engagement():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    ensure_workspace_growth_seed_data(int(workspace['id']))
+    summary = workspace_engagement_summary(int(workspace['id']))
+    filter_value = (request.args.get('filter') or '').strip().lower()
+    comments = summary['comments']
+    if filter_value in {'hot', 'warm', 'nurture', 'cold'}:
+        comments = [item for item in comments if (item.get('intent_label') or '').lower() == filter_value]
+    return render_template(
+        'customer/engagement.html',
+        workspace=workspace,
+        summary=summary,
+        comments=comments,
+        metrics=summary['metrics'],
+        active_filter=filter_value,
+        integrations=summary['integrations'],
+        recent_activity=summary['recent_activity'],
+        saved=(request.args.get('saved') or '').strip(),
+        message=(request.args.get('message') or '').strip(),
+    )
+
+
+@app.post("/workspace/engagement/sync")
+@customer_login_required
+def workspace_engagement_sync():
+    workspace = current_workspace()
+    if workspace is None:
+        abort(404)
+    inserted = sync_workspace_demo_engagement(int(workspace['id']))
+    message = f'Synced {inserted} new engagement item(s).' if inserted else 'Sync completed. No new engagement items were found.'
+    return redirect(url_for('workspace_engagement', saved='synced', message=message))
+
+
+@app.post("/workspace/engagement/<int:comment_id>/generate")
+@customer_login_required
+def workspace_generate_engagement_reply(comment_id: int):
+    workspace = current_workspace()
+    if workspace is None:
+        abort(404)
+    with get_conn() as conn:
+        row = conn.execute(
+            """
+            SELECT c.*, b.display_name AS brand_name, b.tone, b.primary_cta
+            FROM engagement_comments c
+            LEFT JOIN brands b ON b.id = c.brand_id
+            WHERE c.id=? AND c.workspace_id=?
+            """,
+            (comment_id, int(workspace['id'])),
+        ).fetchone()
+        if row is None:
+            abort(404)
+        item = dict(row)
+        options = _build_reply_options(
+            commenter_name=str(item.get('commenter_name') or ''),
+            comment_text=str(item.get('comment_text') or ''),
+            brand_name=str(item.get('brand_name') or workspace.get('display_name') or 'Repurly'),
+            tone=str(item.get('tone') or 'clear and commercial'),
+            primary_cta=str(item.get('primary_cta') or 'Book a demo'),
+            intent_label=str(item.get('intent_label') or 'warm'),
+        )
+        dm_draft = _build_dm_draft(
+            commenter_name=str(item.get('commenter_name') or ''),
+            source_post_title=str(item.get('source_post_title') or 'your recent post'),
+            brand_name=str(item.get('brand_name') or workspace.get('display_name') or 'Repurly'),
+            intent_label=str(item.get('intent_label') or 'warm'),
+        )
+        conn.execute("UPDATE engagement_comments SET reply_options_json=?, suggested_dm_text=?, reply_status='suggested', updated_at=? WHERE id=?", (json.dumps(options), dm_draft, _utcnow_z(), comment_id))
+        conn.commit()
+    return redirect(url_for('workspace_engagement', saved='generated'))
+
+
+@app.post("/workspace/engagement/<int:comment_id>/reply")
+@customer_login_required
+def workspace_send_engagement_reply(comment_id: int):
+    workspace = current_workspace()
+    customer = current_customer()
+    if workspace is None:
+        abort(404)
+    reply_text = (request.form.get('reply_text') or '').strip()
+    if not reply_text:
+        return redirect(url_for('workspace_engagement', saved='error'))
+    with get_conn() as conn:
+        comment = conn.execute('SELECT * FROM engagement_comments WHERE id=? AND workspace_id=?', (comment_id, int(workspace['id']))).fetchone()
+        if comment is None:
+            abort(404)
+        now = _utcnow_z()
+        conn.execute(
+            "INSERT INTO engagement_reply_drafts (comment_id, workspace_id, reply_text, status, approved_by_user_id, approved_at, created_at) VALUES (?, ?, ?, 'sent', ?, ?, ?)",
+            (comment_id, int(workspace['id']), reply_text, int(customer['id']), now, now),
+        )
+        conn.execute(
+            "UPDATE engagement_comments SET selected_reply_text=?, reply_status='sent', updated_at=? WHERE id=?",
+            (reply_text, now, comment_id),
+        )
+        lead_row = conn.execute("SELECT id, stage FROM lead_pipeline WHERE comment_id=? AND workspace_id=?", (comment_id, int(workspace['id']))).fetchone()
+        if lead_row is not None:
+            conn.execute(
+                "UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action='Monitor reply and send DM', updated_at=? WHERE comment_id=? AND workspace_id=?",
+                (now, comment_id, int(workspace['id'])),
+            )
+            _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=int(lead_row['id']), comment_id=comment_id, activity_type='reply_sent', activity_text='Approved reply and marked as sent.', created_by_user_id=int(customer['id']))
+        conn.commit()
+    record_audit_event('engagement_reply_sent', actor=(customer.get('email') or 'workspace_user'), message='Marked engagement reply as sent.', payload={'workspace_id': workspace['id'], 'comment_id': comment_id})
+    return redirect(url_for('workspace_engagement', saved='reply_sent'))
+
+
+@app.post("/workspace/engagement/<int:comment_id>/dm")
+@customer_login_required
+def workspace_send_engagement_dm(comment_id: int):
+    workspace = current_workspace()
+    customer = current_customer()
+    if workspace is None:
+        abort(404)
+    dm_text = (request.form.get('dm_text') or '').strip()
+    if not dm_text:
+        return redirect(url_for('workspace_engagement', saved='error'))
+    with get_conn() as conn:
+        comment = conn.execute('SELECT * FROM engagement_comments WHERE id=? AND workspace_id=?', (comment_id, int(workspace['id']))).fetchone()
+        if comment is None:
+            abort(404)
+        now = _utcnow_z()
+        conn.execute("UPDATE engagement_comments SET suggested_dm_text=?, dm_status='drafted', updated_at=? WHERE id=?", (dm_text, now, comment_id))
+        lead_row = conn.execute("SELECT id FROM lead_pipeline WHERE comment_id=? AND workspace_id=?", (comment_id, int(workspace['id']))).fetchone()
+        if lead_row is not None:
+            conn.execute("UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action='Send DM and track response', last_contact_at=?, updated_at=? WHERE id=?", (now, now, int(lead_row['id'])))
+            _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=int(lead_row['id']), comment_id=comment_id, activity_type='dm_drafted', activity_text='Prepared DM follow-up draft.', created_by_user_id=int(customer['id']))
+        conn.commit()
+    return redirect(url_for('workspace_engagement', saved='dm_ready'))
+
+
+@app.get("/workspace/leads")
+@customer_login_required
+def workspace_leads():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    ensure_workspace_growth_seed_data(int(workspace['id']))
+    summary = workspace_engagement_summary(int(workspace['id']))
+    stage = (request.args.get('stage') or '').strip().lower()
+    leads = summary['leads']
+    if stage:
+        leads = [item for item in leads if (item.get('stage') or '').lower() == stage]
+    return render_template('customer/leads.html', workspace=workspace, leads=leads, metrics=summary['metrics'], active_stage=stage, saved=(request.args.get('saved') or '').strip())
+
+
+@app.get("/workspace/leads/<int:lead_id>")
+@customer_login_required
+def workspace_lead_detail(lead_id: int):
+    workspace = current_workspace()
+    if workspace is None:
+        abort(404)
+    ensure_workspace_growth_seed_data(int(workspace['id']))
+    lead = fetch_workspace_lead_detail(int(workspace['id']), lead_id)
+    if lead is None:
+        abort(404)
+    activity = fetch_rows("SELECT * FROM lead_activity WHERE workspace_id=? AND lead_id=? ORDER BY created_at DESC, id DESC", (int(workspace['id']), lead_id))
+    return render_template('customer/lead_detail.html', workspace=workspace, lead=lead, activity=activity, saved=(request.args.get('saved') or '').strip())
+
+
+@app.post("/workspace/leads/<int:lead_id>/stage")
+@customer_login_required
+def workspace_lead_stage(lead_id: int):
+    workspace = current_workspace()
+    customer = current_customer()
+    if workspace is None:
+        abort(404)
+    stage = (request.form.get('stage') or 'new').strip().lower()
+    if stage not in {'new', 'contacted', 'qualified', 'nurture', 'closed'}:
+        stage = 'new'
+    now = _utcnow_z()
+    with get_conn() as conn:
+        lead = conn.execute("SELECT id, comment_id FROM lead_pipeline WHERE id=? AND workspace_id=?", (lead_id, int(workspace['id']))).fetchone()
+        if lead is None:
+            abort(404)
+        conn.execute(
+            "UPDATE lead_pipeline SET stage=?, updated_at=?, next_action=? WHERE id=? AND workspace_id=?",
+            (stage, now, 'Review conversation history' if stage in {'contacted', 'qualified'} else 'Await next signal', lead_id, int(workspace['id'])),
+        )
+        _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=lead_id, comment_id=int(lead['comment_id']) if lead['comment_id'] else None, activity_type='stage_change', activity_text=f'Lead stage updated to {stage}.', created_by_user_id=int(customer['id']))
+        conn.commit()
+    record_audit_event('lead_stage_updated', actor=(customer.get('email') or 'workspace_user'), message=f'Updated lead stage to {stage}.', payload={'workspace_id': workspace['id'], 'lead_id': lead_id})
+    return redirect(url_for('workspace_leads', saved='updated'))
+
+
+@app.post("/workspace/leads/<int:lead_id>/note")
+@customer_login_required
+def workspace_lead_note(lead_id: int):
+    workspace = current_workspace()
+    customer = current_customer()
+    if workspace is None:
+        abort(404)
+    note_text = (request.form.get('note_text') or '').strip()
+    if not note_text:
+        return redirect(url_for('workspace_lead_detail', lead_id=lead_id, saved='error'))
+    with get_conn() as conn:
+        lead = conn.execute("SELECT id, comment_id FROM lead_pipeline WHERE id=? AND workspace_id=?", (lead_id, int(workspace['id']))).fetchone()
+        if lead is None:
+            abort(404)
+        conn.execute("UPDATE lead_pipeline SET notes=?, updated_at=? WHERE id=?", (note_text, _utcnow_z(), lead_id))
+        _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=lead_id, comment_id=int(lead['comment_id']) if lead['comment_id'] else None, activity_type='note', activity_text=note_text, created_by_user_id=int(customer['id']))
+        conn.commit()
+    return redirect(url_for('workspace_lead_detail', lead_id=lead_id, saved='noted'))
+
+
+@app.get("/workspace/automation-rules")
+@customer_login_required
+def workspace_automation_rules():
+    workspace = current_workspace()
+    if workspace is None:
+        return redirect(url_for("customer_dashboard"))
+    ensure_workspace_growth_seed_data(int(workspace['id']))
+    summary = workspace_engagement_summary(int(workspace['id']))
+    return render_template('customer/automation_rules.html', workspace=workspace, rules=summary['rules'], metrics=summary['metrics'], integrations=summary['integrations'], saved=(request.args.get('saved') or '').strip())
+
+
+@app.post("/workspace/automation-rules/<int:rule_id>/toggle")
+@customer_login_required
+def workspace_toggle_automation_rule(rule_id: int):
+    workspace = current_workspace()
+    if workspace is None:
+        abort(404)
+    with get_conn() as conn:
+        rule = conn.execute("SELECT is_enabled FROM engagement_rules WHERE id=? AND workspace_id=?", (rule_id, int(workspace['id']))).fetchone()
+        if rule is None:
+            abort(404)
+        new_value = 0 if int(rule['is_enabled'] or 0) == 1 else 1
+        conn.execute("UPDATE engagement_rules SET is_enabled=?, updated_at=? WHERE id=?", (new_value, _utcnow_z(), rule_id))
+        conn.commit()
+    return redirect(url_for('workspace_automation_rules', saved='updated'))
 
 
 @app.get("/workspace/analytics")
@@ -4674,8 +5439,8 @@ def validate_uploaded_asset(storage: Any, target_name: str) -> tuple[str, str, i
 
     mime_type = detect_upload_mime_type(target_name, getattr(storage, "mimetype", ""))
     asset_kind = classify_asset_kind(mime_type)
-    if asset_kind != "image":
-        raise ValueError("Only image uploads are supported by the current LinkedIn workflow.")
+    if asset_kind not in {"image", "video"}:
+        raise ValueError("Only image and video uploads are supported by the current content workflow.")
 
     size_bytes = uploaded_file_size(storage)
     if size_bytes > UPLOAD_MAX_BYTES:

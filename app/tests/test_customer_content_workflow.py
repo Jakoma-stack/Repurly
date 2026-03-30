@@ -50,6 +50,8 @@ def content_client(tmp_path, monkeypatch):
     slide1_path.write_bytes(b"slide1")
     slide2_path = asset_dir / "slide2.png"
     slide2_path.write_bytes(b"slide2")
+    teaser_video_path = asset_dir / "teaser.mp4"
+    teaser_video_path.write_bytes(b"mp4data")
     conn.execute(
         "INSERT INTO assets (brand_id, file_name, file_path, mime_type, asset_kind, status, alt_text) VALUES (?, 'logo.png', ?, 'image/png', 'image', 'active', 'Logo')",
         (brand_id, str(logo_path)),
@@ -61,6 +63,10 @@ def content_client(tmp_path, monkeypatch):
     conn.execute(
         "INSERT INTO assets (brand_id, file_name, file_path, mime_type, asset_kind, status, alt_text) VALUES (?, 'slide2.png', ?, 'image/png', 'image', 'active', 'Slide two')",
         (brand_id, str(slide2_path)),
+    )
+    conn.execute(
+        "INSERT INTO assets (brand_id, file_name, file_path, mime_type, asset_kind, status, alt_text) VALUES (?, 'teaser.mp4', ?, 'video/mp4', 'video', 'active', 'Launch teaser video')",
+        (brand_id, str(teaser_video_path)),
     )
     conn.commit()
     conn.close()
@@ -177,3 +183,135 @@ def test_customer_can_submit_carousel_for_review(content_client):
     scheduled_df = pd.read_csv(schedule_path, dtype=str).fillna("")
     assert scheduled_df.iloc[-1]["post_type"] == "carousel"
     assert scheduled_df.iloc[-1]["status"] == "drafted"
+
+
+def test_ai_generation_can_overwrite_selected_draft(content_client):
+    client, db_path, schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        INSERT INTO generated_posts (brand_id, post_id, platform, post_type, topic, hook, body_points_json, cta, hashtags_json, caption_text, generation_mode, approval_status, asset_ids_json, review_notes, prompt_brief, planner_label, last_saved_at)
+        VALUES (?, 'client-one-001', 'linkedin', 'text', 'Old topic', 'Old hook', '[]', 'Old CTA', '["#old"]', 'Old caption', 'customer_editor', 'draft', '[]', '', 'Old brief', 'Old campaign', CURRENT_TIMESTAMP)
+        """,
+        (brand_id,),
+    )
+    draft_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    response = client.post(
+        "/workspace/content/generate",
+        data={
+            "brand_id": str(brand_id),
+            "brief": "fresh launch angle",
+            "post_type": "text",
+            "overwrite_mode": "overwrite_selected",
+            "target_draft_id": str(draft_id),
+            "count": "7",
+            "action": "generate_week",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert f"draft={draft_id}" in response.headers["Location"]
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT id, topic, hook, caption_text, generation_mode, planner_label FROM generated_posts WHERE brand_id=? ORDER BY id ASC", (brand_id,)).fetchall()
+    conn.close()
+
+    assert len(rows) == 1
+    assert rows[0]["id"] == draft_id
+    assert rows[0]["generation_mode"] == "ai_assisted"
+    assert rows[0]["topic"] != "Old topic"
+    assert rows[0]["caption_text"] != "Old caption"
+    assert rows[0]["planner_label"]
+
+
+def test_content_page_shows_overwrite_option_for_selected_draft(content_client):
+    client, db_path, _schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+    conn = sqlite3.connect(db_path)
+    conn.execute(
+        """
+        INSERT INTO generated_posts (brand_id, post_id, platform, post_type, topic, hook, body_points_json, cta, hashtags_json, caption_text, generation_mode, approval_status, asset_ids_json, review_notes, prompt_brief, planner_label, last_saved_at)
+        VALUES (?, 'client-one-002', 'linkedin', 'text', 'Draft to overwrite', '', '[]', '', '[]', 'Existing caption', 'customer_editor', 'draft', '[]', '', 'Existing brief', 'Existing campaign', CURRENT_TIMESTAMP)
+        """,
+        (brand_id,),
+    )
+    draft_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    conn.commit()
+    conn.close()
+
+    response = client.get(f"/workspace/content?draft={draft_id}")
+    assert response.status_code == 200
+    assert b"Overwrite selected draft with AI" in response.data
+    assert b"target_draft_id" in response.data
+    assert b"Replace this draft with 1-week AI plan" in response.data
+    assert b"Warning:" in response.data
+    assert b"This will replace the current draft content with AI-generated copy." in response.data
+
+
+def test_customer_can_save_video_draft(content_client):
+    client, db_path, _schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+    conn = sqlite3.connect(db_path)
+    asset_id = conn.execute("SELECT id FROM assets WHERE file_name='teaser.mp4'").fetchone()[0]
+    conn.close()
+
+    response = client.post(
+        "/workspace/content/save",
+        data={
+            "brand_id": str(brand_id),
+            "topic": "Product teaser",
+            "hook": "A faster way to launch",
+            "caption_text": "Watch the short launch teaser.",
+            "post_type": "video",
+            "asset_ids": [str(asset_id)],
+            "action": "save_draft",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "saved=draft_saved" in response.headers["Location"]
+
+    conn = sqlite3.connect(db_path)
+    draft = conn.execute("SELECT post_type, asset_ids_json FROM generated_posts ORDER BY id DESC LIMIT 1").fetchone()
+    conn.close()
+    assert draft[0] == "video"
+    assert str(asset_id) in draft[1]
+
+
+def test_ai_generation_supports_video_posts(content_client):
+    client, db_path, _schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+    conn = sqlite3.connect(db_path)
+    asset_id = conn.execute("SELECT id FROM assets WHERE file_name='teaser.mp4'").fetchone()[0]
+    conn.close()
+
+    response = client.post(
+        "/workspace/content/generate",
+        data={
+            "brand_id": str(brand_id),
+            "brief": "launch teaser campaign",
+            "post_type": "video",
+            "asset_ids": [str(asset_id)],
+            "count": "3",
+            "action": "generate_week",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+    assert "saved=generated" in response.headers["Location"]
+
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute("SELECT post_type, asset_ids_json FROM generated_posts ORDER BY id DESC LIMIT 3").fetchall()
+    conn.close()
+    assert rows
+    assert all(row[0] == "video" for row in rows)
+    assert all(str(asset_id) in row[1] for row in rows)
+
+
+def test_content_page_shows_video_format_options(content_client):
+    client, *_ = content_client
+    response = client.get("/workspace/content")
+    assert response.status_code == 200
+    assert b">Video<" in response.data
+    assert b"Images, videos, and carousel sequences are all supported in the draft workflow." in response.data

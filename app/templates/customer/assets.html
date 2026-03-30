@@ -5,7 +5,7 @@
   <div>
     <div class="eyebrow">Workspace assets</div>
     <h2>{{ workspace.display_name }}</h2>
-    <p>Upload and tag logos, screenshots, diagrams and image assets. Good tags make AI suggestions and review much better.</p>
+    <p>Upload and tag logos, screenshots, diagrams, photos, and short video assets. Good tags make AI suggestions and review much better.</p>
   </div>
   <div class="actions"><a href="/workspace/content" class="button-link primary">Continue to content studio</a></div>
 </div>
@@ -17,8 +17,8 @@
     <h3>Upload assets</h3>
     <form method="post" action="/workspace/assets/upload" enctype="multipart/form-data">
       <label>Brand<select name="brand_id" required><option value="">Select brand</option>{% for brand in brands %}<option value="{{ brand.id }}">{{ brand.display_name }}</option>{% endfor %}</select></label>
-      <label>Files<input type="file" name="assets" accept=".png,.jpg,.jpeg,.webp,.gif" multiple required></label>
-      <div class="field-help">Upload the logo first, then screenshots, diagrams, before/after visuals, product UI, team photos, or client-proof images.</div>
+      <label>Files<input type="file" name="assets" accept=".png,.jpg,.jpeg,.webp,.gif,.mp4,.mov,.m4v" multiple required></label>
+      <div class="field-help">Upload logos, screenshots, diagrams, before/after visuals, product UI, team photos, and short video clips. Repurly will use them in single-image, video, and carousel drafts.</div>
       <div class="primary-cta-bar"><button type="submit" name="action" value="upload">Upload assets</button><button type="submit" name="action" value="continue_content" class="secondary">Upload and continue</button></div>
     </form>
   </div>
@@ -27,7 +27,7 @@
     <div class="draft-grid">
       {% for asset in assets %}
       <article class="draft-card" style="padding:14px;">
-        <header><div><strong>{{ asset.file_name }}</strong><div class="subtle">{{ asset.brand_name }} · {{ asset.asset_kind or 'image' }}</div></div>{% if asset.thumbnail_url %}<img src="/{{ asset.thumbnail_url }}" class="thumb" alt="{{ asset.alt_text or asset.file_name }}">{% endif %}</header>
+        <header><div><strong>{{ asset.file_name }}</strong><div class="subtle">{{ asset.brand_name }} · {{ asset.asset_kind or 'image' }}</div></div>{% if asset.preview_is_image and asset.thumbnail_url %}<img src="/{{ asset.thumbnail_url }}" class="thumb" alt="{{ asset.alt_text or asset.file_name }}">{% elif asset.asset_kind == "video" %}<div class="thumb" style="display:flex; align-items:center; justify-content:center; background:var(--surface-2); font-size:12px; font-weight:700;">VIDEO</div>{% endif %}</header>
         <form method="post" action="/workspace/assets/{{ asset.id }}/meta">
           <label>Alt text<input name="alt_text" value="{{ asset.alt_text or '' }}" placeholder="Describe the image for accessibility and AI suggestions"></label>
           <label style="margin-top:10px;">Tags<input name="tags_text" value="{{ asset.asset_tags|join(', ') }}" placeholder="logo, founder, process, client proof, screenshot"></label>
