@@ -17,8 +17,9 @@ Must persist on hosted app:
 - config/brands/*.json
 - content/... assets and captions
 
-2026-03-30 user testing notes
-- Uploading assets feels like one batch may overwrite or is awkward. Improve with clearer individual uploads, asset delete, and safer append behavior.
-- Registration should capture LinkedIn details or at least prompt for them during onboarding before posting setup.
-- Password reset email did not work in testing and needs investigation.
-- PDF asset uploads triggered a server error. Fix applied in this build to allow PDF uploads in the workspace asset flow and return a user-facing validation message instead of a 500 if upload validation fails.
+---
+User observations / next fixes
+- Uploading assets - seems to be one upload or it overwrites, so I had to create a folder called assets and then upload all togehter.  I think individual uplaods would be better, and the option to delete
+- when registering, it didn't as for my linked in details, which would be needed to post
+- password reset email didn't work
+- PDF upload caused a 500 and signed the user out of the flow; fixed by allowing PDFs in validation and handling upload errors gracefully.

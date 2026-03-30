@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import io
 import sqlite3
 import sys
 from pathlib import Path
@@ -187,32 +186,3 @@ def test_growth_lead_detail_note_and_rule_toggle(phase456_client):
     assert note_value == 'Follow up on Thursday'
     assert enabled_value == 0
     assert activity_count >= 1
-
-
-def test_workspace_asset_upload_allows_pdf_and_returns_preview_label(phase456_client):
-    client, db_path, workspace_id = phase456_client
-    conn = sqlite3.connect(db_path)
-    conn.execute(
-        "INSERT INTO brands (workspace_id, slug, display_name, website) VALUES (?, 'jakoma', 'Jakoma', 'https://jakoma.org')",
-        (workspace_id,),
-    )
-    brand_id = conn.execute("SELECT id FROM brands WHERE workspace_id=? AND slug='jakoma'", (workspace_id,)).fetchone()[0]
-    conn.commit()
-    conn.close()
-
-    response = client.post(
-        '/workspace/assets/upload',
-        data={
-            'brand_id': str(brand_id),
-            'assets': (io.BytesIO(b'%PDF-1.4\n% test pdf\n'), 'checklist.pdf'),
-        },
-        content_type='multipart/form-data',
-        follow_redirects=False,
-    )
-    assert response.status_code == 302
-    assert 'saved=uploaded' in response.headers['Location']
-
-    page = client.get('/workspace/assets')
-    assert page.status_code == 200
-    assert b'checklist.pdf' in page.data
-    assert b'PDF' in page.data

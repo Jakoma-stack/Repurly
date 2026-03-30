@@ -5,12 +5,13 @@
   <div>
     <div class="eyebrow">Workspace assets</div>
     <h2>{{ workspace.display_name }}</h2>
-    <p>Upload and tag logos, screenshots, diagrams, photos, and short video assets. Good tags make AI suggestions and review much better.</p>
+    <p>Upload and tag logos, screenshots, diagrams, PDFs, photos, and short video assets. Upload one by one or in a small batch. Good tags make AI suggestions and review much better.</p>
   </div>
   <div class="actions"><a href="/workspace/content" class="button-link primary">Continue to content studio</a></div>
 </div>
 {% if saved == 'uploaded' %}<div class="note success">Assets uploaded.</div>{% endif %}
 {% if saved == 'asset_updated' %}<div class="note success">Asset details saved.</div>{% endif %}
+{% if saved == 'asset_deleted' %}<div class="note success">Asset deleted.</div>{% endif %}
 {% if saved == 'error' %}<div class="note error">{{ error or 'We could not update assets.' }}</div>{% endif %}
 <div class="grid-2">
   <div class="panel">
@@ -18,7 +19,7 @@
     <form method="post" action="/workspace/assets/upload" enctype="multipart/form-data">
       <label>Brand<select name="brand_id" required><option value="">Select brand</option>{% for brand in brands %}<option value="{{ brand.id }}">{{ brand.display_name }}</option>{% endfor %}</select></label>
       <label>Files<input type="file" name="assets" accept=".png,.jpg,.jpeg,.webp,.gif,.mp4,.mov,.m4v,.pdf" multiple required></label>
-      <div class="field-help">Upload logos, screenshots, diagrams, before/after visuals, product UI, team photos, short video clips, and PDF reference documents. Repurly will use them in drafts and keep documents as supporting reference assets.</div>
+      <div class="field-help">Upload logos, screenshots, diagrams, proposal PDFs, checklists, product UI, team photos, and short video clips. Individual uploads are supported, and you can delete files from the library if needed.</div>
       <div class="primary-cta-bar"><button type="submit" name="action" value="upload">Upload assets</button><button type="submit" name="action" value="continue_content" class="secondary">Upload and continue</button></div>
     </form>
   </div>
@@ -32,6 +33,9 @@
           <label>Alt text<input name="alt_text" value="{{ asset.alt_text or '' }}" placeholder="Describe the image for accessibility and AI suggestions"></label>
           <label style="margin-top:10px;">Tags<input name="tags_text" value="{{ asset.asset_tags|join(', ') }}" placeholder="logo, founder, process, client proof, screenshot"></label>
           <div class="button-row-end"><button type="submit">Save asset details</button></div>
+        </form>
+        <form method="post" action="/workspace/assets/{{ asset.id }}/delete" onsubmit="return confirm('Delete this asset?');">
+          <div class="button-row-end" style="margin-top:8px;"><button type="submit" class="secondary">Delete asset</button></div>
         </form>
       </article>
       {% else %}

@@ -20,13 +20,14 @@
       {% if editing_brand %}<input type="hidden" name="brand_id" value="{{ editing_brand.id }}" />{% endif %}
       <label>Brand slug<input name="slug" value="{{ editing_brand.slug if editing_brand else '' }}" required /></label>
       <label>Display name<input name="display_name" value="{{ editing_brand.display_name if editing_brand else '' }}" required /></label>
-      <label>Website<input name="website" value="{{ editing_brand.website if editing_brand else '' }}" placeholder="https://example.com" /></label>
-      <label>Contact email<input name="contact_email" type="email" value="{{ editing_brand.contact_email if editing_brand else '' }}" /></label>
+      <label>Website<input name="website" value="{{ editing_brand.website if editing_brand else default_brand_values.website }}" placeholder="https://example.com" /></label>
+      <label>Contact email<input name="contact_email" type="email" value="{{ editing_brand.contact_email if editing_brand else default_brand_values.contact_email }}" /></label>
       <label>Tone<input name="tone" value="{{ editing_brand.tone if editing_brand else '' }}" placeholder="Confident, clear, technical" /></label>
       <label>Audience<input name="audience" value="{{ editing_brand.audience if editing_brand else '' }}" placeholder="Marketing managers, founders" /></label>
       <label>Primary CTA<input name="primary_cta" value="{{ editing_brand.primary_cta if editing_brand else '' }}" /></label>
       <label>Secondary CTA<input name="secondary_cta" value="{{ editing_brand.secondary_cta if editing_brand else '' }}" /></label>
       <div class="field-help">Tip: keep tone, audience and CTA focused on one customer type. The AI content tools use these fields to draft and schedule posts for you.</div>
+      {% if default_brand_values.linkedin_profile_url or default_brand_values.linkedin_company_url %}<div class="field-help">Signup captured LinkedIn details for this workspace. Founder profile: {{ default_brand_values.linkedin_profile_url or "—" }}{% if default_brand_values.linkedin_company_url %}<br>Company page: {{ default_brand_values.linkedin_company_url }}{% endif %}</div>{% endif %}
       <div class="actions" style="margin-top:14px;"><button type="submit" name="action" value="save">{{ 'Save brand' if editing_brand else 'Create brand' }}</button><button type="submit" name="action" value="continue_assets" class="secondary">Save and continue to assets</button><button type="submit" name="action" value="continue_content" class="secondary">Save and continue to content</button></div>
     </form>
     {% else %}

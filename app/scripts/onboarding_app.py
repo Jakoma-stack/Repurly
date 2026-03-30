@@ -195,6 +195,8 @@ def normalised_beta_form_data(form: Any) -> dict[str, str]:
         "full_name": (form.get("full_name") or "").strip(),
         "company_name": (form.get("company_name") or "").strip(),
         "company_website": (form.get("company_website") or "").strip(),
+        "linkedin_profile_url": (form.get("linkedin_profile_url") or "").strip(),
+        "linkedin_company_url": (form.get("linkedin_company_url") or "").strip(),
         "selected_plan": normalise_plan_name((form.get("selected_plan") or "starter")),
         "beta_notes": (form.get("beta_notes") or "").strip(),
         "managed_brands": (form.get("managed_brands") or "").strip(),
@@ -1384,6 +1386,7 @@ def getting_started():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     submitted = False
+    reset_feedback = {"status": "info", "message": ""}
     if request.method == "POST":
         submitted = True
         email = (request.form.get("email") or "").strip().lower()
@@ -1393,13 +1396,21 @@ def forgot_password():
                 raw_token = create_auth_token(conn, user_id=int(user["id"]), token_type="password_reset", expires_in_hours=RESET_TOKEN_HOURS)
                 conn.commit()
             reset_link = build_app_url(f"/reset-password/{raw_token}")
-            send_reset_email_if_enabled(
+            delivery = send_reset_email_if_enabled(
                 recipient_email=email,
                 recipient_name=(user["full_name"] or "").strip(),
                 reset_link=reset_link,
             )
+            if delivery.get("ok"):
+                reset_feedback = {"status": "success", "message": "Password reset email sent. Check your inbox and spam folder."}
+            elif delivery.get("manual_only"):
+                reset_feedback = {"status": "warning", "message": f"Email sending is not active yet: {delivery.get('reason')}. Contact support for a manual reset link."}
+            else:
+                reset_feedback = {"status": "warning", "message": f"We generated the reset request but email delivery failed: {delivery.get('reason')}. Contact support for a manual reset link."}
             record_login_event(int(user["id"]), "password_reset_requested")
-    return render_template("auth/forgot_password.html", submitted=submitted, email_automation=smtp_enabled())
+        else:
+            reset_feedback = {"status": "success", "message": "If an active account exists for that email, a password reset email has been sent. If it does not arrive, check spam or contact support."}
+    return render_template("auth/forgot_password.html", submitted=submitted, email_automation=smtp_enabled(), reset_feedback=reset_feedback)
 
 
 @app.route("/reset-password/<token>", methods=["GET", "POST"])
@@ -1760,6 +1771,7 @@ def workspace_settings():
 @customer_login_required
 def workspace_brands_page():
     workspace = current_workspace()
+    customer = current_customer()
     if workspace is None:
         return redirect(url_for("customer_dashboard"))
     brands = fetch_workspace_brands(int(workspace["id"]))
@@ -1768,6 +1780,19 @@ def workspace_brands_page():
     if edit_brand_id.isdigit():
         row = fetch_workspace_brand_by_id(int(workspace["id"]), int(edit_brand_id))
         editing_brand = dict(row) if row is not None else None
+    signup_metadata = {}
+    email = ((customer or {}).get("email") or "").strip().lower()
+    if email:
+        with get_conn() as conn:
+            signup = conn.execute("SELECT beta_notes FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (email,)).fetchone()
+        if signup is not None:
+            signup_metadata = parse_signup_metadata(signup["beta_notes"] or "")
+    default_brand_values = {
+        "website": signup_metadata.get("company_website", workspace.get("company_name") or ""),
+        "contact_email": email,
+        "linkedin_profile_url": signup_metadata.get("linkedin_profile_url", ""),
+        "linkedin_company_url": signup_metadata.get("linkedin_company_url", ""),
+    }
     return render_template(
         "customer/brands.html",
         workspace=workspace,
@@ -1776,6 +1801,7 @@ def workspace_brands_page():
         manage_brands=current_customer_can_manage_brands(),
         saved=(request.args.get("saved") or "").strip().lower(),
         error=(request.args.get("error") or "").strip(),
+        default_brand_values=default_brand_values,
     )
 
 
@@ -1930,11 +1956,12 @@ def workspace_assets_upload():
     asset_dir = CONTENT_DIR / brand["slug"] / "workspace_assets"
     asset_dir.mkdir(parents=True, exist_ok=True)
     saved_count = 0
-    try:
-        with get_conn() as conn:
-            for storage in uploaded_files:
-                if storage is None or not getattr(storage, "filename", ""):
-                    continue
+    failed_files: list[str] = []
+    with get_conn() as conn:
+        for storage in uploaded_files:
+            if storage is None or not getattr(storage, "filename", ""):
+                continue
+            try:
                 output_name = build_unique_upload_name(asset_dir, storage.filename)
                 mime_type, asset_kind, _size_bytes = validate_uploaded_asset(storage, output_name)
                 target_path = asset_dir / output_name
@@ -1947,19 +1974,22 @@ def workspace_assets_upload():
                     (brand["id"], output_name, str(target_path), mime_type, asset_kind, f"{brand['display_name']} brand asset", json.dumps([slugify(str(brand['display_name'])).replace('-', ''), 'brand', 'asset'])),
                 )
                 saved_count += 1
-            conn.commit()
-    except ValueError as exc:
-        return redirect(url_for("workspace_assets_page", saved="error", error=str(exc)))
+            except Exception as exc:
+                failed_files.append(f"{getattr(storage, 'filename', 'file')}: {exc}")
+        conn.commit()
     if not saved_count:
-        return redirect(url_for("workspace_assets_page", saved="error", error="We could not save any files from that upload."))
+        message = failed_files[0] if failed_files else "We could not save any files from that upload."
+        return redirect(url_for("workspace_assets_page", saved="error", error=message))
     record_audit_event(
         "workspace_assets_uploaded",
         actor=(customer.get("email") or "workspace_admin"),
         message=f"Uploaded {saved_count} brand asset(s) for {brand['display_name']}.",
-        payload={"workspace_id": workspace["id"], "brand_id": brand["id"], "file_count": saved_count},
+        payload={"workspace_id": workspace["id"], "brand_id": brand["id"], "file_count": saved_count, "failed_files": failed_files},
     )
     if action == "continue_content":
         return redirect(url_for("workspace_content_page"))
+    if failed_files:
+        return redirect(url_for("workspace_assets_page", saved="error", error=f"Uploaded {saved_count} file(s). Some files were skipped. {failed_files[0]}"))
     return redirect(url_for("workspace_assets_page", saved="uploaded"))
 
 
@@ -5403,7 +5433,7 @@ def build_unique_upload_name(directory: Path, raw_name: str) -> str:
 
 
 def allowed_upload_extensions() -> set[str]:
-    return {item.strip().lower().lstrip(".") for item in ALLOWED_UPLOAD_EXTENSIONS if item.strip()}
+    return {item.strip().lower().lstrip(".") for item in ALLOWED_UPLOAD_EXTENSIONS if item.strip()} | {'pdf'}
 
 
 def detect_upload_mime_type(filename: str, declared_mime_type: str = "") -> str:
@@ -5443,7 +5473,7 @@ def validate_uploaded_asset(storage: Any, target_name: str) -> tuple[str, str, i
     mime_type = detect_upload_mime_type(target_name, getattr(storage, "mimetype", ""))
     asset_kind = classify_asset_kind(mime_type)
     if asset_kind not in {"image", "video", "document"}:
-        raise ValueError("Only image, video, and PDF uploads are supported right now.")
+        raise ValueError("Only image, video and PDF uploads are supported by the current content workflow.")
 
     size_bytes = uploaded_file_size(storage)
     if size_bytes > UPLOAD_MAX_BYTES:
