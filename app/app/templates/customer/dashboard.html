@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Customer dashboard</div>
+    <h2>{{ workspace.display_name if workspace else 'Welcome to Repurly' }}</h2>
+    <p>
+      {% if workspace %}
+        Your workspace is live. Use this area to keep setup moving, review billing, manage seats, upload assets and generate content without needing ops help.
+      {% else %}
+        Your account is active. We are still finishing workspace setup for your company.
+      {% endif %}
+    </p>
+  </div>
+</div>
+<div class="cards">
+  <div class="card"><h3>Account status</h3><p class="metric-value">{{ user.status|title }}</p><div class="muted">Customer account</div></div>
+  <div class="card"><h3>Workspace</h3><p class="metric-value" style="font-size:24px;">{{ workspace.display_name if workspace else 'Pending' }}</p><div class="muted">Company workspace</div></div>
+  <div class="card"><h3>Brands linked</h3><p class="metric-value">{{ brands|length }}</p><div class="muted">Brand profiles ready</div></div>
+  <div class="card"><h3>Scheduled posts</h3><p class="metric-value">{{ reporting_summary.total_posts }}</p><div class="muted">Posts in the schedule</div></div>
+  <div class="card"><h3>Selected plan</h3><p class="metric-value" style="font-size:24px;">{{ subscription.plan_name if subscription else (workspace.selected_plan if workspace and workspace.selected_plan else (signup.selected_plan if signup else 'Starter')) }}</p><div class="muted">Current commercial plan</div></div>
+  <div class="card"><h3>Billing status</h3><p class="metric-value" style="font-size:24px;">{{ billing_status_label }}</p><div class="muted">Workspace access state</div></div>
+  <div class="card"><h3>Team seats</h3><p class="metric-value">{{ seat_summary.seats_used }}/{{ seat_summary.seat_limit }}</p><div class="muted">Used vs included</div></div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Quick start</h3>
+      <div class="actions">
+        <a class="button-link primary" href="/getting-started">Open guided setup</a>
+        <a class="button-link secondary" href="/workspace/brands">Brands</a>
+        <a class="button-link secondary" href="/workspace/assets">Assets</a>
+        <a class="button-link secondary" href="/workspace/content">Content &amp; schedule</a>
+        <a class="button-link secondary" href="/workspace/engagement">Engagement</a>
+        <a class="button-link secondary" href="/workspace/leads">Leads</a>
+        <a class="button-link secondary" href="/workspace/help">Help</a>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Workspace details</h3>
+      <div class="kv">
+        <div>Workspace name</div><div>{{ workspace.display_name if workspace else 'Pending setup' }}</div>
+        <div>Email</div><div>{{ user.email }}</div>
+        <div>Company</div><div>{{ workspace.company_name if workspace and workspace.company_name else (user.company_name or (signup.company_name if signup else 'Not set yet')) }}</div>
+        <div>Membership role</div><div>{{ membership.membership_role if membership else 'Owner' }}</div>
+        <div>Workspace status</div><div>{{ workspace.status if workspace else 'pending' }}</div>
+        <div>Activated</div><div>{{ user.activated_at or 'Not recorded' }}</div>
+        <div>Last login</div><div>{{ user.last_login_at or 'This is your first session' }}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Linked brands</h3>
+      {% if brands %}
+        <div class="table-wrap">
+          <table>
+            <tr><th>Brand</th><th>Website</th><th>Scheduled posts</th></tr>
+            {% for brand in brands %}
+              <tr>
+                <td>{{ brand.display_name }}</td>
+                <td>{{ brand.website or '—' }}</td>
+                <td>{{ brand.scheduled_posts }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <strong>No brands are linked yet.</strong>
+          <p class="muted">Create your first brand from the Brands page, then upload your logo and generate first drafts from the customer workflow.</p>
+        </div>
+      {% endif %}
+    </div>
+    <div class="panel">
+      <h3>Workspace team</h3>
+      <div class="kv">
+        <div>Active seats</div><div>{{ seat_summary.seats_used }}</div>
+        <div>Pending invites</div><div>{{ seat_summary.pending_invites }}</div>
+        <div>Available seats</div><div>{{ seat_summary.seats_available }}</div>
+      </div>
+      {% if workspace_members %}
+        <div class="table-wrap" style="margin-top:12px;">
+          <table>
+            <tr><th>Name</th><th>Role</th><th>Email</th></tr>
+            {% for member in workspace_members %}
+              <tr>
+                <td>{{ member.full_name or '—' }}</td>
+                <td>{{ member.membership_role }}</td>
+                <td>{{ member.email }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </div>
+      {% endif %}
+      {% if can_manage_team %}
+        <div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/team">Manage team</a></div>
+      {% endif %}
+    </div>
+  </div>
+    <div class="panel">
+      <h3>Growth engine</h3>
+      <div class="kv">
+        <div>Engagement inbox</div><div>Review inbound comments and approve suggested replies.</div>
+        <div>Lead pipeline</div><div>Route high-intent signals into a simple tracked follow-up queue.</div>
+        <div>DM assist</div><div>Keep first-message drafts attached to the original engagement context.</div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <a class="button-link secondary" href="/workspace/engagement">Open engagement</a>
+        <a class="button-link secondary" href="/workspace/automation-rules">View automation rules</a>
+      </div>
+    </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Onboarding progress</h3>
+      <div class="progress-list">
+        {% for item in onboarding_items %}
+          <div class="progress-item">
+            <strong>{{ 'Done' if item.done else 'Next' }} — {{ item.label }}</strong>
+            <span class="muted">{{ item.detail }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Need help?</h3>
+      <p class="muted">Email <a href="mailto:{{ support_email }}?subject=Repurly%20customer%20support">{{ support_email }}</a>. Start with <a href="/getting-started">Getting started</a>, manage billing from <a href="/account/billing">Billing</a>, upload logos from <a href="/workspace/assets">Assets</a>, create, review and schedule posts from <a href="/workspace/content">Content &amp; schedule</a>, open plain-English guidance from <a href="/workspace/help">Help</a>, and review performance from <a href="/workspace/analytics">Analytics</a>{% if can_manage_team %}, manage seats from <a href="/workspace/team">Team</a>{% endif %}{% if can_manage_settings %}, and update workspace details from <a href="/workspace/settings">Settings</a>{% endif %}.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

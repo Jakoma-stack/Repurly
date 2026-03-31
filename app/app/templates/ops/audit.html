@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Audit log</h2>
+    <p>Recent operator and system actions recorded against drafts and publish flow.</p>
+  </div>
+</div>
+<form method="get" class="filters panel">
+  <label>Event type<input name="event_type" value="{{ filters.event_type }}" placeholder="draft_approved"></label>
+  <label>Brand<input name="brand" value="{{ filters.brand }}" placeholder="jakoma"></label>
+  <div class="actions"><button type="submit">Apply filters</button></div>
+</form>
+<div class="panel">
+  <table>
+    <tr><th>Event</th><th>Post</th><th>Brand</th><th>Actor</th><th>Time</th><th>Message</th></tr>
+    {% for row in events %}
+      <tr>
+        <td>{{ row.event_type }}</td>
+        <td>{% if row.post_id %}<a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a>{% else %}—{% endif %}</td>
+        <td>{{ row.brand_slug or '—' }}</td>
+        <td>{{ row.actor or 'system' }}</td>
+        <td>{{ row.created_at }}</td>
+        <td>{{ row.message or '—' }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="muted">No audit events match the current filters.</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

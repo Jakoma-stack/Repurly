@@ -1,0 +1,16 @@
+{
+  "brand": "jakoma",
+  "display_name": "Jakoma",
+  "website": "https://www.jakoma.org/",
+  "contact_email": "support@jakoma.org",
+  "tone": "professional, practical, clear, forward-looking",
+  "audience": "small business owners, consultants, founders",
+  "primary_cta": "Enquire now",
+  "secondary_cta": "Book a call",
+  "default_platforms": ["linkedin"],
+  "hashtags": ["#Jakoma", "#Automation", "#SmallBusinessSystems"],
+  "posting_goals": ["awareness", "credibility", "lead_generation"],
+  "content_pillars": ["automation", "digital strategy", "content workflow", "AI systems"],
+  "linkedin_author_urn": "urn:li:person:sOF0UaJQdy",
+  "linkedin_token_env": "LINKEDIN_ACCESS_TOKEN_JAKOMA"
+}

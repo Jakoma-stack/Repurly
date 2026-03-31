@@ -107,7 +107,7 @@ def normalise_public_app_base_url(candidate: str | None, fallback: str) -> str:
     lowered = value.lower()
     if "replury.org" in lowered:
         return fallback_value
-    if lowered.endswith(".onrender.com") or "repurly.onrender.com" in lowered:
+    if lowered.endswith(".onrender.com") or "beta.repurly.org" in lowered:
         return fallback_value
     return value
 
@@ -144,8 +144,8 @@ def create_checkout_session(
     signup_id: int | None = None,
     user_id: int | None = None,
     workspace_id: int | None = None,
-    success_path: str = "/?billing=success",
-    cancel_path: str = "/?billing=cancelled",
+    success_path: str = "/beta?billing=success",
+    cancel_path: str = "/beta?billing=cancelled",
     app_base_url: str | None = None,
 ) -> dict[str, Any]:
     cfg = get_billing_config()

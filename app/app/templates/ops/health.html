@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Ops health{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Setup and data health</h2>
+    <p>Quick check for local files, tables, and schedule validation.</p>
+  </div>
+  <div><span class="pill">Overall: {{ overall_status }}</span></div>
+</div>
+<div class="panel">
+  <table>
+    <tr><th>Check</th><th>Status</th><th>Detail</th></tr>
+    {% for item in checks %}
+      <tr><td>{{ item.name }}</td><td>{{ item.status }}</td><td>{{ item.detail }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}
