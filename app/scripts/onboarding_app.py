@@ -30,6 +30,7 @@ from billing import (
     create_checkout_session,
     get_billing_config,
     normalise_plan_name,
+    normalise_public_app_base_url,
     process_stripe_event,
     retrieve_checkout_session,
     subscription_allows_workspace_access,
@@ -344,6 +345,11 @@ def build_app_url(path: str) -> str:
     return f"{APP_BASE_URL}{path}"
 
 
+def current_public_app_base_url() -> str:
+    request_base = request.url_root.rstrip("/")
+    return normalise_public_app_base_url(request_base, APP_BASE_URL)
+
+
 def store_pending_checkout_context(*, email: str, full_name: str, company_name: str, selected_plan: str, signup_id: int | None = None, user_id: int | None = None, workspace_id: int | None = None, session_id: str = "") -> None:
     session["pending_checkout"] = {
         "email": (email or "").strip().lower(),
@@ -406,6 +412,13 @@ def active_or_recent_checkout_conflict(*, email: str, workspace_id: int | None =
         if signup is not None:
             existing_customer = conn.execute("SELECT id FROM users WHERE lower(email)=? LIMIT 1", (email,)).fetchone()
             if existing_customer is not None:
+                if workspace_id:
+                    linked_membership = conn.execute(
+                        "SELECT 1 FROM workspace_memberships WHERE workspace_id=? AND user_id=? AND lower(ifnull(status, 'active'))='active' LIMIT 1",
+                        (int(workspace_id), int(existing_customer["id"])),
+                    ).fetchone()
+                    if linked_membership is not None:
+                        return None
                 return "An account already exists for this email. Sign in or reset your password instead of paying again."
     return None
 
@@ -1511,7 +1524,7 @@ def inject_nav() -> dict[str, Any]:
             ("/logout", "Log out"),
         ],
         "public_nav": [
-            ("/beta", "Start"),
+            ("/", "Start"),
             ("/login", "Log in"),
         ],
         "current_customer": customer,
@@ -1537,11 +1550,46 @@ def healthz():
     return jsonify({"ok": True, "service": "replury"})
 
 
-@app.get("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
     if current_customer() is not None:
         return redirect(url_for("customer_dashboard"))
-    return redirect(url_for("beta_signup"))
+    billing_state = (request.args.get("billing") or "").strip().lower()
+    form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
+    errors: list[str] = []
+
+    if request.method == "POST":
+        errors = validate_beta_form(request.form)
+        email = form_data["email"]
+        full_name = form_data["full_name"]
+        company_name = form_data["company_name"]
+        selected_plan = form_data["selected_plan"]
+        beta_notes = build_beta_notes(request.form)
+
+        if not errors:
+            with get_conn() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                        full_name=excluded.full_name,
+                        company_name=excluded.company_name,
+                        selected_plan=excluded.selected_plan,
+                        beta_notes=excluded.beta_notes,
+                        updated_at=CURRENT_TIMESTAMP
+                    """,
+                    (email, full_name, company_name, selected_plan, beta_notes),
+                )
+                conn.commit()
+            return render_beta_template(
+                saved="Workspace enquiry saved. We will follow up using the details you provided.",
+                errors=[],
+                billing_state=billing_state,
+                form_data=normalised_beta_form_data({}),
+            )
+
+    return render_beta_template(saved=None, errors=errors, billing_state=billing_state, form_data=form_data)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1660,7 +1708,7 @@ def signup_complete_from_checkout():
     if not session_id and (pending.get("session_id") or "").strip():
         session_id = str(pending.get("session_id") or "").strip()
     if not session_id:
-        return redirect(url_for("beta_signup", billing="success"))
+        return redirect(url_for("home", billing="success"))
 
     checkout_session: dict[str, Any] | None = None
     confirmation_error = ""
@@ -5510,6 +5558,9 @@ def brand_onboarding():
 
 @app.route("/beta", methods=["GET", "POST"])
 def beta_signup():
+    if request.method == "GET":
+        query_string = request.query_string.decode().strip()
+        return redirect(url_for("home") + (("?" + query_string) if query_string else ""), code=302)
     saved = None
     billing_state = (request.args.get("billing") or "").strip().lower()
     form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
@@ -5539,7 +5590,7 @@ def beta_signup():
                     (email, full_name, company_name, selected_plan, beta_notes),
                 )
                 conn.commit()
-            saved = "Beta request saved. We will follow up using the details you provided."
+            saved = "Workspace enquiry saved. We will follow up using the details you provided."
             form_data = normalised_beta_form_data({})
 
     return render_beta_template(saved=saved, errors=errors, billing_state=billing_state, form_data=form_data)
