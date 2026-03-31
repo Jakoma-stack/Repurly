@@ -65,6 +65,8 @@ def app_client(tmp_path, monkeypatch):
     (content_folder / "assets").mkdir(parents=True, exist_ok=True)
     save_text(content_folder / "captions" / "caption.txt", "Hello LinkedIn")
 
+    monkeypatch.delenv("OPS_USERNAME", raising=False)
+    monkeypatch.delenv("OPS_PASSWORD", raising=False)
     monkeypatch.setattr(onboarding_app, "APP_DB", db_path)
     monkeypatch.setattr(onboarding_app, "SCHEDULE_CSV", schedule_path)
     monkeypatch.setattr(publish_tracking, "APP_DB", db_path)

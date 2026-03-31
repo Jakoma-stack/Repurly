@@ -42,6 +42,8 @@ def phase456_client(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
 
+    monkeypatch.delenv("OPS_USERNAME", raising=False)
+    monkeypatch.delenv("OPS_PASSWORD", raising=False)
     monkeypatch.setattr(onboarding_app, "APP_DB", db_path)
     onboarding_app.app.config.update(TESTING=True, SECRET_KEY="test-secret")
     with onboarding_app.app.test_client() as client:

@@ -71,6 +71,8 @@ def content_client(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
 
+    monkeypatch.delenv("OPS_USERNAME", raising=False)
+    monkeypatch.delenv("OPS_PASSWORD", raising=False)
     monkeypatch.setattr(onboarding_app, "APP_DB", db_path)
     monkeypatch.setattr(onboarding_app, "SCHEDULE_CSV", schedule_path)
     monkeypatch.setattr(onboarding_app, "build_content_date_folder", lambda brand, post_date: tmp_path / "content" / brand / post_date)

@@ -123,7 +123,7 @@ OPS_PROTECTED_PREFIXES = ("/ops", "/api/ops", "/onboarding/brand")
 OPS_ATTEMPT_LIMIT = 50
 OPS_EVENTS_LIMIT = 25
 OPS_SIGNUPS_LIMIT = 25
-PLAN_SEAT_LIMITS = {"agency": 3}
+PLAN_SEAT_LIMITS = {"starter": 1, "growth": 3, "pro": 10}
 TEAM_ADMIN_ROLES = {"owner", "admin"}
 BILLING_MANAGER_ROLES = {"owner", "admin"}
 SETTINGS_MANAGER_ROLES = {"owner", "admin"}
@@ -146,7 +146,7 @@ def wants_json_response() -> bool:
 
 def billing_checkout_enabled() -> bool:
     cfg = get_billing_config()
-    return bool(cfg.secret_key and cfg.agency_price_id)
+    return bool(cfg.secret_key and (cfg.starter_price_id or cfg.growth_price_id or cfg.pro_price_id))
 
 
 def secure_request_active() -> bool:
@@ -205,7 +205,7 @@ def normalised_beta_form_data(form: Any) -> dict[str, str]:
         "company_website": (form.get("company_website") or "").strip(),
         "linkedin_profile_url": (form.get("linkedin_profile_url") or "").strip(),
         "linkedin_company_url": (form.get("linkedin_company_url") or "").strip(),
-        "selected_plan": normalise_plan_name((form.get("selected_plan") or "agency")),
+        "selected_plan": normalise_plan_name((form.get("selected_plan") or "starter")),
         "beta_notes": (form.get("beta_notes") or "").strip(),
         "managed_brands": (form.get("managed_brands") or "").strip(),
         "team_size": (form.get("team_size") or "").strip(),
@@ -251,7 +251,7 @@ def store_pending_checkout_context(*, email: str, full_name: str, company_name: 
         "email": (email or "").strip().lower(),
         "full_name": (full_name or "").strip(),
         "company_name": (company_name or "").strip(),
-        "selected_plan": normalise_plan_name(selected_plan or "agency") or "agency",
+        "selected_plan": normalise_plan_name(selected_plan or "starter") or "starter",
         "signup_id": int(signup_id) if signup_id else None,
         "user_id": int(user_id) if user_id else None,
         "workspace_id": int(workspace_id) if workspace_id else None,
@@ -360,7 +360,7 @@ def maybe_finish_signup_handoff(*, handoff_state: dict[str, Any] | None, paid_fl
         recipient_name=(user["full_name"] or signup["full_name"] or "").strip(),
         setup_link=invite_link,
         workspace_name=(workspace["display_name"] or workspace["company_name"] or signup["company_name"] or "your workspace").strip(),
-        plan_name=normalise_plan_name((workspace["selected_plan"] or signup["selected_plan"] or "agency")),
+        plan_name=normalise_plan_name((workspace["selected_plan"] or signup["selected_plan"] or "starter")),
     )
     clear_pending_checkout_context()
     return redirect(invite_link)
@@ -530,7 +530,7 @@ def current_customer_can_export_workspace_data() -> bool:
     return role_allows_export_management(current_membership_role())
 
 
-def workspace_plan_name(workspace: dict[str, Any] | sqlite3.Row | None, subscription: dict[str, Any] | sqlite3.Row | None = None, fallback: str = "agency") -> str:
+def workspace_plan_name(workspace: dict[str, Any] | sqlite3.Row | None, subscription: dict[str, Any] | sqlite3.Row | None = None, fallback: str = "starter") -> str:
     if subscription is not None:
         plan = (subscription.get("plan_name") if isinstance(subscription, dict) else subscription["plan_name"]) or ""
         if str(plan).strip():
@@ -539,7 +539,7 @@ def workspace_plan_name(workspace: dict[str, Any] | sqlite3.Row | None, subscrip
         plan = (workspace.get("selected_plan") if isinstance(workspace, dict) else workspace["selected_plan"]) or ""
         if str(plan).strip():
             return normalise_plan_name(str(plan))
-    return normalise_plan_name(fallback) or "agency"
+    return normalise_plan_name(fallback) or "starter"
 
 
 def workspace_seat_limit(plan_name: str) -> int:
@@ -1760,7 +1760,7 @@ def customer_billing():
         request.args.get("plan")
         or (workspace.get("selected_plan") if workspace else "")
         or (signup["selected_plan"] if signup else "")
-        or "agency"
+        or "starter"
     )
     selected_plan = normalise_plan_name(selected_plan)
     access_allowed = current_workspace_access_allowed()
@@ -1840,10 +1840,10 @@ def customer_billing_create_checkout_session():
     customer = current_customer()
     workspace = current_workspace()
     subscription = current_subscription() or {}
-    selected_plan = normalise_plan_name(request.form.get("selected_plan") or (workspace.get("selected_plan") if workspace else "") or "agency")
-    allowed_plans = {"agency"}
+    selected_plan = normalise_plan_name(request.form.get("selected_plan") or (workspace.get("selected_plan") if workspace else "") or "starter")
+    allowed_plans = {"starter", "growth", "pro"}
     if selected_plan not in allowed_plans:
-        selected_plan = "agency"
+        selected_plan = "starter"
     active_subscription = subscription_allows_workspace_access(subscription.get("status"))
     active_plan_name = normalise_plan_name(subscription.get("plan_name") or "") if subscription else ""
     confirm_plan_change = (request.form.get("confirm_plan_change") or "").strip().lower() in {"1", "true", "yes", "on"}

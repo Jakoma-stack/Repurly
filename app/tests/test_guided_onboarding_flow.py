@@ -46,6 +46,8 @@ def guided_client(tmp_path, monkeypatch):
     conn.commit()
     conn.close()
 
+    monkeypatch.delenv("OPS_USERNAME", raising=False)
+    monkeypatch.delenv("OPS_PASSWORD", raising=False)
     monkeypatch.setattr(onboarding_app, "APP_DB", db_path)
     monkeypatch.setattr(onboarding_app, "send_welcome_email_if_enabled", lambda **kwargs: {"ok": True})
     onboarding_app.app.config.update(TESTING=True, SECRET_KEY="test-secret")
