@@ -14,7 +14,7 @@
    - OPS_PASSWORD
    - FLASK_SECRET_KEY
 4. Run one live test flow:
-   - submit beta form
+   - submit launch form
    - create invite link in `/ops/billing`
    - activate account
    - log in at `/login`
