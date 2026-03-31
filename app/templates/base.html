@@ -240,8 +240,29 @@
     .insight-list { display:grid; gap:10px; }
     .insight-item { padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); }
 
+    .progress-strip { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:12px; margin: 0 0 18px; }
+    .progress-node { border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#ffffff,#f8fbff); padding:14px; min-height:88px; }
+    .progress-node strong { display:block; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .progress-node .state { font-size:22px; font-weight:800; letter-spacing:-.03em; }
+    .progress-node.done { border-color:#bfe3cb; background:linear-gradient(180deg,#ffffff,#f3fbf6); }
+    .command-grid { display:grid; grid-template-columns: 1.05fr .95fr; gap:18px; margin-bottom:18px; }
+    .hero-kpi { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-top:12px; }
+    .cta-tile { border:1px solid var(--line); border-radius:16px; padding:14px; background:linear-gradient(180deg,#fff,#f9fbff); }
+    .cta-tile h4 { margin:0 0 8px; font-size:16px; letter-spacing:-.02em; }
+    .cta-tile p { margin:0; color:var(--muted); line-height:1.6; }
+    .compact-empty { border:1px dashed #c3d4eb; border-radius:14px; padding:14px; background:#fbfdff; min-height:auto; }
+    .compact-empty strong { display:block; margin-bottom:6px; }
+    .mode-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; margin:14px 0; }
+    .mode-card { border:1px solid var(--line); border-radius:16px; padding:14px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .mode-card h4 { margin:0 0 8px; font-size:16px; letter-spacing:-.02em; }
+    .mode-card ul { margin:8px 0 0 18px; color:var(--muted); line-height:1.6; padding:0; }
+    .stack-tight { display:grid; gap:12px; }
+    .empty-hint { color:var(--muted); font-size:13px; }
+    .section-divider { margin:18px 0 12px; padding-top:14px; border-top:1px solid var(--line); }
+    .mini-stat-row { display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:12px; }
+
     @media (max-width: 1080px) {
-      .hero-grid, .grid-2, .grid-3, .calendar-grid, .draft-grid { grid-template-columns: 1fr; }
+      .hero-grid, .grid-2, .grid-3, .calendar-grid, .draft-grid, .command-grid, .progress-strip, .mode-grid, .mini-stat-row { grid-template-columns: 1fr; }
       .page-header h2 { font-size: 34px; }
     }
     @media (max-width: 920px) {

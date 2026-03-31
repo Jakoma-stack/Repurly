@@ -789,6 +789,9 @@ def workspace_reporting_summary(*, workspace: dict[str, Any] | None, subscriptio
     posted_posts = int((filtered["status"].str.lower() == "posted").sum()) if total_posts else 0
     failed_posts = int((filtered["status"].str.lower() == "failed").sum()) if total_posts else 0
     ready_posts = int(filtered["status"].str.lower().isin(["approved", "generated", "queued", "drafted"]).sum()) if total_posts else 0
+    scheduled_posts = int(filtered["status"].str.lower().isin(["approved", "generated", "queued", "drafted", "scheduled", "posted", "failed"]).sum()) if total_posts else 0
+    delivery_rate = round((posted_posts / total_posts) * 100, 1) if total_posts else 0.0
+    failure_rate = round((failed_posts / total_posts) * 100, 1) if total_posts else 0.0
     upcoming_posts = []
     if total_posts:
         upcoming = filtered.sort_values(by=["post_date", "post_time", "post_id"], ascending=[False, False, True]).head(25)
@@ -830,12 +833,46 @@ def workspace_reporting_summary(*, workspace: dict[str, Any] | None, subscriptio
         else:
             insight = "Text posts remain the fastest way to keep cadence stable while the team learns what angles resonate."
         feedback_loop.append({"label": label, "insight": insight})
+
+    engagement_comments = 0
+    engagement_pending_replies = 0
+    engagement_hot_leads = 0
+    lead_count = 0
+    contacted_leads = 0
+    qualified_leads = 0
+    reply_sent_count = 0
+    if workspace_id:
+        engagement = workspace_engagement_summary(workspace_id)
+        engagement_comments = int(engagement["metrics"].get("comments_total", 0))
+        engagement_pending_replies = int(engagement["metrics"].get("pending_replies", 0))
+        engagement_hot_leads = int(engagement["metrics"].get("hot_leads", 0))
+        lead_count = int(len(engagement.get("leads", [])))
+        contacted_leads = sum(1 for item in engagement.get("leads", []) if (item.get("stage") or "").lower() in {"contacted", "qualified", "closed"})
+        qualified_leads = sum(1 for item in engagement.get("leads", []) if (item.get("stage") or "").lower() in {"qualified", "closed"})
+        reply_sent_count = sum(1 for item in engagement.get("comments", []) if (item.get("reply_status") or "").lower() == "sent")
+    reply_send_rate = round((reply_sent_count / engagement_comments) * 100, 1) if engagement_comments else 0.0
+    lead_conversion_rate = round((lead_count / engagement_comments) * 100, 1) if engagement_comments else 0.0
+    qualified_rate = round((qualified_leads / lead_count) * 100, 1) if lead_count else 0.0
+
     return {
         "brand_count": len(brands),
         "total_posts": total_posts,
         "posted_posts": posted_posts,
         "failed_posts": failed_posts,
         "ready_posts": ready_posts,
+        "scheduled_posts": scheduled_posts,
+        "delivery_rate": delivery_rate,
+        "failure_rate": failure_rate,
+        "engagement_comments": engagement_comments,
+        "engagement_pending_replies": engagement_pending_replies,
+        "engagement_hot_leads": engagement_hot_leads,
+        "lead_count": lead_count,
+        "contacted_leads": contacted_leads,
+        "qualified_leads": qualified_leads,
+        "reply_sent_count": reply_sent_count,
+        "reply_send_rate": reply_send_rate,
+        "lead_conversion_rate": lead_conversion_rate,
+        "qualified_rate": qualified_rate,
         "publish_attempts": publish_attempts,
         "audit_events": audit_events,
         "upcoming_posts": upcoming_posts,
