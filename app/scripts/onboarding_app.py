@@ -2063,6 +2063,7 @@ def customer_billing_create_checkout_session():
             workspace_id=int(workspace["id"]) if workspace else None,
             success_path="/account/billing?billing=success",
             cancel_path="/account/billing?billing=cancelled",
+            app_base_url=current_public_app_base_url(),
         )
         store_pending_checkout_context(
             email=(customer.get("email") or "").strip().lower(),
@@ -5594,7 +5595,13 @@ def billing_create_checkout_session():
         if row is None:
             raise RuntimeError("Unable to save your signup details before checkout. Please try again.")
 
-        session = create_checkout_session(email=email, plan_name=selected_plan, signup_id=int(row["id"]), success_path="/signup/complete?session_id={CHECKOUT_SESSION_ID}")
+        session = create_checkout_session(
+            email=email,
+            plan_name=selected_plan,
+            signup_id=int(row["id"]),
+            success_path="/signup/complete?session_id={CHECKOUT_SESSION_ID}",
+            app_base_url=current_public_app_base_url(),
+        )
         store_pending_checkout_context(
             email=email,
             full_name=full_name,

@@ -59,7 +59,7 @@ def get_billing_config() -> BillingConfig:
         secret_key=os.getenv("STRIPE_SECRET_KEY", "").strip(),
         webhook_secret=os.getenv("STRIPE_WEBHOOK_SECRET", "").strip(),
         agency_price_id=(os.getenv("STRIPE_PRICE_AGENCY", "").strip() or os.getenv("STRIPE_PRICE_GROWTH", "").strip() or os.getenv("STRIPE_PRICE_STARTER", "").strip() or os.getenv("STRIPE_PRICE_PRO", "").strip()),
-        app_base_url=os.getenv("APP_BASE_URL", "https://beta.repurly.org").rstrip("/"),
+        app_base_url=os.getenv("APP_BASE_URL", "https://app.repurly.org").rstrip("/"),
         billing_portal_configuration_id=os.getenv("STRIPE_BILLING_PORTAL_CONFIGURATION_ID", STRIPE_BILLING_PORTAL_CONFIGURATION_ID).strip(),
         billing_portal_return_path=os.getenv("BILLING_PORTAL_RETURN_PATH", BILLING_PORTAL_RETURN_PATH).strip() or "/account/billing",
     )
@@ -99,6 +99,19 @@ def build_checkout_url(base_url: str, path: str) -> str:
     return f"{base_url}{cleaned}"
 
 
+def normalise_public_app_base_url(candidate: str | None, fallback: str) -> str:
+    value = (candidate or "").strip().rstrip("/")
+    fallback_value = (fallback or "").strip().rstrip("/") or "https://app.repurly.org"
+    if not value:
+        return fallback_value
+    lowered = value.lower()
+    if "replury.org" in lowered:
+        return fallback_value
+    if lowered.endswith(".onrender.com") or "beta.repurly.org" in lowered:
+        return fallback_value
+    return value
+
+
 def stripe_object_to_dict(obj: Any) -> dict[str, Any]:
     if obj is None:
         return {}
@@ -133,8 +146,10 @@ def create_checkout_session(
     workspace_id: int | None = None,
     success_path: str = "/beta?billing=success",
     cancel_path: str = "/beta?billing=cancelled",
+    app_base_url: str | None = None,
 ) -> dict[str, Any]:
     cfg = get_billing_config()
+    public_app_base_url = normalise_public_app_base_url(app_base_url, cfg.app_base_url)
     canonical_plan = normalise_plan_name(plan_name)
     price_id = price_id_for_plan(canonical_plan, cfg)
     if not cfg.secret_key:
@@ -155,8 +170,8 @@ def create_checkout_session(
         mode="subscription",
         customer_email=email,
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=build_checkout_url(cfg.app_base_url, success_path),
-        cancel_url=build_checkout_url(cfg.app_base_url, cancel_path),
+        success_url=build_checkout_url(public_app_base_url, success_path),
+        cancel_url=build_checkout_url(public_app_base_url, cancel_path),
         client_reference_id=str(signup_id or workspace_id or user_id or ""),
         metadata=metadata,
         subscription_data={"metadata": metadata},
