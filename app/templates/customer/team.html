@@ -9,7 +9,7 @@
   </div>
 </div>
 {% if saved == 'invite_created' %}
-  <div class="note success">Team invite created. Copy the link below or use automated email delivery if SMTP is enabled.</div>
+  <div class="note success">Team invite created. An email invite has been sent automatically when SMTP is enabled. Keep the manual link below as a fallback if the recipient does not receive it.</div>
 {% elif saved == 'invite_revoked' %}
   <div class="note success">Pending invite revoked.</div>
 {% elif saved == 'member_removed' %}

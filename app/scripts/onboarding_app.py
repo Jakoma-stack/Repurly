@@ -12,6 +12,7 @@ import shutil
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from time import sleep
 from pathlib import Path
 from typing import Any
@@ -154,6 +155,74 @@ def secure_request_active() -> bool:
     return request.is_secure or forwarded_proto == "https"
 
 
+LOCAL_TZ = ZoneInfo("Europe/London")
+
+
+def local_now() -> datetime:
+    return datetime.now(LOCAL_TZ)
+
+
+def plan_display_name(plan_name: str) -> str:
+    plan = normalise_plan_name(plan_name or "agency") or "agency"
+    mapping = {
+        "agency": "Agency",
+        "growth": "Agency Growth",
+        "pro": "Agency Pro",
+    }
+    return mapping.get(plan, plan.replace("_", " ").title())
+
+
+def _filename_tokens(filename: str) -> list[str]:
+    stem = Path(filename or "").stem.replace("_", " ").replace("-", " ")
+    tokens = []
+    for raw in stem.split():
+        word = raw.strip().lower()
+        if not word or word in {"final","v2","v3","copy","new"}:
+            continue
+        tokens.append(word)
+    return tokens
+
+
+def guess_asset_metadata(filename: str, brand_name: str) -> tuple[str, list[str]]:
+    tokens = _filename_tokens(filename)
+    pretty = " ".join(token.upper() if token in {"ai","ui","pdf"} else token.capitalize() for token in tokens) or Path(filename or "asset").stem
+    alt_text = pretty
+    brand_token = slugify(str(brand_name or "brand")).replace("-", "")
+    tags = [brand_token] if brand_token else []
+    tags += tokens[:5]
+    if any(token in tokens for token in ["logo"]):
+        tags += ["brand", "visual identity"]
+    elif any(token in tokens for token in ["homepage", "screenshot", "screen"]):
+        tags += ["website", "screenshot"]
+    elif any(token in tokens for token in ["checklist"]):
+        tags += ["lead magnet", "downloadable resource"]
+    elif any(token in tokens for token in ["proposal", "retainer", "sprint", "deliverable"]):
+        tags += ["service offer"]
+    elif any(token in tokens for token in ["image", "photo"]):
+        tags += ["image"]
+    tags = list(dict.fromkeys([t for t in tags if t]))[:8]
+    return alt_text, tags
+
+
+def local_input_to_utc(post_date: str, post_time: str) -> tuple[str, str]:
+    if not post_date:
+        return post_date, post_time
+    raw_time = (post_time or "09:00").strip() or "09:00"
+    naive = datetime.strptime(f"{post_date} {raw_time}", "%Y-%m-%d %H:%M")
+    local_dt = naive.replace(tzinfo=LOCAL_TZ)
+    utc_dt = local_dt.astimezone(timezone.utc)
+    return utc_dt.strftime("%Y-%m-%d"), utc_dt.strftime("%H:%M")
+
+
+def utc_to_local_display(post_date: str, post_time: str) -> str:
+    try:
+        utc_dt = datetime.strptime(f"{post_date} {post_time}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
+        local_dt = utc_dt.astimezone(LOCAL_TZ)
+        return local_dt.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return f"{post_date} {post_time}".strip()
+
+
 def build_beta_notes(form: Any) -> str:
     notes = (form.get("beta_notes") or "").strip()
     metadata = []
@@ -163,6 +232,7 @@ def build_beta_notes(form: Any) -> str:
     managed_brands = (form.get("managed_brands") or "").strip()
     team_size = (form.get("team_size") or "").strip()
     timeline = (form.get("timeline") or "").strip()
+    setup_addon = "yes" if (form.get("setup_addon") or "").strip().lower() == "yes" else "no"
     updates_opt_in = "yes" if (form.get("updates_opt_in") or "").strip().lower() == "yes" else "no"
     privacy_consent = "yes" if (form.get("privacy_consent") or "").strip().lower() == "yes" else "no"
     if company_website:
@@ -177,6 +247,7 @@ def build_beta_notes(form: Any) -> str:
         metadata.append(f"team_size={team_size}")
     if timeline:
         metadata.append(f"timeline={timeline}")
+    metadata.append(f"setup_addon={setup_addon}")
     metadata.append(f"privacy_consent={privacy_consent}")
     metadata.append(f"updates_opt_in={updates_opt_in}")
     if notes and metadata:
@@ -1884,6 +1955,7 @@ def customer_billing():
         subscription=subscription,
         signup=dict(signup) if signup else None,
         selected_plan=selected_plan,
+        selected_plan_label=plan_display_name(selected_plan),
         billing_state=billing_state,
         billing_required=workspace_billing_required(),
         access_allowed=access_allowed,
@@ -2010,6 +2082,7 @@ def customer_billing_create_checkout_session():
             subscription=current_subscription(),
             signup=dict(signup) if signup else None,
             selected_plan=selected_plan,
+            selected_plan_label=plan_display_name(selected_plan),
             billing_state="",
             billing_required=workspace_billing_required(),
             access_allowed=current_workspace_access_allowed(),
@@ -2518,6 +2591,37 @@ def workspace_assets_upload():
     return redirect(url_for("workspace_assets_page", saved="uploaded"))
 
 
+@app.post("/workspace/assets/batch-meta")
+@customer_login_required
+def workspace_assets_update_meta_batch():
+    if not current_customer_can_manage_brands():
+        abort(403)
+    workspace = current_workspace()
+    customer = current_customer()
+    if workspace is None:
+        abort(404)
+    updated = 0
+    with get_conn() as conn:
+        for key, value in request.form.items():
+            if not key.startswith("asset_") or not key.endswith("_alt_text"):
+                continue
+            asset_id_raw = key[len("asset_"):-len("_alt_text")]
+            if not asset_id_raw.isdigit():
+                continue
+            asset_id = int(asset_id_raw)
+            alt_text = (value or "").strip()
+            tags_text = (request.form.get(f"asset_{asset_id}_tags_text") or "").strip()
+            tags = [item.strip() for item in tags_text.replace(";", ",").split(",") if item.strip()]
+            asset = conn.execute("SELECT a.id FROM assets a JOIN brands b ON b.id = a.brand_id WHERE a.id=? AND b.workspace_id=? LIMIT 1", (asset_id, workspace["id"])).fetchone()
+            if asset is None:
+                continue
+            conn.execute("UPDATE assets SET alt_text=?, asset_tags_json=? WHERE id=?", (alt_text, json.dumps(tags), asset_id))
+            updated += 1
+        conn.commit()
+    record_audit_event("workspace_assets_batch_updated", actor=(customer.get("email") or "workspace_admin"), message=f"Updated metadata for {updated} asset(s).", payload={"workspace_id": workspace["id"], "updated": updated})
+    return redirect(url_for("workspace_assets_page", saved="asset_updated"))
+
+
 @app.post("/workspace/assets/<int:asset_id>/meta")
 @customer_login_required
 def workspace_assets_update_meta(asset_id: int):
@@ -2698,15 +2802,19 @@ def _workspace_publishing_health(*, brands: list[dict[str, Any]], schedule_rows:
             "token_label": token_label,
         })
 
+    london_now = now_utc.astimezone(LOCAL_TZ)
+    next_due_label = "No scheduled posts yet"
+    if next_due:
+        next_due_label = next_due.replace(tzinfo=timezone.utc).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
     return {
-        "utc_now": now_utc.strftime("%Y-%m-%d %H:%M UTC"),
+        "utc_now": london_now.strftime("%Y-%m-%d %H:%M"),
         "dry_run": env_flag("LINKEDIN_DRY_RUN", True),
         "cron_command": "python scripts/post_due_linkedin.py",
         "due_now_count": len(due_rows),
-        "next_due": next_due.strftime("%Y-%m-%d %H:%M UTC") if next_due else "No scheduled posts yet",
+        "next_due": next_due_label,
         "brand_checks": brand_checks,
         "ready_brand_count": sum(1 for item in brand_checks if item["author_ready"] and item["token_ready"]),
-        "scheduled_timezone_note": "All publishing times are stored and checked in UTC.",
+        "scheduled_timezone_note": "Times are planned in Europe/London and converted automatically when published.",
     }
 
 
@@ -2719,6 +2827,7 @@ def _calendar_weeks_for_rows(schedule_rows: list[dict[str, Any]]) -> list[dict[s
             dt = datetime.strptime(f"{row.get('post_date','')} {row.get('post_time','00:00')}", "%Y-%m-%d %H:%M")
         except Exception:
             continue
+        row["local_when"] = utc_to_local_display(str(row.get("post_date") or ""), str(row.get("post_time") or "00:00"))
         parsed.append((dt, row))
     parsed.sort(key=lambda item: item[0])
     grouped: dict[tuple[int, int], list[tuple[datetime, dict[str, Any]]]] = defaultdict(list)
@@ -2901,6 +3010,15 @@ def _customer_content_defaults(*, brands: list[dict[str, Any]], selected_draft: 
         selected_brand_id = str(selected_draft.get("brand_id") or "")
     elif brands:
         selected_brand_id = str(brands[0].get("id") or "")
+    local_post_date = ""
+    local_post_time = "09:00"
+    if selected_draft and selected_draft.get("post_date") and selected_draft.get("post_time"):
+        try:
+            local_compound = utc_to_local_display(str(selected_draft.get("post_date") or ""), str(selected_draft.get("post_time") or "09:00"))
+            local_post_date, local_post_time = local_compound.split(" ", 1)
+        except Exception:
+            local_post_date = (selected_draft.get("post_date") or "") if selected_draft else ""
+            local_post_time = (selected_draft.get("post_time") or "") if selected_draft else "09:00"
     return {
         "draft_id": str(selected_draft.get("id") or "") if selected_draft else "",
         "brand_id": selected_brand_id,
@@ -2910,8 +3028,8 @@ def _customer_content_defaults(*, brands: list[dict[str, Any]], selected_draft: 
         "cta": (selected_draft.get("cta") or "") if selected_draft else "",
         "hashtags_text": ", ".join(parse_json_array(selected_draft.get("hashtags_json") or "[]")) if selected_draft else "",
         "post_type": (selected_draft.get("post_type") or "text") if selected_draft else "text",
-        "post_date": (selected_draft.get("post_date") or "") if selected_draft else "",
-        "post_time": (selected_draft.get("post_time") or "") if selected_draft else "09:00",
+        "post_date": local_post_date if selected_draft else "",
+        "post_time": local_post_time if selected_draft else "09:00",
         "campaign": (selected_draft.get("schedule_campaign") or "") if selected_draft else "",
         "notes": (selected_draft.get("schedule_notes") or "") if selected_draft else "",
         "review_notes": (selected_draft.get("review_notes") or "") if selected_draft else "",
@@ -3285,17 +3403,20 @@ def workspace_content_page():
         selected_draft = fetch_workspace_generated_post(int(workspace["id"]), int(draft_raw))
     drafts = fetch_workspace_generated_posts(int(workspace["id"]))
     schedule_rows = fetch_workspace_schedule_rows(int(workspace["id"]))
+    for item in schedule_rows:
+        item["local_when"] = utc_to_local_display(str(item.get("post_date") or ""), str(item.get("post_time") or "00:00"))
     workspace_assets = fetch_workspace_assets(int(workspace["id"]))
     campaign_templates = fetch_campaign_templates(int(workspace["id"]))
     posting_strategies = fetch_posting_strategies(int(workspace["id"]))
     selected_asset_ids = selected_draft.get("selected_asset_ids") if selected_draft else []
     best_time_hint = _best_time_suggestion(dict(brands[0])) if brands else {"time": "09:00", "label": "Default workday slot", "reason": "A safe weekday time."}
+    local_now_value = local_now()
     ai_defaults = {
         "brand_id": str(brands[0]["id"]) if brands else "",
         "brief": (selected_draft.get("prompt_brief") or selected_draft.get("topic") or "") if selected_draft else "",
         "count": "7",
         "post_type": (selected_draft.get("post_type") or "text") if selected_draft else "text",
-        "post_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "post_date": local_now_value.strftime("%Y-%m-%d"),
         "post_time": (selected_draft.get("post_time") or best_time_hint["time"]) if selected_draft else best_time_hint["time"],
         "campaign": (selected_draft.get("schedule_campaign") or selected_draft.get("planner_label") or "") if selected_draft else "",
         "delivery_mode": "save_draft",
@@ -3336,6 +3457,7 @@ def workspace_content_page():
         best_time_hint=best_time_hint,
         recommended_assets=recommended_assets,
         publishing_health=publishing_health,
+        local_timezone_label="Europe/London (GMT/BST)",
     )
 
 
@@ -3484,13 +3606,14 @@ def workspace_content_save():
         if action == "save_draft":
             saved_key = "draft_saved"
         elif action == "submit_review":
+            utc_date, utc_time = local_input_to_utc(post_date, post_time)
             _sync_generated_post_to_schedule(
                 conn=conn,
                 draft=draft,
                 brand=brand_dict,
                 asset_rows=asset_rows,
-                post_date=post_date,
-                post_time=post_time,
+                post_date=utc_date,
+                post_time=utc_time,
                 campaign=campaign,
                 notes=notes,
                 schedule_status="drafted",
@@ -3498,13 +3621,14 @@ def workspace_content_save():
             )
             saved_key = "submitted"
         else:
+            utc_date, utc_time = local_input_to_utc(post_date, post_time)
             _sync_generated_post_to_schedule(
                 conn=conn,
                 draft=draft,
                 brand=brand_dict,
                 asset_rows=asset_rows,
-                post_date=post_date,
-                post_time=post_time,
+                post_date=utc_date,
+                post_time=utc_time,
                 campaign=campaign,
                 notes=notes,
                 schedule_status="approved",
@@ -3751,6 +3875,8 @@ def workspace_content_generate():
 
     blueprints = _ai_blueprints_for_brand(brand=brand, workspace=workspace, brief=brief, count=count)
     base_date = None
+    local_schedule_date = post_date
+    local_schedule_time = post_time
     if post_date:
         try:
             base_date = datetime.strptime(post_date, "%Y-%m-%d").date()
@@ -3837,13 +3963,14 @@ def workspace_content_generate():
             if delivery_mode in {"submit_review", "schedule_publish"} and base_date is not None:
                 scheduled_date = schedule_dates[idx].strftime("%Y-%m-%d") if idx < len(schedule_dates) else base_date.strftime("%Y-%m-%d")
                 scheduled_time = schedule_times[idx] if idx < len(schedule_times) else post_time
+                utc_date, utc_time = local_input_to_utc(scheduled_date, scheduled_time)
                 _sync_generated_post_to_schedule(
                     conn=conn,
                     draft=draft,
                     brand=brand,
                     asset_rows=asset_rows,
-                    post_date=scheduled_date,
-                    post_time=scheduled_time,
+                    post_date=utc_date,
+                    post_time=utc_time,
                     campaign=campaign,
                     notes=f"AI-assisted plan generated from workspace content workflow ({cadence_label}).",
                     schedule_status="drafted" if delivery_mode == "submit_review" else "approved",

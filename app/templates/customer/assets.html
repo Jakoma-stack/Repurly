@@ -24,14 +24,14 @@
     </form>
   </div>
   <div class="panel">
-    <h3>Asset library</h3>
+    <div class="section-header"><h3 style="margin:0;">Asset library</h3><form method="post" action="/workspace/assets/batch-meta" id="assetBatchForm"><button type="submit" class="secondary">Save all asset details</button></form></div>
     <div class="draft-grid">
       {% for asset in assets %}
       <article class="draft-card {% if saved_asset_id == asset.id %}asset-card-saved{% endif %}" style="padding:14px;">
-        <header><div><strong>{{ asset.file_name }}</strong><div class="subtle">{{ asset.brand_name }} · {{ asset.asset_kind or 'image' }}</div></div>{% if asset.preview_is_image and asset.thumbnail_url %}<img src="/{{ asset.thumbnail_url }}" class="thumb" alt="{{ asset.alt_text or asset.file_name }}">{% elif asset.asset_kind == "video" %}<div class="thumb" style="display:flex; align-items:center; justify-content:center; background:var(--surface-2); font-size:12px; font-weight:700;">VIDEO</div>{% elif asset.asset_kind == "document" %}<div class="thumb" style="display:flex; align-items:center; justify-content:center; background:var(--surface-2); font-size:12px; font-weight:700;">PDF</div>{% endif %}{% if request.args.get("asset_id") == asset.id|string %}<div class="pill ok" style="margin-top:8px;">Saved</div>{% endif %}</header>
+        <header><div><strong>{{ asset.file_name }}</strong><div class="subtle">{{ asset.brand_name }} · {{ asset.asset_kind or 'image' }}</div></div>{% if saved_asset_id == asset.id %}<span class="pill ok">Saved</span>{% endif %}{% if asset.preview_is_image and asset.thumbnail_url %}<img src="/{{ asset.thumbnail_url }}" class="thumb" alt="{{ asset.alt_text or asset.file_name }}">{% elif asset.asset_kind == "video" %}<div class="thumb" style="display:flex; align-items:center; justify-content:center; background:var(--surface-2); font-size:12px; font-weight:700;">VIDEO</div>{% elif asset.asset_kind == "document" %}<div class="thumb" style="display:flex; align-items:center; justify-content:center; background:var(--surface-2); font-size:12px; font-weight:700;">PDF</div>{% endif %}{% if request.args.get("asset_id") == asset.id|string %}<div class="pill ok" style="margin-top:8px;">Saved</div>{% endif %}</header>
         <form method="post" action="/workspace/assets/{{ asset.id }}/meta">
-          <label>Alt text<input name="alt_text" value="{{ asset.alt_text or '' }}" placeholder="Describe the image for accessibility and AI suggestions"></label>
-          <label style="margin-top:10px;">Tags<input name="tags_text" value="{{ asset.asset_tags|join(', ') }}" placeholder="logo, founder, process, client proof, screenshot"></label>
+          <label>Alt text<input name="alt_text" form="assetBatchForm" value="{{ asset.alt_text or '' }}" placeholder="Describe the image for accessibility and AI suggestions"><input type="hidden" form="assetBatchForm" name="asset_{{ asset.id }}_alt_text" value="{{ asset.alt_text or '' }}" data-batch-alt="{{ asset.id }}"></label>
+          <label style="margin-top:10px;">Tags<input name="tags_text" form="assetBatchForm" value="{{ asset.asset_tags|join(', ') }}" placeholder="logo, founder, process, client proof, screenshot"><input type="hidden" form="assetBatchForm" name="asset_{{ asset.id }}_tags_text" value="{{ asset.asset_tags|join(', ') }}" data-batch-tags="{{ asset.id }}"></label>
           <div class="button-row-end"><button type="submit">Save asset details</button>{% if saved_asset_id == asset.id %}<span class="pill ok">Saved</span>{% endif %}</div>
         </form>
         <form method="post" action="/workspace/assets/{{ asset.id }}/delete" onsubmit="return confirm('Delete this asset?');">
@@ -44,6 +44,7 @@
     </div>
   </div>
 </div>
+<script>document.addEventListener("input", function(e){ const wrap=e.target.closest("form"); if(!wrap) return; const altHidden=wrap.querySelector("[data-batch-alt]"); const tagHidden=wrap.querySelector("[data-batch-tags]"); if(e.target.name==="alt_text" && altHidden){altHidden.value=e.target.value;} if(e.target.name==="tags_text" && tagHidden){tagHidden.value=e.target.value;} });</script>
 {% endblock %}
 
 <style>.asset-card-saved{outline:2px solid rgba(33,163,102,.35); box-shadow:0 0 0 4px rgba(33,163,102,.08);}</style>

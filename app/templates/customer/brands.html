@@ -36,7 +36,7 @@
         </div>
         <div class="grid-2" style="margin-top:12px;">
           <label>Posting identity<select name="linkedin_identity_type"><option value="person" {% if linkedin_setup_defaults.identity_type == 'person' %}selected{% endif %}>Personal profile</option><option value="organization" {% if linkedin_setup_defaults.identity_type == 'organization' %}selected{% endif %}>Company page</option></select></label>
-          <label>Setup path<select name="linkedin_connection_mode"><option value="manual" {% if linkedin_setup_defaults.connection_mode == 'manual' %}selected{% endif %}>I will self-configure the token and URN</option><option value="setup_fee" {% if linkedin_setup_defaults.connection_mode == 'setup_fee' %}selected{% endif %}>Handle this inside the setup fee</option></select></label>
+          <label>Setup path<select name="linkedin_connection_mode"><option value="manual" {% if linkedin_setup_defaults.connection_mode == 'manual' %}selected{% endif %}>I will self-configure the token and URN</option><option value="setup_fee" {% if linkedin_setup_defaults.connection_mode == 'setup_fee' %}selected{% endif %}>Handle this inside the setup fee</option></select><div class="field-help">Choose manual if you will add the token and URN yourself. Choose setup fee if you want Repurly setup support to handle this as part of the paid onboarding work.</div></label>
         </div>
         <div class="grid-2" style="margin-top:12px;">
           <label>LinkedIn author URN<input name="linkedin_author_urn" value="{{ editing_brand.linkedin_author_urn if editing_brand else default_brand_values.linkedin_author_urn }}" placeholder="urn:li:person:... or urn:li:organization:..."></label>

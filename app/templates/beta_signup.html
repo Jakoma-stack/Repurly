@@ -78,6 +78,7 @@
         <select name="selected_plan">
           <option value="agency" selected>Repurly Agency — £297/month</option>
         </select>
+        <label style="display:flex; align-items:flex-start; gap:10px; font-weight:600; margin-top:12px;"><input type="checkbox" name="setup_addon" value="yes" style="width:auto; margin-top:3px;" {% if form_data.get("setup_addon") == "yes" %}checked{% endif %}><span>Add guided setup support (£750 one-off). We will confirm and invoice this separately from the monthly plan.</span></label>
       </label>
       <label>Launch timeline
         <select name="timeline">
