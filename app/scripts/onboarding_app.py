@@ -2950,6 +2950,133 @@ def _generation_plan_label(frequency: str, time_mode: str, count: int) -> str:
     return f"{frequency_labels.get((frequency or '').strip().lower(), frequency_labels['custom_count'])} · {time_labels.get((time_mode or '').strip().lower(), 'same time each post')}"
 
 
+def _ai_clean_campaign_focus(brief: str, brand_name: str, audience: str) -> str:
+    raw = " ".join((brief or "").strip().split())
+    if not raw:
+        return f"how {brand_name} helps {audience}"
+
+    lower = raw.lower()
+    meta_markers = [
+        "create a ",
+        "write a ",
+        "linkedin campaign",
+        "7-post",
+        "posts should",
+        "primary cta",
+        "secondary cta",
+        "mix thought leadership",
+        "do not repeat the prompt",
+    ]
+    if any(marker in lower for marker in meta_markers):
+        topics: list[str] = []
+        for topic in ["ai governance", "data", "automation", "transformation", "analytics", "governance", "linkedin"]:
+            if topic in lower and topic not in topics:
+                topics.append(topic)
+        if topics:
+            if len(topics) == 1:
+                return f"practical {topics[0]} work"
+            if len(topics) == 2:
+                return f"practical {topics[0]} and {topics[1]} work"
+            return "practical " + ", ".join(topics[:-1]) + f", and {topics[-1]} work"
+        return f"practical delivery for {audience}"
+
+    return raw
+
+
+def _ai_topic_title(focus: str, idx: int, label: str) -> str:
+    clean_focus = focus[:80].strip()
+    return f"{clean_focus.title()} · {label} {idx + 1}"
+
+
+def _ai_render_caption(*, label: str, brand_name: str, audience: str, tone: str, primary_cta: str, secondary_cta: str, website: str, focus: str, idx: int) -> tuple[str, list[str], str]:
+    audience_short = audience.rstrip(".")
+    tone_short = tone.rstrip(".")
+    focus_short = focus.rstrip(".")
+    lower_focus = focus_short.lower()
+
+    if label == "Practical how-to":
+        hook = f"A simple way {brand_name} approaches {lower_focus}"
+        body_points = [
+            f"Open with the pain point {audience_short} already feel when work around {lower_focus} stays fragmented.",
+            f"Explain the step-by-step method {brand_name} uses in a {tone_short.lower()} tone.",
+            f"Close with one clear next step: {primary_cta}.",
+        ]
+        caption_text = (
+            f"{hook}\n\n"
+            f"Most teams do not struggle because they lack ideas. They struggle because work around {lower_focus} is spread across too many tools, owners, and decisions.\n\n"
+            f"At {brand_name}, we start by clarifying the operating problem, the risk, and the outcome that matters most. Then we put a practical structure around delivery so teams can move with more confidence and less noise.\n\n"
+            f"It is a more grounded way to make progress, especially for {audience_short}.\n\n"
+            f"{primary_cta}"
+        )
+        return hook, body_points, caption_text
+
+    if label == "Point of view":
+        hook = f"Our view on {lower_focus}: keep it simpler than most teams think"
+        body_points = [
+            f"State one clear opinion {brand_name} believes about {lower_focus}.",
+            f"Back it up with two reasons that matter to {audience_short}.",
+            f"Invite a response, then offer {secondary_cta or primary_cta}.",
+        ]
+        caption_text = (
+            f"{hook}\n\n"
+            f"A lot of organisations overcomplicate {lower_focus} before they have fixed the basics.\n\n"
+            f"Our view is simple: better decisions, clearer ownership, and workable delivery habits matter more than fashionable tools on their own.\n\n"
+            f"That is usually what helps {audience_short} move from interest to real progress.\n\n"
+            f"{secondary_cta or primary_cta}"
+        )
+        return hook, body_points, caption_text
+
+    if label == "Proof / outcomes":
+        hook = f"What better {lower_focus} should look like for {audience_short}"
+        body_points = [
+            f"Name two or three outcomes {brand_name} aims to create through {lower_focus}.",
+            f"Translate those outcomes into simple business benefits.",
+            f"Close with {primary_cta} and point readers to {website}.",
+        ]
+        caption_text = (
+            f"{hook}\n\n"
+            f"Better {lower_focus} should feel visible in the day-to-day.\n\n"
+            f"That usually means clearer priorities, fewer manual gaps, stronger governance, and a delivery plan people can actually follow.\n\n"
+            f"When those pieces are in place, teams waste less effort and make faster, better decisions.\n\n"
+            f"{primary_cta}"
+        )
+        return hook, body_points, caption_text
+
+    if label == "Checklist":
+        hook = f"A quick {lower_focus} checklist for busy teams"
+        body_points = [
+            f"Give readers a short checklist they can use this week.",
+            f"Keep the language {tone_short.lower()} and action-led.",
+            f"Wrap with {secondary_cta or primary_cta}.",
+        ]
+        caption_text = (
+            f"{hook}\n\n"
+            f"If you are reviewing {lower_focus} this week, start here:\n"
+            f"1. Define the decision or outcome that matters most.\n"
+            f"2. Identify where ownership is unclear.\n"
+            f"3. Check which steps are still manual, inconsistent, or hard to govern.\n"
+            f"4. Agree the smallest practical next move.\n\n"
+            f"Simple checklists often create more progress than another round of vague planning.\n\n"
+            f"{secondary_cta or primary_cta}"
+        )
+        return hook, body_points, caption_text
+
+    hook = f"Behind the scenes: how {brand_name} plans {lower_focus}"
+    body_points = [
+        f"Describe the workflow or operating rhythm used by {brand_name}.",
+        f"Mention how this helps {audience_short} avoid wasted effort.",
+        f"Finish with {secondary_cta or primary_cta}.",
+    ]
+    caption_text = (
+        f"{hook}\n\n"
+        f"A practical workflow matters more than a long wish list.\n\n"
+        f"At {brand_name}, we usually begin with the current state, define the next useful milestone, then build a delivery rhythm that keeps the work visible and realistic.\n\n"
+        f"That helps {audience_short} avoid false starts and focus on the changes that will actually stick.\n\n"
+        f"{secondary_cta or primary_cta}"
+    )
+    return hook, body_points, caption_text
+
+
 def _ai_blueprints_for_brand(*, brand: dict[str, Any], workspace: dict[str, Any], brief: str, count: int) -> list[dict[str, Any]]:
     brand_name = (brand.get("display_name") or brand.get("slug") or "Your brand").strip()
     audience = (brand.get("audience") or "buyers evaluating your service").strip()
@@ -2957,68 +3084,30 @@ def _ai_blueprints_for_brand(*, brand: dict[str, Any], workspace: dict[str, Any]
     primary_cta = (brand.get("primary_cta") or "Book a call").strip()
     secondary_cta = (brand.get("secondary_cta") or "Learn more").strip()
     website = (brand.get("website") or workspace.get("company_name") or "your website").strip()
-    focus = (brief or f"how {brand_name} helps {audience}").strip()
-    patterns = [
-        (
-            "Practical how-to",
-            lambda i: f"A simple way {brand_name} approaches {focus}",
-            lambda i: [
-                f"Start with the pain point {audience} already feel around {focus}.",
-                f"Explain the system or step-by-step process {brand_name} uses in a {tone.lower()} tone.",
-                f"End with one clear next step: {primary_cta}."
-            ],
-        ),
-        (
-            "Point of view",
-            lambda i: f"Our view on {focus}: keep it simpler than most teams think",
-            lambda i: [
-                f"State one opinion {brand_name} believes about {focus}.",
-                f"Back it up with two reasons that matter to {audience}.",
-                f"Invite readers to respond, then offer {secondary_cta or primary_cta}."
-            ],
-        ),
-        (
-            "Proof / outcomes",
-            lambda i: f"What better {focus} should look like for {audience}",
-            lambda i: [
-                f"List the two or three outcomes {brand_name} wants from {focus}.",
-                f"Translate each outcome into a simple business benefit.",
-                f"Close with {primary_cta} and point readers to {website}."
-            ],
-        ),
-        (
-            "Checklist",
-            lambda i: f"A quick {focus} checklist for busy teams",
-            lambda i: [
-                f"Give a short checklist readers can use this week.",
-                f"Keep the language {tone.lower()} and action-led.",
-                f"Wrap with {primary_cta}."
-            ],
-        ),
-        (
-            "Behind the scenes",
-            lambda i: f"Behind the scenes: how {brand_name} plans {focus}",
-            lambda i: [
-                f"Describe the workflow or operating rhythm used by {brand_name}.",
-                f"Mention how this helps {audience} avoid wasted effort.",
-                f"Finish with {secondary_cta or primary_cta}."
-            ],
-        ),
-    ]
+    focus = _ai_clean_campaign_focus((brief or "").strip(), brand_name, audience)
+    labels = ["Practical how-to", "Point of view", "Proof / outcomes", "Checklist", "Behind the scenes"]
     blueprints: list[dict[str, Any]] = []
     for idx in range(count):
-        label, hook_builder, body_builder = patterns[idx % len(patterns)]
-        hook = hook_builder(idx)
-        body_points = body_builder(idx)
-        topic = f"{focus.title()} #{idx + 1}"
-        hashtags = _hashtag_suggestions(brand, brief)
-        caption_text = f"{hook}\n\n" + "\n".join(f"• {item}" for item in body_points) + f"\n\n{primary_cta}\n"
+        label = labels[idx % len(labels)]
+        hook, body_points, caption_text = _ai_render_caption(
+            label=label,
+            brand_name=brand_name,
+            audience=audience,
+            tone=tone,
+            primary_cta=primary_cta,
+            secondary_cta=secondary_cta,
+            website=website,
+            focus=focus,
+            idx=idx,
+        )
+        topic = _ai_topic_title(focus, idx, label)
+        hashtags = _hashtag_suggestions(brand, focus)
         blueprints.append({
             "topic": topic,
             "hook": hook,
             "body_points": body_points,
             "caption_text": caption_text,
-            "cta": primary_cta,
+            "cta": primary_cta if label in {"Practical how-to", "Proof / outcomes"} else (secondary_cta or primary_cta),
             "hashtags": hashtags,
             "label": label,
         })
