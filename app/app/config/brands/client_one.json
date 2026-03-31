@@ -1,0 +1,23 @@
+{
+  "brand": "client_one",
+  "display_name": "Client One",
+  "website": "https://example.com",
+  "contact_email": "",
+  "tone": "",
+  "audience": "",
+  "primary_cta": "",
+  "secondary_cta": "",
+  "default_platforms": [
+    "linkedin"
+  ],
+  "hashtags": [],
+  "posting_goals": [],
+  "content_pillars": [],
+  "linkedin_profile_url": "",
+  "linkedin_company_url": "",
+  "linkedin_identity_type": "person",
+  "linkedin_connection_mode": "manual",
+  "linkedin_setup_notes": "",
+  "linkedin_author_urn": "",
+  "linkedin_token_env": ""
+}

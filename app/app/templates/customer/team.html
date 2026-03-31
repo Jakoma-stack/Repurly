@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}Team | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Workspace team</div>
+    <h2>{{ workspace.display_name if workspace else 'Workspace team' }}</h2>
+    <p>Manage seats, roles and member invites for this protected Repurly workspace.</p>
+  </div>
+</div>
+{% if saved == 'invite_created' %}
+  <div class="note success">Team invite created. Copy the link below or use automated email delivery if SMTP is enabled.</div>
+{% elif saved == 'invite_revoked' %}
+  <div class="note success">Pending invite revoked.</div>
+{% elif saved == 'member_removed' %}
+  <div class="note success">Workspace access removed for that member.</div>
+{% elif saved == 'role_updated' %}
+  <div class="note success">Workspace role updated.</div>
+{% elif saved == 'member_joined' %}
+  <div class="note success">You have joined this workspace successfully.</div>
+{% elif saved in ['invite_error', 'role_error', 'remove_error'] %}
+  <div class="note error">{{ error or 'We could not complete that team action.' }}</div>
+{% endif %}
+{% if error and saved not in ['invite_error', 'role_error', 'remove_error'] %}
+  <div class="note error">{{ error }}</div>
+{% endif %}
+{% if invite_link %}
+  <div class="panel" style="margin-bottom:16px;">
+    <h3>Manual invite link</h3>
+    <p class="muted">If automated email delivery is not configured, copy this link and send it manually to the person you are adding.</p>
+    <pre>{{ invite_link }}</pre>
+  </div>
+{% endif %}
+<div class="cards">
+  <div class="card"><h3>Plan</h3><p>{{ seat_summary.plan_name }}</p></div>
+  <div class="card"><h3>Seat limit</h3><p>{{ seat_summary.seat_limit }}</p></div>
+  <div class="card"><h3>Seats used</h3><p>{{ seat_summary.seats_used }}</p></div>
+  <div class="card"><h3>Pending invites</h3><p>{{ seat_summary.pending_invites }}</p></div>
+  <div class="card"><h3>Seats available</h3><p>{{ seat_summary.seats_available }}</p></div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Workspace members</h3>
+      <table>
+        <tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last login</th><th>Actions</th></tr>
+        {% for member in members %}
+          <tr>
+            <td>{{ member.full_name or '—' }}</td>
+            <td>{{ member.email }}</td>
+            <td>{{ member.membership_role }}</td>
+            <td>{{ member.user_status or member.status }}</td>
+            <td>{{ member.last_login_at or '—' }}</td>
+            <td>
+              {% if manage_team and member.membership_role != 'owner' %}
+                <div class="actions">
+                  <form method="post" action="/workspace/team/{{ member.id }}/role" class="inline">
+                    <input type="hidden" name="membership_role" value="{% if member.membership_role == 'member' %}admin{% else %}member{% endif %}" />
+                    <button type="submit" class="secondary">Make {% if member.membership_role == 'member' %}admin{% else %}member{% endif %}</button>
+                  </form>
+                  <form method="post" action="/workspace/team/{{ member.id }}/remove" class="inline">
+                    <button type="submit">Remove</button>
+                  </form>
+                </div>
+              {% else %}
+                <span class="muted">{{ 'Owner access is fixed here.' if member.membership_role == 'owner' else 'View only' }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="6" class="muted">No workspace members yet.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Pending invites</h3>
+      <table>
+        <tr><th>Email</th><th>Role</th><th>Expires</th><th>Invited by</th><th>Actions</th></tr>
+        {% for invite in pending_invites %}
+          <tr>
+            <td>{{ invite.email }}</td>
+            <td>{{ invite.membership_role }}</td>
+            <td>{{ invite.expires_at }}</td>
+            <td>{{ invite.invited_by_name or invite.invited_by_email or 'Workspace admin' }}</td>
+            <td>
+              {% if manage_team %}
+                <form method="post" action="/workspace/team/invitations/{{ invite.id }}/revoke" class="inline">
+                  <button type="submit" class="secondary">Revoke</button>
+                </form>
+              {% else %}
+                <span class="muted">View only</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="muted">No pending invites right now.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Invite a teammate</h3>
+      {% if manage_team %}
+        <p class="muted">Add one owner account first, then invite admins or members into the same workspace. Seat usage is tied to the current plan.</p>
+        {% if seat_summary.at_capacity %}
+          <div class="note warning">This workspace is at capacity for the current plan. Upgrade billing or remove someone before adding another member.</div>
+        {% endif %}
+        <form method="post" action="/workspace/team/invite">
+          <label>Work email<input type="email" name="email" required placeholder="team@example.com" /></label>
+          <label>Full name<input type="text" name="full_name" placeholder="Optional" /></label>
+          <label>Role
+            <select name="membership_role">
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </label>
+          <button type="submit" {% if seat_summary.at_capacity %}disabled{% endif %}>Create manual invite</button>
+        </form>
+      {% else %}
+        <p class="muted">Only workspace owners or admins can add and manage team members.</p>
+      {% endif %}
+    </div>
+    <div class="panel">
+      <h3>Roles</h3>
+      <ul>
+        <li><strong>Owner</strong> — controls billing, seats and team access.</li>
+        <li><strong>Admin</strong> — can invite and manage members inside the workspace.</li>
+        <li><strong>Member</strong> — can access the protected workspace but cannot manage billing or seats.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

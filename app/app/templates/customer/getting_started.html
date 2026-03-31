@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Getting started | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Guided setup</div>
+    <h2>Welcome to {{ workspace.display_name if workspace else 'Repurly' }}</h2>
+    <p>Follow this checklist to get your workspace ready for production use. Repurly will guide you from workspace settings to brand setup, logo upload, team access and your first generated posts.</p>
+  </div>
+</div>
+{% if request.args.get('paid') == '1' %}<div class="note success">Your checkout is confirmed. Finish these steps to get the most value from your workspace right away.</div>{% endif %}
+<div class="cards">
+  <div class="card"><h3>Workspace</h3><p class="metric-value">{{ 'Ready' if step_state.workspace else 'Next' }}</p><div class="muted">Confirm settings and billing contact</div></div>
+  <div class="card"><h3>Brands</h3><p class="metric-value">{{ brands|length }}</p><div class="muted">Brands created</div></div>
+  <div class="card"><h3>LinkedIn</h3><p class="metric-value">{{ linkedin_ready_count }}</p><div class="muted">Brands ready to post</div></div>
+  <div class="card"><h3>Assets</h3><p class="metric-value">{{ assets|length }}</p><div class="muted">Assets uploaded</div></div>
+  <div class="card"><h3>Drafts</h3><p class="metric-value">{{ generated_posts|length }}</p><div class="muted">Starter posts generated</div></div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Checklist</h3>
+      <div class="progress-list">
+        <div class="progress-item"><strong>1. Confirm workspace settings</strong><span class="muted">Check workspace name, billing contact, reporting email and allowed domains before inviting teammates.</span><div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/settings">Open workspace settings</a></div></div>
+        <div class="progress-item"><strong>2. Add your brand details</strong><span class="muted">Create the brand you want to publish for, including website, audience, tone and call to action.</span><div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/brands">Add or edit brands</a></div></div>
+        <div class="progress-item"><strong>3. Connect LinkedIn posting details</strong><span class="muted">Capture the profile or company page URL, author URN and token env var name. Or mark it as part of the setup fee.</span><div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/linkedin-setup">Open LinkedIn setup</a></div></div>
+        <div class="progress-item"><strong>4. Upload your logo and starter assets</strong><span class="muted">Upload your logo, screenshots or other images you want available inside the workspace asset library.</span><div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/assets">Open assets</a></div></div>
+        <div class="progress-item"><strong>5. Generate your first posts</strong><span class="muted">Use the guided content generator to create starter LinkedIn draft posts using your brand details.</span><div class="actions" style="margin-top:12px;"><a class="button-link secondary" href="/workspace/content">Generate starter posts</a></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Billing and team setup</h3>
+      <div class="kv">
+        <div>Billing status</div><div>{{ 'Paid and active' if step_state.paid else 'Payment or sync still pending' }}</div>
+        <div>Brands created</div><div>{{ brands|length }}</div>
+        <div>Assets uploaded</div><div>{{ assets|length }}</div>
+        <div>Draft posts</div><div>{{ generated_posts|length }}</div>
+      </div>
+      <div class="actions" style="margin-top:14px;">
+        <a class="button-link secondary" href="/account/billing">Open billing</a>
+        <a class="button-link secondary" href="/workspace/team">Manage team</a>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Need help?</h3>
+      <p class="muted">If you get stuck, email <a href="mailto:{{ support_email }}?subject=Repurly%20onboarding%20help">{{ support_email }}</a>. We can help with brand setup, asset uploads, billing and first-post generation.</p>
+      <div class="actions"><a class="button-link primary" href="/dashboard">Go to dashboard</a></div>
+    </div>
+  </div>
+</div>
+{% endblock %}

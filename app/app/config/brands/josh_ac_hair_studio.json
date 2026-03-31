@@ -1,0 +1,14 @@
+{
+  "brand": "josh_ac_hair_studio",
+  "display_name": "Josh AC Hair Studio",
+  "website": "",
+  "contact_email": "",
+  "tone": "fresh, stylish, local, approachable, confident",
+  "audience": "local salon clients, style-conscious men and women, repeat customers",
+  "primary_cta": "Book your appointment",
+  "secondary_cta": "Send us a message",
+  "default_platforms": ["linkedin"],
+  "hashtags": ["#HairStudio", "#SalonStyle", "#HairCare"],
+  "posting_goals": ["bookings", "visibility", "retention"],
+  "content_pillars": ["before and after", "haircare tips", "offers", "availability", "customer transformation"]
+}
