@@ -158,6 +158,8 @@ def build_beta_notes(form: Any) -> str:
     notes = (form.get("beta_notes") or "").strip()
     metadata = []
     company_website = (form.get("company_website") or "").strip()
+    linkedin_profile_url = (form.get("linkedin_profile_url") or "").strip()
+    linkedin_company_url = (form.get("linkedin_company_url") or "").strip()
     managed_brands = (form.get("managed_brands") or "").strip()
     team_size = (form.get("team_size") or "").strip()
     timeline = (form.get("timeline") or "").strip()
@@ -165,6 +167,10 @@ def build_beta_notes(form: Any) -> str:
     privacy_consent = "yes" if (form.get("privacy_consent") or "").strip().lower() == "yes" else "no"
     if company_website:
         metadata.append(f"company_website={company_website}")
+    if linkedin_profile_url:
+        metadata.append(f"linkedin_profile_url={linkedin_profile_url}")
+    if linkedin_company_url:
+        metadata.append(f"linkedin_company_url={linkedin_company_url}")
     if managed_brands:
         metadata.append(f"managed_brands={managed_brands}")
     if team_size:
@@ -178,6 +184,27 @@ def build_beta_notes(form: Any) -> str:
     if metadata:
         return " | ".join(metadata)
     return notes
+
+
+def parse_signup_metadata(notes: str) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    if not notes:
+        return parsed
+
+    tail = str(notes).strip()
+    if "\n\n" in tail:
+        tail = tail.split("\n\n")[-1]
+
+    for part in tail.split("|"):
+        piece = part.strip()
+        if not piece or "=" not in piece:
+            continue
+        key, value = piece.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if key:
+            parsed[key] = value
+    return parsed
 
 
 def validate_beta_form(form: Any) -> list[str]:
@@ -2164,7 +2191,10 @@ def workspace_brands_page():
         with get_conn() as conn:
             signup = conn.execute("SELECT beta_notes FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (email,)).fetchone()
         if signup is not None:
-            signup_metadata = parse_signup_metadata(signup["beta_notes"] or "")
+            try:
+                signup_metadata = parse_signup_metadata(signup["beta_notes"] or "")
+            except Exception:
+                signup_metadata = {}
     default_brand_values = {
         "website": signup_metadata.get("company_website", workspace.get("company_name") or ""),
         "contact_email": email,
