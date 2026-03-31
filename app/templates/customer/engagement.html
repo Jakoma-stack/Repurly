@@ -4,20 +4,21 @@
 <div class="page-header">
   <div>
     <div class="eyebrow">Engagement inbox</div>
-    <h2>Reply faster and qualify intent</h2>
-    <p>Pull fresh comments into a review queue, generate AI-assisted replies, and push high-intent engagement into a lead pipeline without leaving the workspace.</p>
+    <h2>Reply faster, route intent, and convert interest</h2>
+    <p>Bring comments into one inbox, send smarter replies and DMs, and move real buying signals into a clean lead pipeline.</p>
   </div>
   <div class="actions">
     <form method="post" action="/workspace/engagement/sync" style="display:inline;">
       <button type="submit">Sync comments</button>
     </form>
     <a class="button-link secondary" href="/workspace/leads">Open lead pipeline</a>
-    <a class="button-link secondary" href="/workspace/automation-rules">Automation rules</a>
+    <a class="button-link secondary" href="/workspace/automation-rules">Automation rules</a><form method="post" action="/workspace/engagement/send-all" style="display:inline;"><button type="submit" class="secondary">Send all approved</button></form><form method="post" action="/workspace/engagement/unsync" style="display:inline;" onsubmit="return confirm('Remove synced comments and reset the engagement queue?');"><button type="submit" class="ghost">Unsync comments</button></form>
   </div>
 </div>
 {% if saved %}
   <div class="note success" style="margin-bottom:18px;">{{ message or saved|replace('_', ' ')|title }}</div>
 {% endif %}
+<div class="note info" style="margin-bottom:18px;"><strong>How to use this page:</strong> sync comments, generate tailored replies, approve what should go out, then send a DM or push higher-intent people into the lead pipeline. If you want lighter-touch handling, switch on auto reply or auto DM in automation rules and start with trusted mode first.</div>
 <div class="cards">
   <div class="card"><h3>Comments</h3><p class="metric-value">{{ metrics.comments_total }}</p><div class="muted">In review queue</div></div>
   <div class="card"><h3>Pending replies</h3><p class="metric-value">{{ metrics.pending_replies }}</p><div class="muted">Awaiting approval or send</div></div>
@@ -92,7 +93,7 @@
               <h3>Reply option {{ loop.index }}</h3>
               <p class="muted" style="min-height:92px;">{{ option }}</p>
               <input type="hidden" name="reply_text" value="{{ option }}" />
-              <button type="submit">Approve and mark sent</button>
+              <button type="submit">Send reply now</button>
             </form>
           {% endfor %}
         </div>
@@ -102,7 +103,7 @@
           <h3>Suggested DM opener</h3>
           <textarea name="dm_text" rows="4">{{ comment.suggested_dm_text }}</textarea>
           <div class="actions" style="margin-top:10px;">
-            <button type="submit">Save DM draft</button>
+            <button type="submit">Save DM draft</button><button type="submit" name="send_now" value="1" class="secondary">Send DM now</button>
           </div>
         </form>
       {% endif %}

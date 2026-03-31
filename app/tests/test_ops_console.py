@@ -407,12 +407,12 @@ def test_ops_asset_upload_rejects_unsupported_file_types(app_client):
     assert b"Unsupported file type" in response.data
 
 
-def test_public_root_redirects_to_beta_and_health_routes_render(app_client):
+def test_public_root_and_health_routes_render(app_client):
     client, _, _ = app_client
 
     root_response = client.get("/", follow_redirects=False)
-    assert root_response.status_code == 302
-    assert root_response.headers["Location"].endswith("/beta")
+    assert root_response.status_code == 200
+    assert b"Start your agency workspace in one guided flow" in root_response.data
 
     robots = client.get("/robots.txt")
     assert robots.status_code == 200

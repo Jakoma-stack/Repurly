@@ -317,3 +317,73 @@ def test_content_page_shows_video_format_options(content_client):
     assert response.status_code == 200
     assert b">Video<" in response.data
     assert b"Images, videos, and carousel sequences are all supported in the draft workflow." in response.data
+
+
+def test_ai_generation_produces_real_caption_copy(content_client):
+    client, db_path, _schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+
+    response = client.post(
+        "/workspace/content/generate",
+        data={
+            "brand_id": str(brand_id),
+            "brief": "Create a 7-post LinkedIn campaign for Jakoma aimed at founders, operators, and decision-makers. The posts should position Jakoma as a credible, practical consultancy across AI governance, data, automation, and transformation. Primary CTA: book a discovery call. Secondary CTA: download the AI governance checklist.",
+            "post_type": "text",
+            "count": "1",
+            "action": "generate_week",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    conn = sqlite3.connect(db_path)
+    row = conn.execute("SELECT caption_text FROM generated_posts WHERE brand_id=? ORDER BY id DESC LIMIT 1", (brand_id,)).fetchone()
+    conn.close()
+
+    assert row is not None
+    caption = row[0]
+    assert "Create a 7-post LinkedIn campaign" not in caption
+    assert "Do not repeat the prompt" not in caption
+    assert any(cta in caption for cta in ["Book a discovery call", "Download the AI governance checklist", "Learn more"])
+    assert len(caption.strip()) > 80
+
+
+def test_customer_can_save_campaign_template_and_strategy(content_client):
+    client, db_path, _schedule_path, _workspace_id, brand_id, _tmp_path = content_client
+
+    response = client.post(
+        "/workspace/content/templates/save",
+        data={
+            "brand_id": str(brand_id),
+            "brief": "client wins",
+            "post_type": "text",
+            "frequency": "daily_week",
+            "time_mode": "same_time",
+            "count": "7",
+            "campaign": "launch week",
+            "template_name": "Launch template",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    response = client.post(
+        "/workspace/content/strategies/save",
+        data={
+            "brand_id": str(brand_id),
+            "brief": "ai governance, automation",
+            "frequency": "daily_week",
+            "time_mode": "same_time",
+            "post_time": "07:45",
+            "campaign": "Launch strategy",
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    conn = sqlite3.connect(db_path)
+    template_count = conn.execute("SELECT COUNT(*) FROM campaign_templates").fetchone()[0]
+    strategy_count = conn.execute("SELECT COUNT(*) FROM posting_strategies").fetchone()[0]
+    conn.close()
+
+    assert template_count == 1
+    assert strategy_count == 1

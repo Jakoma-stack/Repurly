@@ -8,7 +8,7 @@
   <title>{% block title %}Repurly{% endblock %}</title>
   <style>
     :root {
-      --bg: #f3f6fb;
+      --bg: #f4f7fb;
       --surface: #ffffff;
       --surface-2: #f8fbff;
       --surface-3: #eef4ff;
@@ -19,9 +19,9 @@
       --warn: #fff7e8;
       --error: #fff0f0;
       --info: #edf5ff;
-      --accent: #1d4ed8;
-      --accent-2: #0ea5e9;
-      --accent-3: #8b5cf6;
+      --accent: #2563eb;
+      --accent-2: #38bdf8;
+      --accent-3: #7c3aed;
       --ink: #0f172a;
       --success: #0f9f5b;
       --shadow: 0 20px 40px rgba(15, 23, 42, 0.06);
@@ -42,7 +42,7 @@
     a:hover { text-decoration: underline; }
     .layout { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
     .sidebar {
-      background: linear-gradient(180deg, #0f172a 0%, #111b31 40%, #10203a 100%);
+      background: linear-gradient(180deg, #081224 0%, #0f1d38 42%, #11284b 100%);
       color: #e5eef9;
       padding: 24px 20px;
       border-right: 1px solid rgba(255,255,255,.08);
@@ -119,7 +119,7 @@
       border: 1px solid var(--line);
       border-radius: var(--radius);
       padding: 18px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
     }
     .hero-card {
       position: relative;
@@ -223,7 +223,7 @@
     .primary-cta-bar { display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:16px; }
     .section-header { display:flex; justify-content:space-between; gap:12px; align-items:flex-end; margin-bottom:12px; }
     .draft-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:16px; }
-    .draft-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,250,255,.98)); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow: var(--shadow); }
+    .draft-card { background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(246,250,255,.98)); border:1px solid var(--line); border-radius:16px; padding:16px; box-shadow: 0 18px 44px rgba(15, 23, 42, 0.08); }
     .draft-card header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:10px; }
     .draft-meta { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
     .asset-strip { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -240,8 +240,29 @@
     .insight-list { display:grid; gap:10px; }
     .insight-item { padding:12px; border:1px solid var(--line); border-radius:14px; background:var(--surface-2); }
 
+    .progress-strip { display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap:12px; margin: 0 0 18px; }
+    .progress-node { border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,#ffffff,#f8fbff); padding:14px; min-height:88px; }
+    .progress-node strong { display:block; font-size:14px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; }
+    .progress-node .state { font-size:22px; font-weight:800; letter-spacing:-.03em; }
+    .progress-node.done { border-color:#bfe3cb; background:linear-gradient(180deg,#ffffff,#f3fbf6); }
+    .command-grid { display:grid; grid-template-columns: 1.05fr .95fr; gap:18px; margin-bottom:18px; }
+    .hero-kpi { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px; margin-top:12px; }
+    .cta-tile { border:1px solid var(--line); border-radius:16px; padding:14px; background:linear-gradient(180deg,#fff,#f9fbff); }
+    .cta-tile h4 { margin:0 0 8px; font-size:16px; letter-spacing:-.02em; }
+    .cta-tile p { margin:0; color:var(--muted); line-height:1.6; }
+    .compact-empty { border:1px dashed #c3d4eb; border-radius:14px; padding:14px; background:#fbfdff; min-height:auto; }
+    .compact-empty strong { display:block; margin-bottom:6px; }
+    .mode-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:14px; margin:14px 0; }
+    .mode-card { border:1px solid var(--line); border-radius:16px; padding:14px; background:linear-gradient(180deg,#fff,#f8fbff); }
+    .mode-card h4 { margin:0 0 8px; font-size:16px; letter-spacing:-.02em; }
+    .mode-card ul { margin:8px 0 0 18px; color:var(--muted); line-height:1.6; padding:0; }
+    .stack-tight { display:grid; gap:12px; }
+    .empty-hint { color:var(--muted); font-size:13px; }
+    .section-divider { margin:18px 0 12px; padding-top:14px; border-top:1px solid var(--line); }
+    .mini-stat-row { display:grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap:12px; }
+
     @media (max-width: 1080px) {
-      .hero-grid, .grid-2, .grid-3, .calendar-grid, .draft-grid { grid-template-columns: 1fr; }
+      .hero-grid, .grid-2, .grid-3, .calendar-grid, .draft-grid, .command-grid, .progress-strip, .mode-grid, .mini-stat-row { grid-template-columns: 1fr; }
       .page-header h2 { font-size: 34px; }
     }
     @media (max-width: 920px) {
@@ -275,9 +296,9 @@
         <h1>Repurly</h1>
         <p>
           {% if app_shell == 'customer' %}
-            A guided customer workspace for onboarding, brand setup, content generation, team seats and billing control.
+            A polished operating workspace for brand setup, content production, engagement handling, and commercial reporting.
           {% else %}
-            Commercial operations workspace for customer onboarding, content planning, schedule review, publishing and account management.
+            Operations workspace for onboarding, publishing, engagement, reporting, and account control.
           {% endif %}
         </p>
         <nav>
