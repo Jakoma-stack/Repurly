@@ -25,7 +25,7 @@
 {% for error in errors or [] %}<div class="note error">{{ error }}</div>{% endfor %}
 <div class="cards">
   <div class="card"><h3>Workspace</h3><p class="metric-value" style="font-size:24px;">{{ workspace.display_name if workspace else 'Pending setup' }}</p><div class="muted">Customer workspace</div></div>
-  <div class="card"><h3>Selected plan</h3><p class="metric-value" style="font-size:24px;">{{ selected_plan or 'starter' }}</p><div class="muted">Current plan selection</div></div>
+  <div class="card"><h3>Selected plan</h3><p class="metric-value" style="font-size:24px;">{{ 'Repurly Agency' if (selected_plan or 'agency') == 'agency' else (selected_plan or 'Repurly Agency') }}</p><div class="muted">Current plan selection</div></div>
   <div class="card"><h3>Billing status</h3><p class="metric-value" style="font-size:24px;">{{ billing_status_label }}</p><div class="muted">Stripe subscription state</div></div>
   <div class="card"><h3>Access</h3><p class="metric-value" style="font-size:24px;">{{ 'Unlocked' if access_allowed else 'Locked' }}</p><div class="muted">Workspace availability</div></div>
   <div class="card"><h3>Seats included</h3><p class="metric-value">{{ seat_summary.seat_limit }}</p><div class="muted">Included on this plan</div></div>
@@ -34,7 +34,7 @@
   <div class="panel">
     <h3>Plan and billing controls</h3>
     {% if active_subscription %}
-      <div class="note info">This workspace already has an active subscription on the <strong>{{ active_plan_name or subscription.plan_name }}</strong> plan. Use the customer portal to update payment method, cancel safely or change plan.</div>
+      <div class="note info">This workspace already has an active subscription on the <strong>{{ 'Repurly Agency' if (active_plan_name or subscription.plan_name) == 'agency' else (active_plan_name or subscription.plan_name) }}</strong> plan. Use the customer portal to update payment method, cancel safely or change plan.</div>
     {% else %}
       <p class="muted">Use checkout to activate the paid subscription for this workspace. Team seats scale with the selected plan.</p>
     {% endif %}
@@ -44,9 +44,7 @@
     <form method="post" action="/account/billing/create-checkout-session">
       <label>Plan
         <select name="selected_plan" {% if not manage_billing %}disabled{% endif %}>
-          <option value="starter" {% if selected_plan == 'starter' %}selected{% endif %}>Agency Starter — 1 seat</option>
-          <option value="growth" {% if selected_plan == 'growth' %}selected{% endif %}>Agency Growth — 3 seats</option>
-          <option value="pro" {% if selected_plan == 'pro' %}selected{% endif %}>Agency Pro — 10 seats</option>
+          <option value="agency" selected>Repurly Agency — £297/month</option>
         </select>
       </label>
       {% if active_subscription %}
@@ -78,7 +76,7 @@
       <h3>Current subscription</h3>
       {% if subscription %}
         <div class="kv">
-          <div>Plan</div><div>{{ subscription.plan_name or '—' }}</div>
+          <div>Plan</div><div>{{ 'Repurly Agency' if (subscription.plan_name or '') in ['agency', 'growth', 'starter', 'pro'] else (subscription.plan_name or '—') }}</div>
           <div>Status</div><div>{{ subscription.status or '—' }}</div>
           <div>Billing email</div><div>{{ subscription.billing_email or user.email }}</div>
           <div>Current period end</div><div>{{ subscription.current_period_end or '—' }}</div>

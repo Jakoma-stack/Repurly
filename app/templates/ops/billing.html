@@ -42,7 +42,7 @@
             <strong>{{ row.company_name or row.full_name }}</strong><br>
             <span class="muted">{{ row.email }}</span>
           </td>
-          <td>{{ row.selected_plan or 'starter' }}</td>
+          <td>{{ 'agency' if (row.selected_plan or 'agency') in ['agency', 'growth', 'starter', 'pro'] else (row.selected_plan or 'agency') }}</td>
           <td>
             <div>{{ row.invite_status }}</div>
             <div class="muted">{{ row.created_at }}</div>
@@ -86,7 +86,7 @@
       <table>
         <tr><th>Customer</th><th>Plan</th><th>Status</th><th>Period end</th><th>Email</th></tr>
         {% for row in subscriptions %}
-          <tr><td>{{ row.stripe_customer_id or '—' }}</td><td>{{ row.plan_name or '—' }}</td><td>{{ row.status }}</td><td>{{ row.current_period_end or '—' }}</td><td>{{ row.billing_email or '—' }}</td></tr>
+          <tr><td>{{ row.stripe_customer_id or '—' }}</td><td>{{ 'agency' if (row.plan_name or '') in ['agency', 'growth', 'starter', 'pro'] else (row.plan_name or '—') }}</td><td>{{ row.status }}</td><td>{{ row.current_period_end or '—' }}</td><td>{{ row.billing_email or '—' }}</td></tr>
         {% else %}<tr><td colspan="5" class="muted">No subscriptions recorded yet.</td></tr>{% endfor %}
       </table>
     </div>

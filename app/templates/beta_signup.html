@@ -22,7 +22,7 @@
     <h3 style="font-size:30px; color:var(--text); text-transform:none; letter-spacing:-.03em; margin-top:10px;">A smoother self-serve onboarding path</h3>
     <p class="muted" style="font-size:15px;">Repurly is designed to get a new agency from payment to a live, productive workspace without back-and-forth emails.</p>
     <ol class="steps" style="margin-top:16px;">
-      <li class="step"><span class="step-number">1</span><div><strong>Pay securely</strong><div class="muted">Choose the plan that fits your team and complete Stripe checkout.</div></div></li>
+      <li class="step"><span class="step-number">1</span><div><strong>Pay securely</strong><div class="muted">Choose the Repurly Agency plan and complete secure Stripe checkout.</div></div></li>
       <li class="step"><span class="step-number">2</span><div><strong>Set your password</strong><div class="muted">You will be taken straight into account setup after payment.</div></div></li>
       <li class="step"><span class="step-number">3</span><div><strong>Complete guided setup</strong><div class="muted">Add brand details, upload your logo, review billing and invite teammates.</div></div></li>
       <li class="step"><span class="step-number">4</span><div><strong>Generate first posts</strong><div class="muted">Create starter LinkedIn drafts using your workspace and brand details.</div></div></li>
@@ -76,9 +76,7 @@
       </div>
       <label>Selected plan
         <select name="selected_plan">
-          <option value="starter" {% if form_data.selected_plan == 'starter' %}selected{% endif %}>Agency Starter</option>
-          <option value="growth" {% if form_data.selected_plan == 'growth' %}selected{% endif %}>Agency Growth</option>
-          <option value="pro" {% if form_data.selected_plan == 'pro' %}selected{% endif %}>Agency Pro</option>
+          <option value="agency" selected>Repurly Agency — £297/month</option>
         </select>
       </label>
       <label>Launch timeline
@@ -112,10 +110,10 @@
       <h3>Pricing and onboarding</h3>
       <p class="muted">Secure checkout is enabled. After payment, new customers are taken straight into password setup and guided onboarding.</p>
       <div class="mini-grid" style="margin-top:14px;">
-        <div class="card"><h3>Starter</h3><p class="metric-value">1</p><div class="muted">Seat</div></div>
-        <div class="card"><h3>Growth</h3><p class="metric-value">3</p><div class="muted">Seats</div></div>
-        <div class="card"><h3>Pro</h3><p class="metric-value">10</p><div class="muted">Seats</div></div>
-        <div class="card"><h3>LinkedIn-first</h3><p class="metric-value">1</p><div class="muted">Core channel</div></div>
+        <div class="card"><h3>Repurly Agency</h3><p class="metric-value">£297</p><div class="muted">Per month</div></div>
+        <div class="card"><h3>Seats</h3><p class="metric-value">3</p><div class="muted">Included</div></div>
+        <div class="card"><h3>Setup</h3><p class="metric-value">£750</p><div class="muted">One-off support</div></div>
+        <div class="card"><h3>Channel</h3><p class="metric-value">1</p><div class="muted">LinkedIn-first</div></div>
       </div>
     </div>
     <div class="panel">

@@ -78,7 +78,7 @@
       <table>
         <tr><th>Name</th><th>Email</th><th>Plan</th></tr>
         {% for row in recent_signups %}
-          <tr><td>{{ row.full_name }}</td><td>{{ row.email }}</td><td>{{ row.selected_plan or '—' }}</td></tr>
+          <tr><td>{{ row.full_name }}</td><td>{{ row.email }}</td><td>{{ 'agency' if (row.selected_plan or '') in ['agency', 'growth', 'starter', 'pro'] else (row.selected_plan or '—') }}</td></tr>
         {% else %}<tr><td colspan="3" class="muted">No signups yet.</td></tr>{% endfor %}
       </table>
     </div>

@@ -19,7 +19,7 @@
   <div class="card"><h3>Workspace</h3><p class="metric-value" style="font-size:24px;">{{ workspace.display_name if workspace else 'Pending' }}</p><div class="muted">Company workspace</div></div>
   <div class="card"><h3>Brands linked</h3><p class="metric-value">{{ brands|length }}</p><div class="muted">Brand profiles ready</div></div>
   <div class="card"><h3>Scheduled posts</h3><p class="metric-value">{{ reporting_summary.total_posts }}</p><div class="muted">Posts in the schedule</div></div>
-  <div class="card"><h3>Selected plan</h3><p class="metric-value" style="font-size:24px;">{{ subscription.plan_name if subscription else (workspace.selected_plan if workspace and workspace.selected_plan else (signup.selected_plan if signup else 'Starter')) }}</p><div class="muted">Current commercial plan</div></div>
+  <div class="card"><h3>Selected plan</h3><p class="metric-value" style="font-size:24px;">{{ 'Repurly Agency' if ((subscription.plan_name if subscription else (workspace.selected_plan if workspace and workspace.selected_plan else (signup.selected_plan if signup else 'agency')))|lower) in ['agency', 'growth', 'starter', 'pro'] else (subscription.plan_name if subscription else (workspace.selected_plan if workspace and workspace.selected_plan else (signup.selected_plan if signup else 'agency'))) }}</p><div class="muted">Current commercial plan</div></div>
   <div class="card"><h3>Billing status</h3><p class="metric-value" style="font-size:24px;">{{ billing_status_label }}</p><div class="muted">Workspace access state</div></div>
   <div class="card"><h3>Team seats</h3><p class="metric-value">{{ seat_summary.seats_used }}/{{ seat_summary.seat_limit }}</p><div class="muted">Used vs included</div></div>
 </div>

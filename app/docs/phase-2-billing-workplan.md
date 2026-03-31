@@ -12,10 +12,10 @@
    - STRIPE_WEBHOOK_SECRET
    - STRIPE_PUBLISHABLE_KEY
    - STRIPE_PRICE_STARTER
-   - STRIPE_PRICE_GROWTH
+   - STRIPE_PRICE_AGENCY (or legacy STRIPE_PRICE_GROWTH)
    - STRIPE_PRICE_PRO
 2. Set `WORKSPACE_BILLING_REQUIRED=true` only after Stripe checkout and webhook handling are verified.
-3. In Stripe, make sure your checkout products/prices match starter / growth / pro.
+3. In Stripe, make sure your checkout products/prices match agency pricing.
 4. Test this live flow end to end:
    - invite user
    - activate account
