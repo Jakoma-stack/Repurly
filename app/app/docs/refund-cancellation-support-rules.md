@@ -1,11 +1,11 @@
 # Refund, cancellation and support rules
 
-## Recommended live policy for commercial beta
+## Recommended live policy for commercial launch
 
 ### Refunds
 - Duplicate or accidental charges: refund in full.
 - Failed onboarding caused by Repurly platform issues: refund in full.
-- Mid-cycle dissatisfaction: handle case by case during beta and document the outcome.
+- Mid-cycle dissatisfaction: handle case by case during launch and document the outcome.
 
 ### Cancellations
 - Customers manage cancellation in the Stripe customer portal.
@@ -14,7 +14,7 @@
 
 ### Support expectations
 - Primary support channel: `support@repurly.org`
-- Response target during beta: within 1 business day
+- Response target during launch: within 1 business day
 - Billing problems take priority over product polish issues
 
 ### Internal playbook

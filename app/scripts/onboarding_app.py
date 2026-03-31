@@ -1511,7 +1511,7 @@ def inject_nav() -> dict[str, Any]:
             ("/logout", "Log out"),
         ],
         "public_nav": [
-            ("/beta", "Start"),
+            ("/", "Start"),
             ("/login", "Log in"),
         ],
         "current_customer": customer,
@@ -1537,11 +1537,11 @@ def healthz():
     return jsonify({"ok": True, "service": "replury"})
 
 
-@app.get("/")
+@app.route("/", methods=["GET", "POST"])
 def home():
     if current_customer() is not None:
         return redirect(url_for("customer_dashboard"))
-    return redirect(url_for("beta_signup"))
+    return beta_signup()
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1660,7 +1660,7 @@ def signup_complete_from_checkout():
     if not session_id and (pending.get("session_id") or "").strip():
         session_id = str(pending.get("session_id") or "").strip()
     if not session_id:
-        return redirect(url_for("beta_signup", billing="success"))
+        return redirect(url_for("home", billing="success"))
 
     checkout_session: dict[str, Any] | None = None
     confirmation_error = ""
@@ -5510,6 +5510,9 @@ def brand_onboarding():
 
 @app.route("/beta", methods=["GET", "POST"])
 def beta_signup():
+    if request.method == "GET":
+        query_string = request.query_string.decode().strip()
+        return redirect(url_for("home") + (("?" + query_string) if query_string else ""), code=302)
     saved = None
     billing_state = (request.args.get("billing") or "").strip().lower()
     form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
@@ -5539,7 +5542,7 @@ def beta_signup():
                     (email, full_name, company_name, selected_plan, beta_notes),
                 )
                 conn.commit()
-            saved = "Beta request saved. We will follow up using the details you provided."
+            saved = "Workspace enquiry saved. We will follow up using the details you provided."
             form_data = normalised_beta_form_data({})
 
     return render_beta_template(saved=saved, errors=errors, billing_state=billing_state, form_data=form_data)

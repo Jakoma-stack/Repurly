@@ -1,6 +1,6 @@
 # Commercial launch notes
 
-This branch removes beta-facing copy from the customer and public experience, fixes the premium content calendar crash, and adds due-time LinkedIn posting support.
+This branch removes pre-launch copy from the customer and public experience, fixes the premium content calendar crash, and adds due-time LinkedIn posting support.
 
 ## External setup still required
 - Stripe live keys and webhook
