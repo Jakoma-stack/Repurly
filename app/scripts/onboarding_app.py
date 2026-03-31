@@ -36,6 +36,7 @@ from billing import (
     subscription_allows_workspace_access,
     sync_latest_subscription_for_customer,
     verify_stripe_webhook_signature,
+    store_checkout_session_reference,
 )
 
 from auth import (
@@ -423,6 +424,52 @@ def active_or_recent_checkout_conflict(*, email: str, workspace_id: int | None =
     return None
 
 
+
+
+def ensure_signup_row_for_checkout(
+    conn: sqlite3.Connection,
+    *,
+    billing_email: str,
+    full_name: str = "",
+    company_name: str = "",
+    selected_plan: str = "agency",
+    session_id: str = "",
+    signup_id: int | None = None,
+) -> sqlite3.Row | None:
+    billing_email = (billing_email or "").strip().lower()
+    if not billing_email and not signup_id:
+        return None
+    signup = None
+    if signup_id:
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (int(signup_id),)).fetchone()
+    if signup is None and billing_email:
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (billing_email,)).fetchone()
+    if signup is None:
+        conn.execute(
+            """
+            INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes, stripe_checkout_session_id, invite_status)
+            VALUES (?, ?, ?, ?, '', ?, 'requested')
+            """,
+            (billing_email, (full_name or billing_email.split('@', 1)[0]).strip(), (company_name or '').strip(), normalise_plan_name(selected_plan or 'agency') or 'agency', (session_id or '').strip()),
+        )
+        signup_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (signup_id,)).fetchone()
+    else:
+        new_full_name = (full_name or signup["full_name"] or billing_email.split('@', 1)[0]).strip()
+        new_company_name = (company_name or signup["company_name"] or '').strip()
+        new_plan = normalise_plan_name(selected_plan or signup["selected_plan"] or 'agency') or 'agency'
+        new_session = (session_id or signup["stripe_checkout_session_id"] or '').strip()
+        conn.execute(
+            """
+            UPDATE founding_user_signups
+            SET email=?, full_name=?, company_name=?, selected_plan=?, stripe_checkout_session_id=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (billing_email or signup["email"], new_full_name, new_company_name, new_plan, new_session, signup["id"]),
+        )
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (signup["id"],)).fetchone()
+    return signup
+
 def retrieve_checkout_session_with_retry(session_id: str, *, attempts: int = 4, delay_seconds: float = 0.9) -> dict[str, Any]:
     last_error: Exception | None = None
     for attempt in range(max(attempts, 1)):
@@ -436,23 +483,27 @@ def retrieve_checkout_session_with_retry(session_id: str, *, attempts: int = 4, 
 
 
 
-def build_signup_handoff_state(*, billing_email: str, signup_id: int | None = None, stripe_customer_id: str = "") -> dict[str, Any] | None:
+def build_signup_handoff_state(*, billing_email: str, signup_id: int | None = None, stripe_customer_id: str = "", full_name: str = "", company_name: str = "", selected_plan: str = "agency", session_id: str = "") -> dict[str, Any] | None:
     billing_email = (billing_email or "").strip().lower()
     if not billing_email and not signup_id:
         return None
     with get_conn() as conn:
-        signup = None
-        if signup_id:
-            signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (int(signup_id),)).fetchone()
-        if signup is None and billing_email:
-            signup = conn.execute("SELECT * FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (billing_email,)).fetchone()
+        signup = ensure_signup_row_for_checkout(
+            conn,
+            billing_email=billing_email,
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
+            signup_id=signup_id,
+        )
         if signup is None:
             return None
         user = ensure_customer_user_for_signup(conn, signup=signup)
         workspace = ensure_workspace_for_signup(conn, signup=signup, user_id=int(user["id"]))
         conn.execute(
-            "UPDATE founding_user_signups SET invite_status='invited', updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (signup["id"],),
+            "UPDATE founding_user_signups SET invite_status='invited', stripe_checkout_session_id=COALESCE(NULLIF(?, ''), stripe_checkout_session_id), updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            ((session_id or '').strip(), signup["id"]),
         )
         conn.commit()
 
@@ -1725,6 +1776,9 @@ def signup_complete_from_checkout():
         or pending.get("email")
         or ""
     ).strip().lower()
+    selected_plan = normalise_plan_name(str(metadata.get("selected_plan") or pending.get("selected_plan") or "agency")) or "agency"
+    full_name = str(metadata.get("full_name") or pending.get("full_name") or "").strip()
+    company_name = str(metadata.get("company_name") or pending.get("company_name") or "").strip()
     signup_id_raw = str(metadata.get("signup_id") or (checkout_session or {}).get("client_reference_id") or pending.get("signup_id") or "").strip()
     signup_id = int(signup_id_raw) if signup_id_raw.isdigit() else None
 
@@ -1744,6 +1798,10 @@ def signup_complete_from_checkout():
             billing_email=billing_email,
             signup_id=signup_id,
             stripe_customer_id=str((checkout_session.get("customer") or "")).strip(),
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
         )
         handoff_response = maybe_finish_signup_handoff(handoff_state=handoff_state, paid_flag="1")
         if handoff_response is not None:
@@ -1754,6 +1812,10 @@ def signup_complete_from_checkout():
             billing_email=billing_email,
             signup_id=signup_id,
             stripe_customer_id="",
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
         )
         if handoff_state and handoff_state.get("subscription"):
             handoff_response = maybe_finish_signup_handoff(handoff_state=handoff_state, paid_flag="1")
@@ -1766,7 +1828,7 @@ def signup_complete_from_checkout():
         retry_url=url_for("signup_complete_from_checkout", session_id=session_id),
         support_email=PUBLIC_SUPPORT_EMAIL,
         billing_email=billing_email,
-        error_message=confirmation_error or "We are still finishing your Repurly setup. Refresh in a moment or use the link in your welcome email once it arrives.",
+        error_message=(str(confirmation_error).strip() if str(confirmation_error).strip() else "We have your payment, but Repurly is still creating or linking your setup record. Retry in a moment. If it still does not move forward, contact support with the session reference below."),
         pending_context=pending,
     ), 202
 

@@ -108,3 +108,46 @@ def test_workspace_assets_and_content_routes_work(guided_client):
     count = conn.execute("SELECT COUNT(*) FROM generated_posts WHERE brand_id=?", (brand_id,)).fetchone()[0]
     conn.close()
     assert count == 2
+
+
+def test_signup_complete_recovers_when_signup_row_missing(monkeypatch, guided_client):
+    client, db_path, _ = guided_client
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("DELETE FROM founding_user_signups WHERE email='new@example.com'")
+    conn.commit()
+    conn.close()
+
+    with client.session_transaction() as sess:
+        sess["pending_checkout"] = {
+            "email": "new@example.com",
+            "full_name": "New User",
+            "company_name": "New Co",
+            "selected_plan": "agency",
+        }
+
+    monkeypatch.setattr(
+        onboarding_app,
+        "retrieve_checkout_session",
+        lambda session_id: {
+            "id": session_id,
+            "payment_status": "paid",
+            "status": "complete",
+            "customer": "cus_test_123",
+            "customer_details": {"email": "new@example.com"},
+            "metadata": {"selected_plan": "agency"},
+        },
+    )
+    monkeypatch.setattr(onboarding_app, "sync_latest_subscription_for_customer", lambda **kwargs: {"ok": True})
+    monkeypatch.setattr(onboarding_app, "send_welcome_email_if_enabled", lambda **kwargs: {"ok": True})
+
+    response = client.get("/signup/complete?session_id=cs_test_missing_signup", follow_redirects=False)
+    assert response.status_code == 302
+    assert "/activate/" in response.headers["Location"]
+
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    signup = conn.execute("SELECT * FROM founding_user_signups WHERE email='new@example.com'").fetchone()
+    conn.close()
+    assert signup is not None
+    assert signup["selected_plan"] == "agency"
