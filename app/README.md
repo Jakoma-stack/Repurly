@@ -51,11 +51,3 @@ Production entrypoint:
 ```bash
 gunicorn --bind 0.0.0.0:${PORT:-5050} wsgi:app
 ```
-
-
-## Live domains
-
-- Marketing site: `https://repurly.org`
-- Customer app: `https://app.repurly.org`
-- Customer login: `https://app.repurly.org/login`
-- Ops console: `https://app.repurly.org/ops`

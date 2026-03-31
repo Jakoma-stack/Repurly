@@ -3,12 +3,12 @@
 ## Recommended shape
 
 - Serve the marketing site from the repository root on `https://repurly.org`
-- Serve the Flask customer and ops app from `app/` on `https://app.repurly.org`
+- Serve the Flask beta and ops app from `System/` on `https://beta.repurly.org`
 - Protect `/ops`, `/api/ops`, and `/onboarding/brand` with `OPS_USERNAME` and `OPS_PASSWORD`
 
 ## Required environment variables
 
-- `APP_BASE_URL=https://app.repurly.org`
+- `APP_BASE_URL=https://beta.repurly.org`
 - `MARKETING_SITE_URL=https://repurly.org`
 - `PUBLIC_SUPPORT_EMAIL=support@repurly.org`
 - `OPS_USERNAME=<strong-admin-user>`

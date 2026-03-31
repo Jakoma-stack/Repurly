@@ -35,4 +35,4 @@ The GitHub version keeps the cleaner nested project as the source of truth and r
 3. publish validation gate
 4. audit logging hardening
 5. approval-state enforcement
-6. paid onboarding flow
+6. paid beta onboarding flow

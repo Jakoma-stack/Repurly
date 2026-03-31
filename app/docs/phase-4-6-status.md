@@ -14,4 +14,4 @@
 - enterprise-grade identity integrations remain a future external implementation
 
 ## Recommended launch posture
-Launch as a guided commercial product with automated email enabled only after SMTP is fully tested.
+Launch as a guided commercial beta with automated email enabled only after SMTP is fully tested.

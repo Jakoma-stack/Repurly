@@ -10,7 +10,7 @@
 
 ## Render environment variables
 
-Set these in the live `repurly-app` service:
+Set these in the live `replury-beta` service:
 
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
@@ -24,7 +24,7 @@ Set these in the live `repurly-app` service:
 
 ## Stripe dashboard setup
 
-1. Confirm the webhook endpoint is `https://app.repurly.org/stripe/webhook`.
+1. Confirm the webhook endpoint is `https://beta.repurly.org/stripe/webhook`.
 2. Confirm it listens to:
    - `checkout.session.completed`
    - `customer.subscription.created`
@@ -47,8 +47,8 @@ Set these in the live `repurly-app` service:
 ## Go-live URLs
 
 - Marketing site: `https://repurly.org`
-- Workspace launch: `https://app.repurly.org/`
-- Customer login: `https://app.repurly.org/login`
-- Customer dashboard: `https://app.repurly.org/dashboard`
-- Customer billing: `https://app.repurly.org/account/billing`
-- Ops billing: `https://app.repurly.org/ops/billing`
+- Beta intake: `https://beta.repurly.org/beta`
+- Customer login: `https://beta.repurly.org/login`
+- Customer dashboard: `https://beta.repurly.org/dashboard`
+- Customer billing: `https://beta.repurly.org/account/billing`
+- Ops billing: `https://beta.repurly.org/ops/billing`

@@ -12,7 +12,6 @@ import shutil
 import sqlite3
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
-from zoneinfo import ZoneInfo
 from time import sleep
 from pathlib import Path
 from typing import Any
@@ -155,99 +154,23 @@ def secure_request_active() -> bool:
     return request.is_secure or forwarded_proto == "https"
 
 
-LOCAL_TZ = ZoneInfo("Europe/London")
-
-
-def local_now() -> datetime:
-    return datetime.now(LOCAL_TZ)
-
-
-def plan_display_name(plan_name: str) -> str:
-    plan = normalise_plan_name(plan_name or "agency") or "agency"
-    mapping = {
-        "agency": "Agency",
-        "growth": "Agency Growth",
-        "pro": "Agency Pro",
-    }
-    return mapping.get(plan, plan.replace("_", " ").title())
-
-
-def _filename_tokens(filename: str) -> list[str]:
-    stem = Path(filename or "").stem.replace("_", " ").replace("-", " ")
-    tokens = []
-    for raw in stem.split():
-        word = raw.strip().lower()
-        if not word or word in {"final","v2","v3","copy","new"}:
-            continue
-        tokens.append(word)
-    return tokens
-
-
-def guess_asset_metadata(filename: str, brand_name: str) -> tuple[str, list[str]]:
-    tokens = _filename_tokens(filename)
-    pretty = " ".join(token.upper() if token in {"ai","ui","pdf"} else token.capitalize() for token in tokens) or Path(filename or "asset").stem
-    alt_text = pretty
-    brand_token = slugify(str(brand_name or "brand")).replace("-", "")
-    tags = [brand_token] if brand_token else []
-    tags += tokens[:5]
-    if any(token in tokens for token in ["logo"]):
-        tags += ["brand", "visual identity"]
-    elif any(token in tokens for token in ["homepage", "screenshot", "screen"]):
-        tags += ["website", "screenshot"]
-    elif any(token in tokens for token in ["checklist"]):
-        tags += ["lead magnet", "downloadable resource"]
-    elif any(token in tokens for token in ["proposal", "retainer", "sprint", "deliverable"]):
-        tags += ["service offer"]
-    elif any(token in tokens for token in ["image", "photo"]):
-        tags += ["image"]
-    tags = list(dict.fromkeys([t for t in tags if t]))[:8]
-    return alt_text, tags
-
-
-def local_input_to_utc(post_date: str, post_time: str) -> tuple[str, str]:
-    if not post_date:
-        return post_date, post_time
-    raw_time = (post_time or "09:00").strip() or "09:00"
-    naive = datetime.strptime(f"{post_date} {raw_time}", "%Y-%m-%d %H:%M")
-    local_dt = naive.replace(tzinfo=LOCAL_TZ)
-    utc_dt = local_dt.astimezone(timezone.utc)
-    return utc_dt.strftime("%Y-%m-%d"), utc_dt.strftime("%H:%M")
-
-
-def utc_to_local_display(post_date: str, post_time: str) -> str:
-    try:
-        utc_dt = datetime.strptime(f"{post_date} {post_time}", "%Y-%m-%d %H:%M").replace(tzinfo=timezone.utc)
-        local_dt = utc_dt.astimezone(LOCAL_TZ)
-        return local_dt.strftime("%Y-%m-%d %H:%M")
-    except Exception:
-        return f"{post_date} {post_time}".strip()
-
-
 def build_beta_notes(form: Any) -> str:
     notes = (form.get("beta_notes") or "").strip()
     metadata = []
     company_website = (form.get("company_website") or "").strip()
-    linkedin_profile_url = (form.get("linkedin_profile_url") or "").strip()
-    linkedin_company_url = (form.get("linkedin_company_url") or "").strip()
     managed_brands = (form.get("managed_brands") or "").strip()
     team_size = (form.get("team_size") or "").strip()
     timeline = (form.get("timeline") or "").strip()
-    setup_addon = "yes" if (form.get("setup_addon") or "").strip().lower() == "yes" else "no"
     updates_opt_in = "yes" if (form.get("updates_opt_in") or "").strip().lower() == "yes" else "no"
     privacy_consent = "yes" if (form.get("privacy_consent") or "").strip().lower() == "yes" else "no"
     if company_website:
         metadata.append(f"company_website={company_website}")
-    if linkedin_profile_url:
-        metadata.append(f"linkedin_profile_url={linkedin_profile_url}")
-    if linkedin_company_url:
-        metadata.append(f"linkedin_company_url={linkedin_company_url}")
     if managed_brands:
         metadata.append(f"managed_brands={managed_brands}")
     if team_size:
         metadata.append(f"team_size={team_size}")
     if timeline:
         metadata.append(f"timeline={timeline}")
-    metadata.append(f"setup_addon={setup_addon}")
     metadata.append(f"privacy_consent={privacy_consent}")
     metadata.append(f"updates_opt_in={updates_opt_in}")
     if notes and metadata:
@@ -255,27 +178,6 @@ def build_beta_notes(form: Any) -> str:
     if metadata:
         return " | ".join(metadata)
     return notes
-
-
-def parse_signup_metadata(notes: str) -> dict[str, str]:
-    parsed: dict[str, str] = {}
-    if not notes:
-        return parsed
-
-    tail = str(notes).strip()
-    if "\n\n" in tail:
-        tail = tail.split("\n\n")[-1]
-
-    for part in tail.split("|"):
-        piece = part.strip()
-        if not piece or "=" not in piece:
-            continue
-        key, value = piece.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if key:
-            parsed[key] = value
-    return parsed
 
 
 def validate_beta_form(form: Any) -> list[str]:
@@ -367,47 +269,6 @@ def pending_checkout_context() -> dict[str, Any]:
 def clear_pending_checkout_context() -> None:
     session.pop("pending_checkout", None)
 
-
-
-
-def active_or_recent_checkout_conflict(*, email: str, workspace_id: int | None = None, selected_plan: str = "agency") -> str | None:
-    email = (email or "").strip().lower()
-    selected_plan = normalise_plan_name(selected_plan or "agency") or "agency"
-    if not email:
-        return None
-    pending = pending_checkout_context()
-    if pending and (pending.get("email") or "").strip().lower() == email:
-        pending_plan = normalise_plan_name(pending.get("selected_plan") or "")
-        if pending_plan == selected_plan:
-            return "Checkout is already in progress for this email and plan. Complete the existing checkout or wait for it to expire before trying again."
-
-    with get_conn() as conn:
-        customer = conn.execute("SELECT * FROM users WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (email,)).fetchone()
-        signup = conn.execute("SELECT * FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (email,)).fetchone()
-        if customer is not None:
-            user_id = int(customer["id"])
-            subscription = conn.execute(
-                "SELECT * FROM subscriptions WHERE user_id=? ORDER BY id DESC LIMIT 1",
-                (user_id,),
-            ).fetchone()
-            if subscription is not None and subscription_allows_workspace_access(subscription.get("status")):
-                active_plan = normalise_plan_name(subscription.get("plan_name") or "")
-                if not active_plan or active_plan == selected_plan:
-                    return "This email already has an active subscription. Sign in and use billing settings instead of starting a new checkout."
-        if workspace_id:
-            subscription = conn.execute(
-                "SELECT s.* FROM subscriptions s WHERE s.workspace_id=? ORDER BY s.id DESC LIMIT 1",
-                (int(workspace_id),),
-            ).fetchone()
-            if subscription is not None and subscription_allows_workspace_access(subscription.get("status")):
-                active_plan = normalise_plan_name(subscription.get("plan_name") or "")
-                if not active_plan or active_plan == selected_plan:
-                    return "This workspace already has an active subscription on that plan. Use billing settings instead of paying again."
-        if signup is not None:
-            existing_customer = conn.execute("SELECT id FROM users WHERE lower(email)=? LIMIT 1", (email,)).fetchone()
-            if existing_customer is not None:
-                return "An account already exists for this email. Sign in or reset your password instead of paying again."
-    return None
 
 
 def retrieve_checkout_session_with_retry(session_id: str, *, attempts: int = 4, delay_seconds: float = 0.9) -> dict[str, Any]:
@@ -860,9 +721,6 @@ def workspace_reporting_summary(*, workspace: dict[str, Any] | None, subscriptio
     posted_posts = int((filtered["status"].str.lower() == "posted").sum()) if total_posts else 0
     failed_posts = int((filtered["status"].str.lower() == "failed").sum()) if total_posts else 0
     ready_posts = int(filtered["status"].str.lower().isin(["approved", "generated", "queued", "drafted"]).sum()) if total_posts else 0
-    scheduled_posts = int(filtered["status"].str.lower().isin(["approved", "generated", "queued", "drafted", "scheduled", "posted", "failed"]).sum()) if total_posts else 0
-    delivery_rate = round((posted_posts / total_posts) * 100, 1) if total_posts else 0.0
-    failure_rate = round((failed_posts / total_posts) * 100, 1) if total_posts else 0.0
     upcoming_posts = []
     if total_posts:
         upcoming = filtered.sort_values(by=["post_date", "post_time", "post_id"], ascending=[False, False, True]).head(25)
@@ -904,46 +762,12 @@ def workspace_reporting_summary(*, workspace: dict[str, Any] | None, subscriptio
         else:
             insight = "Text posts remain the fastest way to keep cadence stable while the team learns what angles resonate."
         feedback_loop.append({"label": label, "insight": insight})
-
-    engagement_comments = 0
-    engagement_pending_replies = 0
-    engagement_hot_leads = 0
-    lead_count = 0
-    contacted_leads = 0
-    qualified_leads = 0
-    reply_sent_count = 0
-    if workspace_id:
-        engagement = workspace_engagement_summary(workspace_id)
-        engagement_comments = int(engagement["metrics"].get("comments_total", 0))
-        engagement_pending_replies = int(engagement["metrics"].get("pending_replies", 0))
-        engagement_hot_leads = int(engagement["metrics"].get("hot_leads", 0))
-        lead_count = int(len(engagement.get("leads", [])))
-        contacted_leads = sum(1 for item in engagement.get("leads", []) if (item.get("stage") or "").lower() in {"contacted", "qualified", "closed"})
-        qualified_leads = sum(1 for item in engagement.get("leads", []) if (item.get("stage") or "").lower() in {"qualified", "closed"})
-        reply_sent_count = sum(1 for item in engagement.get("comments", []) if (item.get("reply_status") or "").lower() == "sent")
-    reply_send_rate = round((reply_sent_count / engagement_comments) * 100, 1) if engagement_comments else 0.0
-    lead_conversion_rate = round((lead_count / engagement_comments) * 100, 1) if engagement_comments else 0.0
-    qualified_rate = round((qualified_leads / lead_count) * 100, 1) if lead_count else 0.0
-
     return {
         "brand_count": len(brands),
         "total_posts": total_posts,
         "posted_posts": posted_posts,
         "failed_posts": failed_posts,
         "ready_posts": ready_posts,
-        "scheduled_posts": scheduled_posts,
-        "delivery_rate": delivery_rate,
-        "failure_rate": failure_rate,
-        "engagement_comments": engagement_comments,
-        "engagement_pending_replies": engagement_pending_replies,
-        "engagement_hot_leads": engagement_hot_leads,
-        "lead_count": lead_count,
-        "contacted_leads": contacted_leads,
-        "qualified_leads": qualified_leads,
-        "reply_sent_count": reply_sent_count,
-        "reply_send_rate": reply_send_rate,
-        "lead_conversion_rate": lead_conversion_rate,
-        "qualified_rate": qualified_rate,
         "publish_attempts": publish_attempts,
         "audit_events": audit_events,
         "upcoming_posts": upcoming_posts,
@@ -1501,9 +1325,9 @@ def inject_nav() -> dict[str, Any]:
             ("/workspace/brands", "Brands"),
             ("/workspace/linkedin-setup", "LinkedIn setup"),
             ("/workspace/assets", "Assets"),
-            ("/workspace/content", "Content studio"),
-            ("/workspace/engagement", "Engagement inbox"),
-            ("/workspace/leads", "Lead pipeline"),
+            ("/workspace/content", "Content & schedule"),
+            ("/workspace/engagement", "Engagement"),
+            ("/workspace/leads", "Leads"),
             ("/workspace/automation-rules", "Automation rules"),
             ("/workspace/analytics", "Analytics"),
             ("/workspace/help", "Help"),
@@ -1511,7 +1335,7 @@ def inject_nav() -> dict[str, Any]:
             ("/logout", "Log out"),
         ],
         "public_nav": [
-            ("/", "Start"),
+            ("/beta", "Start"),
             ("/login", "Log in"),
         ],
         "current_customer": customer,
@@ -1537,11 +1361,11 @@ def healthz():
     return jsonify({"ok": True, "service": "replury"})
 
 
-@app.route("/", methods=["GET", "POST"])
+@app.get("/")
 def home():
     if current_customer() is not None:
         return redirect(url_for("customer_dashboard"))
-    return beta_signup()
+    return redirect(url_for("beta_signup"))
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1660,7 +1484,7 @@ def signup_complete_from_checkout():
     if not session_id and (pending.get("session_id") or "").strip():
         session_id = str(pending.get("session_id") or "").strip()
     if not session_id:
-        return redirect(url_for("home", billing="success"))
+        return redirect(url_for("beta_signup", billing="success"))
 
     checkout_session: dict[str, Any] | None = None
     confirmation_error = ""
@@ -1955,7 +1779,6 @@ def customer_billing():
         subscription=subscription,
         signup=dict(signup) if signup else None,
         selected_plan=selected_plan,
-        selected_plan_label=plan_display_name(selected_plan),
         billing_state=billing_state,
         billing_required=workspace_billing_required(),
         access_allowed=access_allowed,
@@ -2029,13 +1852,6 @@ def customer_billing_create_checkout_session():
         return redirect(url_for("customer_billing", billing="portal_return", error="This workspace already has an active subscription on that plan. Use the customer portal to manage it."))
     if active_subscription and selected_plan != active_plan_name and not confirm_plan_change:
         return redirect(url_for("customer_billing", error="Confirm that you want to start a new checkout for a plan change before continuing.", plan=selected_plan))
-    duplicate_error = active_or_recent_checkout_conflict(
-        email=(customer.get("email") or "").strip().lower(),
-        workspace_id=int(workspace["id"]) if workspace else None,
-        selected_plan=selected_plan,
-    )
-    if duplicate_error and not (active_subscription and selected_plan != active_plan_name and confirm_plan_change):
-        return redirect(url_for("customer_billing", billing="portal_return", error=duplicate_error))
 
     with get_conn() as conn:
         signup = conn.execute(
@@ -2063,7 +1879,6 @@ def customer_billing_create_checkout_session():
             workspace_id=int(workspace["id"]) if workspace else None,
             success_path="/account/billing?billing=success",
             cancel_path="/account/billing?billing=cancelled",
-            app_base_url=current_public_app_base_url(),
         )
         store_pending_checkout_context(
             email=(customer.get("email") or "").strip().lower(),
@@ -2083,7 +1898,6 @@ def customer_billing_create_checkout_session():
             subscription=current_subscription(),
             signup=dict(signup) if signup else None,
             selected_plan=selected_plan,
-            selected_plan_label=plan_display_name(selected_plan),
             billing_state="",
             billing_required=workspace_billing_required(),
             access_allowed=current_workspace_access_allowed(),
@@ -2350,10 +2164,7 @@ def workspace_brands_page():
         with get_conn() as conn:
             signup = conn.execute("SELECT beta_notes FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (email,)).fetchone()
         if signup is not None:
-            try:
-                signup_metadata = parse_signup_metadata(signup["beta_notes"] or "")
-            except Exception:
-                signup_metadata = {}
+            signup_metadata = parse_signup_metadata(signup["beta_notes"] or "")
     default_brand_values = {
         "website": signup_metadata.get("company_website", workspace.get("company_name") or ""),
         "contact_email": email,
@@ -2518,8 +2329,6 @@ def workspace_assets_page():
         return redirect(url_for("customer_dashboard"))
     brands = fetch_workspace_brands(int(workspace["id"]))
     assets = fetch_workspace_assets(int(workspace["id"]))
-    asset_id_raw = (request.args.get("asset_id") or "").strip()
-    saved_asset_id = int(asset_id_raw) if asset_id_raw.isdigit() else None
     return render_template(
         "customer/assets.html",
         workspace=workspace,
@@ -2527,7 +2336,6 @@ def workspace_assets_page():
         assets=assets,
         saved=(request.args.get("saved") or "").strip().lower(),
         error=(request.args.get("error") or "").strip(),
-        saved_asset_id=saved_asset_id,
         manage_brands=current_customer_can_manage_brands(),
     )
 
@@ -2592,37 +2400,6 @@ def workspace_assets_upload():
     return redirect(url_for("workspace_assets_page", saved="uploaded"))
 
 
-@app.post("/workspace/assets/batch-meta")
-@customer_login_required
-def workspace_assets_update_meta_batch():
-    if not current_customer_can_manage_brands():
-        abort(403)
-    workspace = current_workspace()
-    customer = current_customer()
-    if workspace is None:
-        abort(404)
-    updated = 0
-    with get_conn() as conn:
-        for key, value in request.form.items():
-            if not key.startswith("asset_") or not key.endswith("_alt_text"):
-                continue
-            asset_id_raw = key[len("asset_"):-len("_alt_text")]
-            if not asset_id_raw.isdigit():
-                continue
-            asset_id = int(asset_id_raw)
-            alt_text = (value or "").strip()
-            tags_text = (request.form.get(f"asset_{asset_id}_tags_text") or "").strip()
-            tags = [item.strip() for item in tags_text.replace(";", ",").split(",") if item.strip()]
-            asset = conn.execute("SELECT a.id FROM assets a JOIN brands b ON b.id = a.brand_id WHERE a.id=? AND b.workspace_id=? LIMIT 1", (asset_id, workspace["id"])).fetchone()
-            if asset is None:
-                continue
-            conn.execute("UPDATE assets SET alt_text=?, asset_tags_json=? WHERE id=?", (alt_text, json.dumps(tags), asset_id))
-            updated += 1
-        conn.commit()
-    record_audit_event("workspace_assets_batch_updated", actor=(customer.get("email") or "workspace_admin"), message=f"Updated metadata for {updated} asset(s).", payload={"workspace_id": workspace["id"], "updated": updated})
-    return redirect(url_for("workspace_assets_page", saved="asset_updated"))
-
-
 @app.post("/workspace/assets/<int:asset_id>/meta")
 @customer_login_required
 def workspace_assets_update_meta(asset_id: int):
@@ -2649,7 +2426,7 @@ def workspace_assets_update_meta(asset_id: int):
         message=f"Updated asset metadata for asset {asset_id}.",
         payload={"workspace_id": workspace["id"], "asset_id": asset_id, "tags": tags},
     )
-    return redirect(url_for("workspace_assets_page", saved="asset_updated", asset_id=asset_id))
+    return redirect(url_for("workspace_assets_page", saved="asset_updated"))
 
 
 def parse_json_array(raw: Any) -> list[Any]:
@@ -2754,71 +2531,6 @@ def _smart_asset_suggestions(assets: list[dict[str, Any]], text_seed: str, post_
     return [item[1] for item in ranked[:6] if item[0] > 0] or [item[1] for item in ranked[:3]]
 
 
-def _parse_schedule_datetime_value(post_date: str, post_time: str) -> datetime | None:
-    try:
-        return datetime.strptime(f"{(post_date or '').strip()} {(post_time or '00:00').strip() or '00:00'}", "%Y-%m-%d %H:%M")
-    except Exception:
-        return None
-
-
-def _workspace_publishing_health(*, brands: list[dict[str, Any]], schedule_rows: list[dict[str, Any]]) -> dict[str, Any]:
-    now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-    due_rows: list[dict[str, Any]] = []
-    next_due: datetime | None = None
-    publishable_statuses = {"approved", "generated", "queued"}
-    publishable_approvals = {"approved", "not_required"}
-
-    for row in schedule_rows:
-        scheduled_at = _parse_schedule_datetime_value(str(row.get("post_date") or ""), str(row.get("post_time") or "00:00"))
-        if scheduled_at is None:
-            continue
-        if next_due is None or scheduled_at < next_due:
-            next_due = scheduled_at
-        status = str(row.get("status") or "").strip().lower()
-        approval = str(row.get("approval_status") or "").strip().lower()
-        if scheduled_at <= now_utc.replace(tzinfo=None) and status in publishable_statuses and approval in publishable_approvals:
-            due_rows.append(row)
-
-    brand_checks: list[dict[str, Any]] = []
-    for brand in brands:
-        slug = str(brand.get("slug") or "").strip()
-        author_urn = str(brand.get("linkedin_author_urn") or "").strip()
-        token_env = str(brand.get("linkedin_token_env") or "").strip()
-        token_ready = False
-        token_label = ""
-        if token_env == "__db_linkedin_token__":
-            token_ready = True
-            token_label = "workspace LinkedIn connection"
-        elif token_env:
-            token_ready = bool(os.getenv(token_env, "").strip()) or env_flag("LINKEDIN_DRY_RUN", True)
-            token_label = token_env
-        else:
-            token_ready = bool(os.getenv("LINKEDIN_ACCESS_TOKEN", "").strip()) or env_flag("LINKEDIN_DRY_RUN", True)
-            token_label = "LINKEDIN_ACCESS_TOKEN"
-        brand_checks.append({
-            "slug": slug,
-            "display_name": str(brand.get("display_name") or slug or "Brand"),
-            "author_ready": bool(author_urn),
-            "token_ready": token_ready,
-            "token_label": token_label,
-        })
-
-    london_now = now_utc.astimezone(LOCAL_TZ)
-    next_due_label = "No scheduled posts yet"
-    if next_due:
-        next_due_label = next_due.replace(tzinfo=timezone.utc).astimezone(LOCAL_TZ).strftime("%Y-%m-%d %H:%M")
-    return {
-        "utc_now": london_now.strftime("%Y-%m-%d %H:%M"),
-        "dry_run": env_flag("LINKEDIN_DRY_RUN", True),
-        "cron_command": "python scripts/post_due_linkedin.py",
-        "due_now_count": len(due_rows),
-        "next_due": next_due_label,
-        "brand_checks": brand_checks,
-        "ready_brand_count": sum(1 for item in brand_checks if item["author_ready"] and item["token_ready"]),
-        "scheduled_timezone_note": "Times are planned in Europe/London and converted automatically when published.",
-    }
-
-
 def _calendar_weeks_for_rows(schedule_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     if not schedule_rows:
         return []
@@ -2828,7 +2540,6 @@ def _calendar_weeks_for_rows(schedule_rows: list[dict[str, Any]]) -> list[dict[s
             dt = datetime.strptime(f"{row.get('post_date','')} {row.get('post_time','00:00')}", "%Y-%m-%d %H:%M")
         except Exception:
             continue
-        row["local_when"] = utc_to_local_display(str(row.get("post_date") or ""), str(row.get("post_time") or "00:00"))
         parsed.append((dt, row))
     parsed.sort(key=lambda item: item[0])
     grouped: dict[tuple[int, int], list[tuple[datetime, dict[str, Any]]]] = defaultdict(list)
@@ -3011,15 +2722,6 @@ def _customer_content_defaults(*, brands: list[dict[str, Any]], selected_draft: 
         selected_brand_id = str(selected_draft.get("brand_id") or "")
     elif brands:
         selected_brand_id = str(brands[0].get("id") or "")
-    local_post_date = ""
-    local_post_time = "09:00"
-    if selected_draft and selected_draft.get("post_date") and selected_draft.get("post_time"):
-        try:
-            local_compound = utc_to_local_display(str(selected_draft.get("post_date") or ""), str(selected_draft.get("post_time") or "09:00"))
-            local_post_date, local_post_time = local_compound.split(" ", 1)
-        except Exception:
-            local_post_date = (selected_draft.get("post_date") or "") if selected_draft else ""
-            local_post_time = (selected_draft.get("post_time") or "") if selected_draft else "09:00"
     return {
         "draft_id": str(selected_draft.get("id") or "") if selected_draft else "",
         "brand_id": selected_brand_id,
@@ -3029,8 +2731,8 @@ def _customer_content_defaults(*, brands: list[dict[str, Any]], selected_draft: 
         "cta": (selected_draft.get("cta") or "") if selected_draft else "",
         "hashtags_text": ", ".join(parse_json_array(selected_draft.get("hashtags_json") or "[]")) if selected_draft else "",
         "post_type": (selected_draft.get("post_type") or "text") if selected_draft else "text",
-        "post_date": local_post_date if selected_draft else "",
-        "post_time": local_post_time if selected_draft else "09:00",
+        "post_date": (selected_draft.get("post_date") or "") if selected_draft else "",
+        "post_time": (selected_draft.get("post_time") or "") if selected_draft else "09:00",
         "campaign": (selected_draft.get("schedule_campaign") or "") if selected_draft else "",
         "notes": (selected_draft.get("schedule_notes") or "") if selected_draft else "",
         "review_notes": (selected_draft.get("review_notes") or "") if selected_draft else "",
@@ -3218,133 +2920,6 @@ def _generation_plan_label(frequency: str, time_mode: str, count: int) -> str:
     return f"{frequency_labels.get((frequency or '').strip().lower(), frequency_labels['custom_count'])} · {time_labels.get((time_mode or '').strip().lower(), 'same time each post')}"
 
 
-def _ai_clean_campaign_focus(brief: str, brand_name: str, audience: str) -> str:
-    raw = " ".join((brief or "").strip().split())
-    if not raw:
-        return f"how {brand_name} helps {audience}"
-
-    lower = raw.lower()
-    meta_markers = [
-        "create a ",
-        "write a ",
-        "linkedin campaign",
-        "7-post",
-        "posts should",
-        "primary cta",
-        "secondary cta",
-        "mix thought leadership",
-        "do not repeat the prompt",
-    ]
-    if any(marker in lower for marker in meta_markers):
-        topics: list[str] = []
-        for topic in ["ai governance", "data", "automation", "transformation", "analytics", "governance", "linkedin"]:
-            if topic in lower and topic not in topics:
-                topics.append(topic)
-        if topics:
-            if len(topics) == 1:
-                return f"practical {topics[0]} work"
-            if len(topics) == 2:
-                return f"practical {topics[0]} and {topics[1]} work"
-            return "practical " + ", ".join(topics[:-1]) + f", and {topics[-1]} work"
-        return f"practical delivery for {audience}"
-
-    return raw
-
-
-def _ai_topic_title(focus: str, idx: int, label: str) -> str:
-    clean_focus = focus[:80].strip()
-    return f"{clean_focus.title()} · {label} {idx + 1}"
-
-
-def _ai_render_caption(*, label: str, brand_name: str, audience: str, tone: str, primary_cta: str, secondary_cta: str, website: str, focus: str, idx: int) -> tuple[str, list[str], str]:
-    audience_short = audience.rstrip(".")
-    tone_short = tone.rstrip(".")
-    focus_short = focus.rstrip(".")
-    lower_focus = focus_short.lower()
-
-    if label == "Practical how-to":
-        hook = f"A simple way {brand_name} approaches {lower_focus}"
-        body_points = [
-            f"Open with the pain point {audience_short} already feel when work around {lower_focus} stays fragmented.",
-            f"Explain the step-by-step method {brand_name} uses in a {tone_short.lower()} tone.",
-            f"Close with one clear next step: {primary_cta}.",
-        ]
-        caption_text = (
-            f"{hook}\n\n"
-            f"Most teams do not struggle because they lack ideas. They struggle because work around {lower_focus} is spread across too many tools, owners, and decisions.\n\n"
-            f"At {brand_name}, we start by clarifying the operating problem, the risk, and the outcome that matters most. Then we put a practical structure around delivery so teams can move with more confidence and less noise.\n\n"
-            f"It is a more grounded way to make progress, especially for {audience_short}.\n\n"
-            f"{primary_cta}"
-        )
-        return hook, body_points, caption_text
-
-    if label == "Point of view":
-        hook = f"Our view on {lower_focus}: keep it simpler than most teams think"
-        body_points = [
-            f"State one clear opinion {brand_name} believes about {lower_focus}.",
-            f"Back it up with two reasons that matter to {audience_short}.",
-            f"Invite a response, then offer {secondary_cta or primary_cta}.",
-        ]
-        caption_text = (
-            f"{hook}\n\n"
-            f"A lot of organisations overcomplicate {lower_focus} before they have fixed the basics.\n\n"
-            f"Our view is simple: better decisions, clearer ownership, and workable delivery habits matter more than fashionable tools on their own.\n\n"
-            f"That is usually what helps {audience_short} move from interest to real progress.\n\n"
-            f"{secondary_cta or primary_cta}"
-        )
-        return hook, body_points, caption_text
-
-    if label == "Proof / outcomes":
-        hook = f"What better {lower_focus} should look like for {audience_short}"
-        body_points = [
-            f"Name two or three outcomes {brand_name} aims to create through {lower_focus}.",
-            f"Translate those outcomes into simple business benefits.",
-            f"Close with {primary_cta} and point readers to {website}.",
-        ]
-        caption_text = (
-            f"{hook}\n\n"
-            f"Better {lower_focus} should feel visible in the day-to-day.\n\n"
-            f"That usually means clearer priorities, fewer manual gaps, stronger governance, and a delivery plan people can actually follow.\n\n"
-            f"When those pieces are in place, teams waste less effort and make faster, better decisions.\n\n"
-            f"{primary_cta}"
-        )
-        return hook, body_points, caption_text
-
-    if label == "Checklist":
-        hook = f"A quick {lower_focus} checklist for busy teams"
-        body_points = [
-            f"Give readers a short checklist they can use this week.",
-            f"Keep the language {tone_short.lower()} and action-led.",
-            f"Wrap with {secondary_cta or primary_cta}.",
-        ]
-        caption_text = (
-            f"{hook}\n\n"
-            f"If you are reviewing {lower_focus} this week, start here:\n"
-            f"1. Define the decision or outcome that matters most.\n"
-            f"2. Identify where ownership is unclear.\n"
-            f"3. Check which steps are still manual, inconsistent, or hard to govern.\n"
-            f"4. Agree the smallest practical next move.\n\n"
-            f"Simple checklists often create more progress than another round of vague planning.\n\n"
-            f"{secondary_cta or primary_cta}"
-        )
-        return hook, body_points, caption_text
-
-    hook = f"Behind the scenes: how {brand_name} plans {lower_focus}"
-    body_points = [
-        f"Describe the workflow or operating rhythm used by {brand_name}.",
-        f"Mention how this helps {audience_short} avoid wasted effort.",
-        f"Finish with {secondary_cta or primary_cta}.",
-    ]
-    caption_text = (
-        f"{hook}\n\n"
-        f"A practical workflow matters more than a long wish list.\n\n"
-        f"At {brand_name}, we usually begin with the current state, define the next useful milestone, then build a delivery rhythm that keeps the work visible and realistic.\n\n"
-        f"That helps {audience_short} avoid false starts and focus on the changes that will actually stick.\n\n"
-        f"{secondary_cta or primary_cta}"
-    )
-    return hook, body_points, caption_text
-
-
 def _ai_blueprints_for_brand(*, brand: dict[str, Any], workspace: dict[str, Any], brief: str, count: int) -> list[dict[str, Any]]:
     brand_name = (brand.get("display_name") or brand.get("slug") or "Your brand").strip()
     audience = (brand.get("audience") or "buyers evaluating your service").strip()
@@ -3352,30 +2927,68 @@ def _ai_blueprints_for_brand(*, brand: dict[str, Any], workspace: dict[str, Any]
     primary_cta = (brand.get("primary_cta") or "Book a call").strip()
     secondary_cta = (brand.get("secondary_cta") or "Learn more").strip()
     website = (brand.get("website") or workspace.get("company_name") or "your website").strip()
-    focus = _ai_clean_campaign_focus((brief or "").strip(), brand_name, audience)
-    labels = ["Practical how-to", "Point of view", "Proof / outcomes", "Checklist", "Behind the scenes"]
+    focus = (brief or f"how {brand_name} helps {audience}").strip()
+    patterns = [
+        (
+            "Practical how-to",
+            lambda i: f"A simple way {brand_name} approaches {focus}",
+            lambda i: [
+                f"Start with the pain point {audience} already feel around {focus}.",
+                f"Explain the system or step-by-step process {brand_name} uses in a {tone.lower()} tone.",
+                f"End with one clear next step: {primary_cta}."
+            ],
+        ),
+        (
+            "Point of view",
+            lambda i: f"Our view on {focus}: keep it simpler than most teams think",
+            lambda i: [
+                f"State one opinion {brand_name} believes about {focus}.",
+                f"Back it up with two reasons that matter to {audience}.",
+                f"Invite readers to respond, then offer {secondary_cta or primary_cta}."
+            ],
+        ),
+        (
+            "Proof / outcomes",
+            lambda i: f"What better {focus} should look like for {audience}",
+            lambda i: [
+                f"List the two or three outcomes {brand_name} wants from {focus}.",
+                f"Translate each outcome into a simple business benefit.",
+                f"Close with {primary_cta} and point readers to {website}."
+            ],
+        ),
+        (
+            "Checklist",
+            lambda i: f"A quick {focus} checklist for busy teams",
+            lambda i: [
+                f"Give a short checklist readers can use this week.",
+                f"Keep the language {tone.lower()} and action-led.",
+                f"Wrap with {primary_cta}."
+            ],
+        ),
+        (
+            "Behind the scenes",
+            lambda i: f"Behind the scenes: how {brand_name} plans {focus}",
+            lambda i: [
+                f"Describe the workflow or operating rhythm used by {brand_name}.",
+                f"Mention how this helps {audience} avoid wasted effort.",
+                f"Finish with {secondary_cta or primary_cta}."
+            ],
+        ),
+    ]
     blueprints: list[dict[str, Any]] = []
     for idx in range(count):
-        label = labels[idx % len(labels)]
-        hook, body_points, caption_text = _ai_render_caption(
-            label=label,
-            brand_name=brand_name,
-            audience=audience,
-            tone=tone,
-            primary_cta=primary_cta,
-            secondary_cta=secondary_cta,
-            website=website,
-            focus=focus,
-            idx=idx,
-        )
-        topic = _ai_topic_title(focus, idx, label)
-        hashtags = _hashtag_suggestions(brand, focus)
+        label, hook_builder, body_builder = patterns[idx % len(patterns)]
+        hook = hook_builder(idx)
+        body_points = body_builder(idx)
+        topic = f"{focus.title()} #{idx + 1}"
+        hashtags = _hashtag_suggestions(brand, brief)
+        caption_text = f"{hook}\n\n" + "\n".join(f"• {item}" for item in body_points) + f"\n\n{primary_cta}\n"
         blueprints.append({
             "topic": topic,
             "hook": hook,
             "body_points": body_points,
             "caption_text": caption_text,
-            "cta": primary_cta if label in {"Practical how-to", "Proof / outcomes"} else (secondary_cta or primary_cta),
+            "cta": primary_cta,
             "hashtags": hashtags,
             "label": label,
         })
@@ -3404,20 +3017,17 @@ def workspace_content_page():
         selected_draft = fetch_workspace_generated_post(int(workspace["id"]), int(draft_raw))
     drafts = fetch_workspace_generated_posts(int(workspace["id"]))
     schedule_rows = fetch_workspace_schedule_rows(int(workspace["id"]))
-    for item in schedule_rows:
-        item["local_when"] = utc_to_local_display(str(item.get("post_date") or ""), str(item.get("post_time") or "00:00"))
     workspace_assets = fetch_workspace_assets(int(workspace["id"]))
     campaign_templates = fetch_campaign_templates(int(workspace["id"]))
     posting_strategies = fetch_posting_strategies(int(workspace["id"]))
     selected_asset_ids = selected_draft.get("selected_asset_ids") if selected_draft else []
     best_time_hint = _best_time_suggestion(dict(brands[0])) if brands else {"time": "09:00", "label": "Default workday slot", "reason": "A safe weekday time."}
-    local_now_value = local_now()
     ai_defaults = {
         "brand_id": str(brands[0]["id"]) if brands else "",
         "brief": (selected_draft.get("prompt_brief") or selected_draft.get("topic") or "") if selected_draft else "",
         "count": "7",
         "post_type": (selected_draft.get("post_type") or "text") if selected_draft else "text",
-        "post_date": local_now_value.strftime("%Y-%m-%d"),
+        "post_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         "post_time": (selected_draft.get("post_time") or best_time_hint["time"]) if selected_draft else best_time_hint["time"],
         "campaign": (selected_draft.get("schedule_campaign") or selected_draft.get("planner_label") or "") if selected_draft else "",
         "delivery_mode": "save_draft",
@@ -3432,7 +3042,6 @@ def workspace_content_page():
         ((selected_draft.get("caption_text") if selected_draft else request.args.get("q") or "") or "") + " " + ((selected_draft.get("topic") if selected_draft else "") or ""),
         (selected_draft.get("post_type") if selected_draft else ai_defaults["post_type"]),
     )
-    publishing_health = _workspace_publishing_health(brands=brands, schedule_rows=schedule_rows)
     return render_template(
         "customer/content.html",
         workspace=workspace,
@@ -3446,7 +3055,6 @@ def workspace_content_page():
         ai_defaults=ai_defaults,
         saved=(request.args.get("saved") or "").strip().lower(),
         message=(request.args.get("message") or "").strip(),
-        selected_brand_id=(int(selected_draft["brand_id"]) if selected_draft and str(selected_draft.get("brand_id") or "").isdigit() else (int(brands[0]["id"]) if brands else None)),
         error=(request.args.get("error") or "").strip(),
         can_manage_content=current_customer_can_manage_content(),
         can_manage_brands=current_customer_can_manage_brands(),
@@ -3457,28 +3065,7 @@ def workspace_content_page():
         posting_strategies=posting_strategies,
         best_time_hint=best_time_hint,
         recommended_assets=recommended_assets,
-        publishing_health=publishing_health,
-        local_timezone_label="Europe/London (GMT/BST)",
     )
-
-
-@app.post("/workspace/content/run-due-check")
-@customer_login_required
-def workspace_content_run_due_check():
-    if not current_customer_can_manage_content():
-        abort(403)
-    try:
-        from post_to_linkedin import process_due_linkedin_posts
-        processed = int(process_due_linkedin_posts(now_utc=datetime.now(timezone.utc)))
-    except Exception as exc:
-        return redirect(url_for("workspace_content_page", saved="error", error=f"Due-post check failed: {exc}"))
-    if processed == 0:
-        message = "Publishing check ran successfully. No scheduled LinkedIn posts were due yet."
-    elif processed == 1:
-        message = "Due-post check ran successfully and processed 1 scheduled LinkedIn post."
-    else:
-        message = f"Due-post check ran successfully and processed {processed} scheduled LinkedIn posts."
-    return redirect(url_for("workspace_content_page", saved="generated", message=message))
 
 
 @app.post("/workspace/content/save")
@@ -3607,14 +3194,13 @@ def workspace_content_save():
         if action == "save_draft":
             saved_key = "draft_saved"
         elif action == "submit_review":
-            utc_date, utc_time = local_input_to_utc(post_date, post_time)
             _sync_generated_post_to_schedule(
                 conn=conn,
                 draft=draft,
                 brand=brand_dict,
                 asset_rows=asset_rows,
-                post_date=utc_date,
-                post_time=utc_time,
+                post_date=post_date,
+                post_time=post_time,
                 campaign=campaign,
                 notes=notes,
                 schedule_status="drafted",
@@ -3622,14 +3208,13 @@ def workspace_content_save():
             )
             saved_key = "submitted"
         else:
-            utc_date, utc_time = local_input_to_utc(post_date, post_time)
             _sync_generated_post_to_schedule(
                 conn=conn,
                 draft=draft,
                 brand=brand_dict,
                 asset_rows=asset_rows,
-                post_date=utc_date,
-                post_time=utc_time,
+                post_date=post_date,
+                post_time=post_time,
                 campaign=campaign,
                 notes=notes,
                 schedule_status="approved",
@@ -3646,82 +3231,6 @@ def workspace_content_save():
         payload={"workspace_id": workspace["id"], "brand_id": brand_dict["id"], "draft_id": draft_id, "action": action, "post_type": post_type},
     )
     return redirect(url_for("workspace_content_page", draft=draft_id, saved=saved_key))
-
-
-
-@app.post("/workspace/content/<int:draft_id>/apply-rewrite")
-@customer_login_required
-def workspace_content_apply_rewrite(draft_id: int):
-    if not current_customer_can_manage_content():
-        abort(403)
-    workspace = current_workspace()
-    if workspace is None:
-        abort(404)
-    variant_index_raw = (request.form.get("variant_index") or "").strip()
-    try:
-        variant_index = max(0, int(variant_index_raw))
-    except ValueError:
-        return redirect(url_for("workspace_content_page", draft=draft_id, saved="error", error="Choose a valid rewrite idea to apply."))
-    with get_conn() as conn:
-        row = conn.execute(
-            "SELECT gp.* FROM generated_posts gp JOIN brands b ON b.id = gp.brand_id WHERE gp.id=? AND b.workspace_id=? LIMIT 1",
-            (draft_id, int(workspace["id"])),
-        ).fetchone()
-        if row is None:
-            abort(404)
-        draft = dict(row)
-        variants = _ai_copy_variants(str(draft.get("topic") or ""), str(draft.get("hook") or ""), str(draft.get("caption_text") or ""), str(draft.get("cta") or ""))
-        if variant_index >= len(variants):
-            return redirect(url_for("workspace_content_page", draft=draft_id, saved="error", error="That rewrite idea is no longer available."))
-        variant = variants[variant_index]
-        conn.execute(
-            "UPDATE generated_posts SET hook=?, caption_text=?, review_notes=?, last_saved_at=CURRENT_TIMESTAMP WHERE id=?",
-            (
-                variant.get("hook") or draft.get("hook") or "",
-                variant.get("caption_text") or draft.get("caption_text") or "",
-                f"Applied AI rewrite variant: {variant.get('label') or 'rewrite'}",
-                draft_id,
-            ),
-        )
-        conn.commit()
-    return redirect(url_for("workspace_content_page", draft=draft_id, saved="draft_saved", message="AI rewrite applied to the draft."))
-
-
-@app.post("/workspace/content/clear-drafts")
-@customer_login_required
-def workspace_content_clear_drafts():
-    if not current_customer_can_manage_content():
-        abort(403)
-    workspace = current_workspace()
-    customer = current_customer()
-    if workspace is None:
-        abort(404)
-    scope = (request.form.get("scope") or "all").strip().lower()
-    brand_id_raw = (request.form.get("brand_id") or "").strip()
-    with get_conn() as conn:
-        if scope == "brand" and brand_id_raw.isdigit():
-            rows = conn.execute(
-                "SELECT gp.id, gp.post_id FROM generated_posts gp JOIN brands b ON b.id=gp.brand_id WHERE b.workspace_id=? AND gp.brand_id=?",
-                (int(workspace["id"]), int(brand_id_raw)),
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT gp.id, gp.post_id FROM generated_posts gp JOIN brands b ON b.id=gp.brand_id WHERE b.workspace_id=?",
-                (int(workspace["id"]),),
-            ).fetchall()
-        cleared = 0
-        for row in rows:
-            _remove_schedule_for_post(conn, str(row["post_id"] or ""))
-            conn.execute("DELETE FROM generated_posts WHERE id=?", (int(row["id"]),))
-            cleared += 1
-        conn.commit()
-    record_audit_event(
-        "workspace_content_cleared",
-        actor=(customer.get("email") or "workspace_user"),
-        message=f"Cleared {cleared} draft(s) from the content studio.",
-        payload={"workspace_id": workspace["id"], "cleared": cleared, "scope": scope},
-    )
-    return redirect(url_for("workspace_content_page", saved="deleted", message=f"Cleared {cleared} draft(s)."))
 
 
 @app.post("/workspace/content/<int:draft_id>/delete")
@@ -3834,7 +3343,7 @@ def workspace_content_generate():
         delivery_mode = "save_draft"
     if post_type not in {"text", "single_image", "video", "carousel"}:
         post_type = "text"
-    if overwrite_mode not in {"create_new", "overwrite_selected", "overwrite_brand_drafts"}:
+    if overwrite_mode not in {"create_new", "overwrite_selected"}:
         overwrite_mode = "create_new"
 
     selected_asset_ids = [int(item) for item in request.form.getlist("asset_ids") if str(item).isdigit()]
@@ -3846,7 +3355,6 @@ def workspace_content_generate():
     if frequency != "custom_count" and delivery_mode == "save_draft" and not brief:
         errors.append("Add a campaign brief so the AI can vary the generated posts across the chosen cadence.")
     target_draft = None
-    target_drafts: list[dict[str, Any]] = []
     if overwrite_mode == "overwrite_selected":
         if not target_draft_raw.isdigit():
             errors.append("Choose an existing draft to overwrite, or switch overwrite off.")
@@ -3856,18 +3364,7 @@ def workspace_content_generate():
                 errors.append("The selected draft could not be found in this workspace.")
             elif str(target_draft.get("brand_id") or "") != str(brand["id"]):
                 errors.append("You can only overwrite a draft from the same brand.")
-            else:
-                target_drafts = [target_draft]
         count = 1
-    elif overwrite_mode == "overwrite_brand_drafts":
-        target_drafts = [
-            item for item in fetch_workspace_generated_posts(int(workspace["id"]), limit=200)
-            if str(item.get("brand_id") or "") == str(brand["id"]) and not item.get("schedule_status")
-        ]
-        if not target_drafts:
-            errors.append("There are no unscheduled drafts for this brand to overwrite. Create drafts first or clear the library.")
-        else:
-            count = len(target_drafts)
     if delivery_mode == "schedule_publish" and post_type in {"carousel", "video"} and not env_flag("LINKEDIN_DRY_RUN", True):
         errors.append("Live carousel and video publishing are not enabled yet. Save the drafts or submit them for review instead.")
     if errors:
@@ -3876,8 +3373,6 @@ def workspace_content_generate():
 
     blueprints = _ai_blueprints_for_brand(brand=brand, workspace=workspace, brief=brief, count=count)
     base_date = None
-    local_schedule_date = post_date
-    local_schedule_time = post_time
     if post_date:
         try:
             base_date = datetime.strptime(post_date, "%Y-%m-%d").date()
@@ -3898,14 +3393,9 @@ def workspace_content_generate():
     with get_conn() as conn:
         for idx, blueprint in enumerate(blueprints):
             approval_value = "draft" if delivery_mode == "save_draft" else ("submitted" if delivery_mode == "submit_review" else "approved")
-            overwrite_target = None
-            if overwrite_mode == "overwrite_selected" and target_drafts:
-                overwrite_target = target_drafts[0]
-            elif overwrite_mode == "overwrite_brand_drafts" and idx < len(target_drafts):
-                overwrite_target = target_drafts[idx]
-            if overwrite_target is not None:
-                draft_id = int(overwrite_target["id"])
-                post_id = str(overwrite_target.get("post_id") or _new_customer_post_id(str(brand.get("slug") or brand.get("display_name") or "brand")))
+            if overwrite_mode == "overwrite_selected" and target_draft is not None:
+                draft_id = int(target_draft["id"])
+                post_id = str(target_draft.get("post_id") or _new_customer_post_id(str(brand.get("slug") or brand.get("display_name") or "brand")))
                 conn.execute(
                     """
                     UPDATE generated_posts
@@ -3964,14 +3454,13 @@ def workspace_content_generate():
             if delivery_mode in {"submit_review", "schedule_publish"} and base_date is not None:
                 scheduled_date = schedule_dates[idx].strftime("%Y-%m-%d") if idx < len(schedule_dates) else base_date.strftime("%Y-%m-%d")
                 scheduled_time = schedule_times[idx] if idx < len(schedule_times) else post_time
-                utc_date, utc_time = local_input_to_utc(scheduled_date, scheduled_time)
                 _sync_generated_post_to_schedule(
                     conn=conn,
                     draft=draft,
                     brand=brand,
                     asset_rows=asset_rows,
-                    post_date=utc_date,
-                    post_time=utc_time,
+                    post_date=scheduled_date,
+                    post_time=scheduled_time,
                     campaign=campaign,
                     notes=f"AI-assisted plan generated from workspace content workflow ({cadence_label}).",
                     schedule_status="drafted" if delivery_mode == "submit_review" else "approved",
@@ -4106,7 +3595,6 @@ def workspace_content_feedback_add(draft_id: int):
     return redirect(url_for("workspace_content_page", draft=draft_id, saved="draft_saved", message="Feedback added to the draft history."))
 
 
-
 @app.post("/workspace/content/bulk-regenerate")
 @customer_login_required
 def workspace_content_bulk_regenerate():
@@ -4119,49 +3607,44 @@ def workspace_content_bulk_regenerate():
     draft_ids = [int(item) for item in request.form.getlist("draft_ids") if str(item).isdigit()]
     if not draft_ids:
         return redirect(url_for("workspace_content_page", saved="error", error="Select at least one draft to regenerate."))
-    updated = 0
-    first_id = draft_ids[0]
+    created = 0
+    first_new = None
     with get_conn() as conn:
-        for idx, draft_id in enumerate(draft_ids[:12]):
+        for draft_id in draft_ids[:12]:
             row = fetch_workspace_generated_post(int(workspace["id"]), draft_id)
             if row is None:
                 continue
             brand = fetch_workspace_brand_by_id(int(workspace["id"]), int(row["brand_id"]))
             if brand is None:
                 continue
-            brief = str(row.get("prompt_brief") or row.get("topic") or "").strip()
-            if row.get("hook"):
-                brief = f"{brief}\n\nImprove this angle: {row.get('hook')}"
-            variant = _ai_blueprints_for_brand(
-                brand=dict(brand),
-                workspace=workspace,
-                brief=brief,
-                count=1,
-            )[0]
+            variant = _ai_blueprints_for_brand(brand=dict(brand), workspace=workspace, brief=str(row.get("prompt_brief") or row.get("topic") or ""), count=1)[0]
+            post_id = _new_customer_post_id(str(row.get("brand_slug") or row.get("brand_name") or "brand"))
             conn.execute(
-                "UPDATE generated_posts SET topic=?, hook=?, body_points_json=?, cta=?, hashtags_json=?, caption_text=?, generation_mode='ai_regenerated', review_notes=?, approval_status=CASE WHEN approval_status='submitted' THEN 'draft' ELSE approval_status END, last_saved_at=CURRENT_TIMESTAMP WHERE id=?",
+                "INSERT INTO generated_posts (brand_id, post_id, platform, post_type, topic, hook, body_points_json, cta, hashtags_json, caption_text, generation_mode, approval_status, asset_ids_json, review_notes, prompt_brief, planner_label, last_saved_at) VALUES (?, ?, 'linkedin', ?, ?, ?, ?, ?, ?, ?, 'ai_regenerated', 'draft', ?, ?, ?, ?, CURRENT_TIMESTAMP)",
                 (
-                    variant["topic"],
-                    variant["hook"],
+                    row["brand_id"],
+                    post_id,
+                    row.get("post_type") or "text",
+                    row.get("topic") or variant["topic"],
+                    f"Another angle: {variant['hook']}",
                     json.dumps(variant["body_points"]),
-                    variant["cta"],
-                    json.dumps(variant["hashtags"]),
+                    row.get("cta") or variant["cta"],
+                    row.get("hashtags_json") or json.dumps(variant["hashtags"]),
                     variant["caption_text"],
-                    f"Bulk regenerated variant {idx + 1} from the latest brief.",
-                    draft_id,
+                    row.get("asset_ids_json") or '[]',
+                    f"Regenerated from draft {draft_id}",
+                    row.get("prompt_brief") or row.get("topic") or "",
+                    row.get("planner_label") or row.get("schedule_campaign") or "",
                 ),
             )
-            updated += 1
+            new_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+            if first_new is None:
+                first_new = new_id
+            created += 1
         conn.commit()
-    record_audit_event(
-        "workspace_content_bulk_regenerated",
-        actor=(customer.get("email") or "workspace_user"),
-        message=f"Bulk regenerated {updated} draft(s).",
-        payload={"workspace_id": workspace["id"], "draft_ids": draft_ids[:12], "updated": updated},
-    )
-    if updated == 0:
-        return redirect(url_for("workspace_content_page", saved="error", error="No selected drafts could be regenerated."))
-    return redirect(url_for("workspace_content_page", draft=first_id, saved="generated", message=f"Bulk regenerated {updated} draft(s) from the latest brief."))
+    record_audit_event("workspace_drafts_regenerated", actor=(customer.get("email") or "workspace_admin"), message=f"Regenerated {created} draft(s).", payload={"workspace_id": workspace["id"], "source_draft_ids": draft_ids})
+    return redirect(url_for("workspace_content_page", draft=first_new, saved="generated", message=f"Created {created} regenerated draft variant(s)."))
+
 
 @app.post("/workspace/content/bulk-reschedule")
 @customer_login_required
@@ -4315,7 +3798,7 @@ def _score_comment_intent(comment_text: str) -> tuple[str, int, str]:
     if not text:
         return 'cold', 10, 'neutral'
     hot_tokens = ['price', 'pricing', 'demo', 'interested', 'dm me', 'send details', 'how much', 'book', 'trial']
-    warm_tokens = ['workflow', 'tool', 'stack', 'reviewing', 'quarter', 'curious', 'plug into', 'team', 'approval', 'process', 'governance', 'multiple brands', 'agency']
+    warm_tokens = ['workflow', 'tool', 'stack', 'reviewing', 'quarter', 'curious', 'plug into', 'team']
     spam_tokens = ['promo', 'bitcoin', 'agency for you', 'guaranteed followers']
     hot_hits = sum(1 for token in hot_tokens if token in text)
     warm_hits = sum(1 for token in warm_tokens if token in text)
@@ -4380,64 +3863,32 @@ def _build_reply_options(*, commenter_name: str, comment_text: str, brand_name: 
         return ai_options
     first_name = _first_name(commenter_name)
     cta = primary_cta or 'book a demo'
-    comment_lower = (comment_text or '').lower()
-    if 'dm' in comment_lower or 'send' in comment_lower or 'workflow' in comment_lower:
-        return [
-            f"Thanks {first_name} — happy to. I can DM the simple workflow we use and keep it practical.",
-            f"Appreciate it {first_name}. I will send a short DM with the workflow and how teams usually implement it.",
-            f"Thanks {first_name} — yes, happy to share the concise version of the workflow and what good rollout looks like."
-        ]
-    if 'price' in comment_lower or 'cost' in comment_lower or 'pricing' in comment_lower or 'how much' in comment_lower:
-        return [
-            f"Thanks {first_name} — happy to share pricing context. The quickest next step is usually to {cta.lower()} so we can point you to the right setup.",
-            f"Appreciate it {first_name}. I can send the pricing shape and what rollout normally looks like from here.",
-            f"Thanks {first_name} — yes, I can share pricing and the simplest route to getting started."
-        ]
-    if 'approval' in comment_lower or 'review' in comment_lower or 'before any reply' in comment_lower:
-        return [
-            f"Thanks {first_name} — yes, teams can keep replies approval-led before anything goes out.",
-            f"Appreciate it {first_name}. The usual setup is suggested replies first, then approval, then send once the team is comfortable.",
-            f"Good question {first_name}. We typically start with manual review and only add automation once the team trusts the guardrails."
-        ]
-    if 'agency' in comment_lower or 'multiple brands' in comment_lower or 'multi-brand' in comment_lower:
-        return [
-            f"Thanks {first_name} — yes, multi-brand workflows are supported, which is especially helpful for agency setups.",
-            f"Appreciate it {first_name}. It is designed so each brand can keep its own voice, assets, and approval flow.",
-            f"Yes — that is a common use case. Teams usually separate brand settings, content, and engagement while keeping reporting in one place."
-        ]
-    if 'plug into' in comment_lower or 'outbound' in comment_lower or 'integrate' in comment_lower:
-        return [
-            f"Thanks {first_name} — it can fit alongside outbound workflows rather than replacing them.",
-            f"Appreciate it {first_name}. Most teams use it to handle content-driven engagement and then pass stronger signals into the wider sales motion.",
-            f"Good question. The useful part is keeping replies, DMs, and lead signals tidy before handing off to the next step in the pipeline."
-        ]
     if intent_label == 'hot':
         return [
-            f"Thanks {first_name} — yes, I can send details and the simplest next step from here.",
-            f"Appreciate it {first_name}. Happy to share the workflow, pricing bands, and what rollout usually looks like.",
-            f"Absolutely — I can outline how {brand_name} handles content, engagement, and lead routing without adding more admin overhead."
+            f"Thanks {first_name} — yes, I can send details and pricing. If useful, the fastest next step is to {cta.lower()}.",
+            f"Appreciate it {first_name}. Happy to send the short version with workflow, pricing bands, and what setup looks like.",
+            f"Absolutely — I can outline how {brand_name} handles content, engagement, and lead routing without adding more admin overhead.",
         ]
     if intent_label == 'warm':
         return [
-            f"Thanks {first_name} — good question. {brand_name} is designed to keep publishing, replies, and follow-up in one operating flow.",
-            f"Appreciate it {first_name}. We can share the practical workflow and where the engagement inbox fits if that helps.",
-            f"Helpful prompt, thanks. We usually recommend starting with reply assist first, then adding routing and automation once the basics feel solid."
+            f"Thanks {first_name} — good question. {brand_name} is designed to help content teams and founders keep publishing and follow-up in one place.",
+            f"Appreciate it {first_name}. We can share the workflow we use and where the engagement inbox fits if that helps.",
+            f"Helpful prompt, thanks. We usually recommend starting with reply assist first, then adding lead routing once the team is ready.",
         ]
     return [
-        f"Thanks {first_name} — appreciate you reading. Happy to keep sharing what is working in practice.",
+        f"Thanks {first_name} — appreciate you reading. Happy to keep sharing what is working for {brand_name}.",
         f"Appreciate it {first_name}. We are building this to keep content and follow-up cleaner for lean teams.",
-        f"Thanks {first_name}. We will keep posting more of the practical playbook behind this workflow."
+        f"Thanks {first_name}. We will keep posting more of the operator playbook behind this workflow.",
     ]
 
 
 def _build_dm_draft(*, commenter_name: str, source_post_title: str, brand_name: str, intent_label: str) -> str:
     first_name = _first_name(commenter_name)
-    title = (source_post_title or 'your recent post').strip()
     if intent_label == 'hot':
-        return f"Hi {first_name}, thanks for commenting on our post about {title}. Happy to send a concise overview of the workflow, pricing shape, and what rollout usually looks like. Would the quick summary be useful?"
+        return f"Hi {first_name}, thanks for commenting on our post about {source_post_title}. I can send a concise overview of the {brand_name} workflow, pricing, and what rollout usually looks like. Want the quick summary or a demo outline?"
     if intent_label == 'warm':
-        return f"Hi {first_name}, thanks for the comment on {title}. Sharing a quick note in case it helps: most teams start with reply assist and a simple approval flow, then add lead routing once the workflow feels stable."
-    return f"Hi {first_name}, thanks again for engaging with our post on {title}. Happy to send over more examples when useful."
+        return f"Hi {first_name}, thanks for the comment on {source_post_title}. Sharing a quick note in case it helps: we usually start teams on reply assist and lead scoring, then layer in DM follow-up once the workflow is stable."
+    return f"Hi {first_name}, thanks again for engaging with our post on {source_post_title}. Happy to send over more examples when useful."
 
 
 def _log_lead_activity(conn: sqlite3.Connection, *, workspace_id: int, lead_id: int, comment_id: int | None, activity_type: str, activity_text: str, created_by_user_id: int | None = None) -> None:
@@ -4724,80 +4175,8 @@ def workspace_engagement_sync():
     if workspace is None:
         abort(404)
     inserted = sync_workspace_demo_engagement(int(workspace['id']))
-    _apply_engagement_automation(int(workspace['id']), current_customer())
     message = f'Synced {inserted} new engagement item(s).' if inserted else 'Sync completed. No new engagement items were found.'
     return redirect(url_for('workspace_engagement', saved='synced', message=message))
-
-
-def _integration_moderation_mode(integration: dict[str, Any] | sqlite3.Row | None) -> str:
-    if integration is None:
-        return 'manual_review'
-    value = integration.get('moderation_level') if isinstance(integration, dict) else integration['moderation_level']
-    return str(value or 'manual_review').strip().lower()
-
-
-def _integration_auto_ready(integration: dict[str, Any] | sqlite3.Row | None, field_name: str) -> bool:
-    if integration is None:
-        return False
-    raw = integration.get(field_name) if isinstance(integration, dict) else integration[field_name]
-    return int(raw or 0) == 1 and _integration_moderation_mode(integration) in {'automatic', 'trusted'}
-
-
-def _apply_engagement_automation(workspace_id: int, customer: dict[str, Any] | sqlite3.Row | None = None) -> dict[str, int]:
-    integration = fetch_or_create_workspace_integration(workspace_id)
-    auto_reply = _integration_auto_ready(integration, 'auto_reply_enabled')
-    auto_dm = _integration_auto_ready(integration, 'auto_dm_enabled')
-    processed = {'replies': 0, 'dms': 0}
-    if not auto_reply and not auto_dm:
-        return processed
-    actor_user_id = None
-    actor_email = 'automation'
-    if customer is not None:
-        try:
-            actor_user_id = int(customer['id'])
-        except Exception:
-            actor_user_id = None
-        actor_email = (customer.get('email') if isinstance(customer, dict) else customer['email']) or 'automation'
-    now = _utcnow_z()
-    with get_conn() as conn:
-        rows = conn.execute("SELECT * FROM engagement_comments WHERE workspace_id=? ORDER BY id ASC", (workspace_id,)).fetchall()
-        for row in rows:
-            row = dict(row)
-            row_id = int(row['id'])
-            options = _parse_json_list(row.get('reply_options_json'))
-            if auto_reply and (row.get('reply_status') or '').lower() in {'suggested', 'drafted', 'ready', 'not_started', ''}:
-                reply_text = (row.get('selected_reply_text') or (options[0] if options else '')).strip()
-                if reply_text:
-                    conn.execute(
-                        "INSERT INTO engagement_reply_drafts (comment_id, workspace_id, reply_text, status, approved_by_user_id, approved_at, created_at) VALUES (?, ?, ?, 'sent', ?, ?, ?)",
-                        (row_id, workspace_id, reply_text, actor_user_id, now, now),
-                    )
-                    conn.execute(
-                        "UPDATE engagement_comments SET selected_reply_text=?, reply_status='sent', updated_at=? WHERE id=?",
-                        (reply_text, now, row_id),
-                    )
-                    lead_row = conn.execute("SELECT id, stage FROM lead_pipeline WHERE comment_id=? AND workspace_id=?", (row_id, workspace_id)).fetchone()
-                    if lead_row is not None:
-                        conn.execute(
-                            "UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action='Auto reply sent. Monitor and decide on DM.', updated_at=? WHERE id=?",
-                            (now, int(lead_row['id'])),
-                        )
-                        _log_lead_activity(conn, workspace_id=workspace_id, lead_id=int(lead_row['id']), comment_id=row_id, activity_type='reply_sent', activity_text='Automation sent the approved reply.', created_by_user_id=actor_user_id)
-                    processed['replies'] += 1
-            current_dm_status = (row.get('dm_status') or '').lower()
-            if auto_dm and (row.get('intent_label') or '').lower() in {'hot', 'warm'} and current_dm_status in {'ready', 'drafted', 'not_started', ''}:
-                dm_text = (row.get('suggested_dm_text') or '').strip()
-                if dm_text:
-                    conn.execute("UPDATE engagement_comments SET dm_status='sent', updated_at=? WHERE id=?", (now, row_id))
-                    lead_row = conn.execute("SELECT id FROM lead_pipeline WHERE comment_id=? AND workspace_id=?", (row_id, workspace_id)).fetchone()
-                    if lead_row is not None:
-                        conn.execute("UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action='Automation sent a DM. Watch for reply.', last_contact_at=?, updated_at=? WHERE id=?", (now, now, int(lead_row['id'])))
-                        _log_lead_activity(conn, workspace_id=workspace_id, lead_id=int(lead_row['id']), comment_id=row_id, activity_type='dm_sent', activity_text='Automation sent the DM follow-up.', created_by_user_id=actor_user_id)
-                    processed['dms'] += 1
-        conn.commit()
-    if processed['replies'] or processed['dms']:
-        record_audit_event('engagement_automation_applied', actor=(actor_email or 'automation'), message='Applied engagement automation actions.', payload={'workspace_id': workspace_id, **processed})
-    return processed
 
 
 @app.post("/workspace/engagement/<int:comment_id>/generate")
@@ -4848,7 +4227,6 @@ def workspace_send_engagement_reply(comment_id: int):
     reply_text = (request.form.get('reply_text') or '').strip()
     if not reply_text:
         return redirect(url_for('workspace_engagement', saved='error'))
-    send_now = (request.form.get('send_now') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     with get_conn() as conn:
         comment = conn.execute('SELECT * FROM engagement_comments WHERE id=? AND workspace_id=?', (comment_id, int(workspace['id']))).fetchone()
         if comment is None:
@@ -4884,71 +4262,18 @@ def workspace_send_engagement_dm(comment_id: int):
     dm_text = (request.form.get('dm_text') or '').strip()
     if not dm_text:
         return redirect(url_for('workspace_engagement', saved='error'))
-    send_now = (request.form.get('send_now') or '').strip().lower() in {'1', 'true', 'yes', 'on'}
     with get_conn() as conn:
         comment = conn.execute('SELECT * FROM engagement_comments WHERE id=? AND workspace_id=?', (comment_id, int(workspace['id']))).fetchone()
         if comment is None:
             abort(404)
         now = _utcnow_z()
-        conn.execute("UPDATE engagement_comments SET suggested_dm_text=?, dm_status=?, updated_at=? WHERE id=?", (dm_text, 'sent' if send_now else 'drafted', now, comment_id))
+        conn.execute("UPDATE engagement_comments SET suggested_dm_text=?, dm_status='drafted', updated_at=? WHERE id=?", (dm_text, now, comment_id))
         lead_row = conn.execute("SELECT id FROM lead_pipeline WHERE comment_id=? AND workspace_id=?", (comment_id, int(workspace['id']))).fetchone()
         if lead_row is not None:
-            conn.execute("UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action=?, last_contact_at=?, updated_at=? WHERE id=?", ('Track DM response' if send_now else 'Review and send DM', now, now, int(lead_row['id'])))
-            _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=int(lead_row['id']), comment_id=comment_id, activity_type='dm_sent' if send_now else 'dm_drafted', activity_text='Sent DM follow-up.' if send_now else 'Prepared DM follow-up draft.', created_by_user_id=int(customer['id']))
+            conn.execute("UPDATE lead_pipeline SET stage=CASE WHEN stage='new' THEN 'contacted' ELSE stage END, next_action='Send DM and track response', last_contact_at=?, updated_at=? WHERE id=?", (now, now, int(lead_row['id'])))
+            _log_lead_activity(conn, workspace_id=int(workspace['id']), lead_id=int(lead_row['id']), comment_id=comment_id, activity_type='dm_drafted', activity_text='Prepared DM follow-up draft.', created_by_user_id=int(customer['id']))
         conn.commit()
-    return redirect(url_for('workspace_engagement', saved='dm_ready', message='DM sent.' if send_now else 'DM draft saved.'))
-
-
-
-@app.post("/workspace/engagement/send-all")
-@customer_login_required
-def workspace_send_all_engagement():
-    workspace = current_workspace()
-    customer = current_customer()
-    if workspace is None:
-        abort(404)
-    sent = 0
-    with get_conn() as conn:
-        rows = conn.execute(
-            "SELECT * FROM engagement_comments WHERE workspace_id=? AND reply_status IN ('suggested', 'drafted') ORDER BY id ASC",
-            (int(workspace['id']),),
-        ).fetchall()
-        now = _utcnow_z()
-        for row in rows:
-            row = dict(row)
-            options = _parse_json_list(row.get('reply_options_json'))
-            reply_text = (row.get('selected_reply_text') or (options[0] if options else '')).strip()
-            if not reply_text:
-                continue
-            conn.execute(
-                "INSERT INTO engagement_reply_drafts (comment_id, workspace_id, reply_text, status, approved_by_user_id, approved_at, created_at) VALUES (?, ?, ?, 'sent', ?, ?, ?)",
-                (int(row['id']), int(workspace['id']), reply_text, int(customer['id']), now, now),
-            )
-            conn.execute(
-                "UPDATE engagement_comments SET selected_reply_text=?, reply_status='sent', updated_at=? WHERE id=?",
-                (reply_text, now, int(row['id'])),
-            )
-            sent += 1
-        conn.commit()
-    return redirect(url_for('workspace_engagement', saved='reply_sent', message=f'Sent {sent} queued repl{"y" if sent == 1 else "ies"}.' if sent else 'There were no queued replies to send.'))
-
-
-@app.post("/workspace/engagement/unsync")
-@customer_login_required
-def workspace_unsync_engagement():
-    workspace = current_workspace()
-    if workspace is None:
-        abort(404)
-    removed = 0
-    with get_conn() as conn:
-        rows = conn.execute("SELECT id FROM engagement_comments WHERE workspace_id=?", (int(workspace['id']),)).fetchall()
-        removed = len(rows)
-        conn.execute("DELETE FROM engagement_reply_drafts WHERE workspace_id=?", (int(workspace['id']),))
-        conn.execute("DELETE FROM lead_activity WHERE workspace_id=?", (int(workspace['id']),))
-        conn.execute("DELETE FROM lead_pipeline WHERE workspace_id=?", (int(workspace['id']),))
-        conn.execute("DELETE FROM engagement_comments WHERE workspace_id=?", (int(workspace['id']),))
-        conn.commit()
-    return redirect(url_for('workspace_engagement', saved='synced', message=f'Removed {removed} synced comment(s) and reset the engagement demo queue.'))
+    return redirect(url_for('workspace_engagement', saved='dm_ready'))
 
 
 @app.get("/workspace/leads")
@@ -5049,29 +4374,6 @@ def workspace_toggle_automation_rule(rule_id: int):
         new_value = 0 if int(rule['is_enabled'] or 0) == 1 else 1
         conn.execute("UPDATE engagement_rules SET is_enabled=?, updated_at=? WHERE id=?", (new_value, _utcnow_z(), rule_id))
         conn.commit()
-    return redirect(url_for('workspace_automation_rules', saved='updated'))
-
-
-@app.post("/workspace/automation-rules/integration-defaults")
-@customer_login_required
-def workspace_update_integration_defaults():
-    workspace = current_workspace()
-    if workspace is None:
-        abort(404)
-    integration = fetch_or_create_workspace_integration(int(workspace['id']))
-    auto_reply_enabled = 1 if (request.form.get('auto_reply_enabled') or '').strip().lower() in {'1', 'true', 'yes', 'on'} else 0
-    auto_dm_enabled = 1 if (request.form.get('auto_dm_enabled') or '').strip().lower() in {'1', 'true', 'yes', 'on'} else 0
-    moderation_level = (request.form.get('moderation_level') or 'manual_review').strip().lower()
-    sync_mode = 'auto_assist' if auto_reply_enabled or auto_dm_enabled else 'manual_review'
-    if moderation_level not in {'manual_review', 'balanced', 'trusted', 'automatic'}:
-        moderation_level = 'manual_review'
-    with get_conn() as conn:
-        conn.execute(
-            "UPDATE engagement_integrations SET auto_reply_enabled=?, auto_dm_enabled=?, moderation_level=?, sync_mode=?, updated_at=? WHERE id=?",
-            (auto_reply_enabled, auto_dm_enabled, moderation_level, sync_mode, _utcnow_z(), int(integration['id'])),
-        )
-        conn.commit()
-    _apply_engagement_automation(int(workspace['id']), current_customer())
     return redirect(url_for('workspace_automation_rules', saved='updated'))
 
 
@@ -5510,9 +4812,6 @@ def brand_onboarding():
 
 @app.route("/beta", methods=["GET", "POST"])
 def beta_signup():
-    if request.method == "GET":
-        query_string = request.query_string.decode().strip()
-        return redirect(url_for("home") + (("?" + query_string) if query_string else ""), code=302)
     saved = None
     billing_state = (request.args.get("billing") or "").strip().lower()
     form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
@@ -5542,7 +4841,7 @@ def beta_signup():
                     (email, full_name, company_name, selected_plan, beta_notes),
                 )
                 conn.commit()
-            saved = "Workspace enquiry saved. We will follow up using the details you provided."
+            saved = "Beta request saved. We will follow up using the details you provided."
             form_data = normalised_beta_form_data({})
 
     return render_beta_template(saved=saved, errors=errors, billing_state=billing_state, form_data=form_data)
@@ -5567,16 +4866,6 @@ def billing_create_checkout_session():
     company_name = form_data["company_name"]
     beta_notes = build_beta_notes(request.form)
 
-    duplicate_error = active_or_recent_checkout_conflict(email=email, selected_plan=selected_plan)
-    if duplicate_error:
-        return render_beta_template(
-            saved=None,
-            errors=[duplicate_error],
-            billing_state="",
-            form_data=form_data,
-            status_code=409,
-        )
-
     try:
         with get_conn() as conn:
             conn.execute(
@@ -5598,13 +4887,7 @@ def billing_create_checkout_session():
         if row is None:
             raise RuntimeError("Unable to save your signup details before checkout. Please try again.")
 
-        session = create_checkout_session(
-            email=email,
-            plan_name=selected_plan,
-            signup_id=int(row["id"]),
-            success_path="/signup/complete?session_id={CHECKOUT_SESSION_ID}",
-            app_base_url=current_public_app_base_url(),
-        )
+        session = create_checkout_session(email=email, plan_name=selected_plan, signup_id=int(row["id"]), success_path="/signup/complete?session_id={CHECKOUT_SESSION_ID}")
         store_pending_checkout_context(
             email=email,
             full_name=full_name,

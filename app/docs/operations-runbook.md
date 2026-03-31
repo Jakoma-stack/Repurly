@@ -4,7 +4,7 @@
 - Visit `/ops/health`
 - Review failed posts on `/ops`
 - Review publish attempts and audit log
-- Confirm new workspace enquiries are flowing into billing or follow-up
+- Confirm new beta signups are flowing into billing or follow-up
 
 ## Backup set
 Back up these directories together:

@@ -4,7 +4,7 @@
 Repurly is now set up as a live commercial SaaS foundation for agency onboarding, billing, workspace setup, brand management, asset uploads, content drafting, schedule management, team access, analytics and ops review.
 
 ## What is shipped in this package
-- public workspace launch flow and Stripe checkout
+- public beta signup and Stripe checkout
 - post-payment account activation and guided onboarding
 - customer dashboard, billing portal access and workspace settings
 - workspace team management with seat-aware plans

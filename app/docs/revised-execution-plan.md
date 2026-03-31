@@ -54,7 +54,7 @@ Exit criteria:
 - admin/operator console exists
 - a new workspace can move from intake to scheduled publishing
 
-## Phase 5 - Sell the launch offer
+## Phase 5 - Sell the beta
 
 Exit criteria:
 
@@ -64,7 +64,7 @@ Exit criteria:
 - discovery calls are logged
 - at least two customers pay
 
-## Phase 6 - Deliver the launch plan
+## Phase 6 - Deliver the beta
 
 Exit criteria:
 

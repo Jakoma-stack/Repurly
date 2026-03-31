@@ -1,0 +1,18 @@
+{
+  "brand": "agency_main",
+  "display_name": "Agency Main",
+  "website": "https://agency.example.com",
+  "contact_email": "",
+  "tone": "",
+  "audience": "",
+  "primary_cta": "",
+  "secondary_cta": "",
+  "default_platforms": [
+    "linkedin"
+  ],
+  "hashtags": [],
+  "posting_goals": [],
+  "content_pillars": [],
+  "linkedin_author_urn": "",
+  "linkedin_token_env": ""
+}

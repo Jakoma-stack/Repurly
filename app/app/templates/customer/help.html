@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Help | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">Customer help</div>
+    <h2>{{ workspace.display_name }}</h2>
+    <p>Use this guide when you want a plain-English explanation of how Repurly works. It covers onboarding, brand setup, asset uploads, content drafting, scheduling and what each publishing format means.</p>
+  </div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Launch checklist</h3>
+      <ol class="info-list">
+        <li>Check your workspace name, billing contact and allowed domains in <a href="/workspace/settings">Settings</a>.</li>
+        <li>Add at least one brand in <a href="/workspace/brands">Brands</a>.</li>
+        <li>Upload your logo, starter images, and any short video clips in <a href="/workspace/assets">Assets</a>.</li>
+        <li>Create drafts, choose the right format, generate AI-assisted copy, and schedule them from <a href="/workspace/content">Content &amp; schedule</a>.</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>Choosing the right format</h3>
+      <div class="progress-list">
+        <div class="progress-item">
+          <strong>Text only</strong>
+          Use this when the copy carries the idea on its own. Leave the asset picker empty.
+        </div>
+        <div class="progress-item">
+          <strong>Single image</strong>
+          Use this when one graphic, logo, screenshot or photo supports the post. Select exactly one uploaded asset.
+        </div>
+        <div class="progress-item">
+          <strong>Video</strong>
+          Use this when the post should lead with a single uploaded video clip. Select exactly one video asset.
+        </div>
+        <div class="progress-item">
+          <strong>Carousel / multi-asset</strong>
+          Use this when the story is better spread across multiple slides, screenshots, or a mixed visual sequence. Select at least two image or video assets. If live carousel publishing is not enabled yet for your environment, save or submit the post for review rather than self-scheduling it.
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Review and scheduling</h3>
+      <ol class="info-list">
+        <li><strong>Save draft</strong> if you are still writing or collecting assets.</li>
+        <li><strong>Submit for review</strong> if you want the post checked before it is allowed into the publishing pipeline.</li>
+        <li><strong>Schedule for publishing</strong> if the draft is ready and you want Repurly to treat it as approved.</li>
+      </ol>
+      <div class="note info">Scheduling creates the dated content package used by the publishing pipeline: caption file, asset files, schedule row, and customer-facing status updates.</div>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>AI-assisted generation</h3>
+      <ol class="info-list">
+        <li>Use the AI-assisted generator in <a href="/workspace/content">Content &amp; schedule</a> when you want Repurly to draft copy from your brand tone, audience, CTA and brief.</li>
+        <li>Choose <strong>Create drafts only</strong> if you want to edit the copy before it enters the queue.</li>
+        <li>Choose <strong>Create and schedule automatically</strong> if you want a ready-made content plan. You can now choose daily, weekdays, weekly, or 3x-weekly cadences plus same-time, staggered, or random workday timing.</li>
+      </ol>
+      <div class="note info">Bulk weekly plans work best when your brand settings and CTA fields are already filled in. If the copy is close but not perfect, edit the generated draft before scheduling it.</div>
+    </div>
+    <div class="panel">
+      <h3>Status guide</h3>
+      <table>
+        <tr><th>Status</th><th>Meaning</th></tr>
+        <tr><td>draft</td><td>The post exists in your workspace but is not in the schedule yet.</td></tr>
+        <tr><td>pending</td><td>The post has been submitted for review and is waiting for approval.</td></tr>
+        <tr><td>approved</td><td>The post is cleared for publishing and can move through the pipeline.</td></tr>
+        <tr><td>posted</td><td>The platform accepted the post and a publish record exists.</td></tr>
+        <tr><td>failed</td><td>The publish attempt failed and needs review or retry.</td></tr>
+      </table>
+    </div>
+    <div class="panel">
+      <h3>What to do if something looks wrong</h3>
+      <ul class="info-list">
+        <li>If a text post shows a media error, clear the asset picker or switch the format.</li>
+        <li>If a single-image or video post is rejected, check that exactly one matching asset is selected and still exists in Assets.</li>
+        <li>If a scheduled post is missing from the queue, open Content &amp; schedule and confirm you used <strong>Submit for review</strong> or <strong>Schedule for publishing</strong> rather than only <strong>Save draft</strong>.</li>
+        <li>If billing or login behave unexpectedly, use <a href="/account/billing">Billing</a> or email <a href="mailto:{{ support_email }}">{{ support_email }}</a>.</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Quick links</h3>
+      <div class="actions">
+        <a href="/workspace/content" class="button-link primary">Open content &amp; schedule</a>
+        <a href="/workspace/assets" class="button-link secondary">Open assets</a>
+        <a href="/workspace/brands" class="button-link secondary">Open brands</a>
+        <a href="/workspace/settings" class="button-link secondary">Open settings</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -49,7 +49,7 @@
   <div class="panel">
     <h3>Agency sign-up</h3>
     <p class="muted">Fill this in once. After payment, Repurly will take you into password setup and a guided checklist instead of sending you back to the start.</p>
-    <form method="post" action="{{ '/billing/create-checkout-session' if checkout_enabled else '/' }}">
+    <form method="post" action="{{ '/billing/create-checkout-session' if checkout_enabled else '/beta' }}">
       <label>Full name<input name="full_name" value="{{ form_data.full_name }}" required></label>
       <div class="field-help">Use the name you want to appear on the customer account.</div>
       <label>Work email<input name="email" type="email" value="{{ form_data.email }}" required></label>
@@ -78,7 +78,6 @@
         <select name="selected_plan">
           <option value="agency" selected>Repurly Agency — £297/month</option>
         </select>
-        <label style="display:flex; align-items:flex-start; gap:10px; font-weight:600; margin-top:12px;"><input type="checkbox" name="setup_addon" value="yes" style="width:auto; margin-top:3px;" {% if form_data.get("setup_addon") == "yes" %}checked{% endif %}><span>Add guided setup support (£750 one-off). We will confirm and invoice this separately from the monthly plan.</span></label>
       </label>
       <label>Launch timeline
         <select name="timeline">
@@ -87,7 +86,7 @@
           {% endfor %}
         </select>
       </label>
-      <label>Anything we should know before we set up your workspace?
+      <label>Anything we should know before we onboard you?
         <textarea name="beta_notes">{{ form_data.beta_notes }}</textarea>
       </label>
       <label style="display:flex; align-items:flex-start; gap:10px; font-weight:600; margin-top:12px;">
@@ -101,7 +100,7 @@
       <input type="text" name="website" value="{{ form_data.website }}" autocomplete="off" class="sr-only" tabindex="-1">
       <div class="actions" style="margin-top:18px;">
         <button type="submit" class="btn-primary">Pay and start secure setup</button>
-        <button type="submit" formaction="/" formmethod="post" class="secondary">Save enquiry without checkout</button>
+        <button type="submit" formaction="/beta" formmethod="post" class="secondary">Save enquiry without checkout</button>
       </div>
       <p class="subtle" style="margin-top:14px;">Already have an account? <a href="/login">Log in here</a>.</p>
     </form>

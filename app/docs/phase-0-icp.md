@@ -42,7 +42,7 @@ They are not mainly struggling with how to write a caption. They are struggling 
 - **ICP:** small agencies managing LinkedIn content for multiple client brands
 - **Platform:** LinkedIn only until paid pilots succeed
 - **Promise:** approve and publish a month of client LinkedIn content safely in one workflow
-- **Offer:** agency launch plan with setup fee plus monthly recurring fee
+- **Offer:** founding agency beta with setup fee plus monthly recurring fee
 
 ## Decision filter
 

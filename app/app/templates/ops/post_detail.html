@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Post {{ post.post_id }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Post detail: {{ post.post_id }}</h2>
+    <p>Review content readiness, upload missing assets, retry failed publishes, and inspect audit history.</p>
+  </div>
+  <div class="actions">
+    <a href="/ops/schedule"><button type="button" class="secondary">Back to schedule</button></a>
+  </div>
+</div>
+{% set saved = request.args.get('saved') %}
+{% set message = request.args.get('message') %}
+{% if saved == 'approved' %}<div class="note success">Draft approved.</div>{% endif %}
+{% if saved == 'rejected' %}<div class="note warning">Draft rejected.</div>{% endif %}
+{% if saved == 'assets_uploaded' %}<div class="note success">{{ message or 'Assets uploaded successfully.' }}</div>{% endif %}
+{% if saved == 'asset_upload_error' %}<div class="note error">{{ message or 'Asset upload failed.' }}</div>{% endif %}
+{% if saved == 'assets_attached' %}<div class="note success">{{ message or 'Existing assets attached successfully.' }}</div>{% endif %}
+{% if saved == 'asset_attach_error' %}<div class="note error">{{ message or 'Existing asset attach failed.' }}</div>{% endif %}
+{% if saved == 'retry_success' %}<div class="note success">{{ message or 'Publish completed successfully.' }}</div>{% endif %}
+{% if saved == 'retry_failed' %}<div class="note error">{{ message or 'Publish retry failed.' }}</div>{% endif %}
+{% if saved == 'retry_skipped' %}<div class="note warning">{{ message or 'Publish retry was skipped.' }}</div>{% endif %}
+{% if saved == 'retry_error' %}<div class="note error">{{ message or 'Publish retry could not be started.' }}</div>{% endif %}
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Post metadata</h3>
+      <div class="kv">
+        <div class="muted">Brand</div><div>{{ post.brand }}</div>
+        <div class="muted">Platform</div><div>{{ post.platform }}</div>
+        <div class="muted">Type</div><div>{{ post.post_type }}</div>
+        <div class="muted">Date</div><div>{{ post.post_date }} {{ post.post_time }}</div>
+        <div class="muted">Status</div><div>{{ post.status }}</div>
+        <div class="muted">Approval</div><div>{{ post.approval_status or '—' }}</div>
+        <div class="muted">Campaign</div><div>{{ post.campaign or '—' }}</div>
+        <div class="muted">Theme</div><div>{{ post.theme or '—' }}</div>
+        <div class="muted">Caption file</div><div>{{ post.caption_filename or '—' }}</div>
+        <div class="muted">Asset file(s)</div><div>{{ post.asset_filename or '—' }}</div>
+        <div class="muted">Asset mode</div><div>{{ post.asset_mode or '—' }}</div>
+        <div class="muted">Platform post id</div><div>{{ post.platform_post_id or '—' }}</div>
+        <div class="muted">Last error</div><div>{{ post.last_publish_error or '—' }}</div>
+        <div class="muted">Notes</div><div>{{ post.notes or '—' }}</div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Caption preview</h3>
+      {% if caption_error %}
+        <div class="note error">{{ caption_error }}</div>
+      {% elif caption_text %}
+        <pre>{{ caption_text }}</pre>
+      {% else %}
+        <div class="muted">No caption text found.</div>
+      {% endif %}
+    </div>
+    <div class="panel">
+      <div class="page-header" style="margin-bottom:10px;"><h3 style="margin:0;">Asset checks</h3><div class="actions"><a href="/ops/assets?brand={{ post.brand }}&post_id={{ post.post_id }}"><button type="button" class="secondary">Attach from asset library</button></a></div></div>
+      <table>
+        <tr><th>Asset</th><th>Exists</th><th>Path</th></tr>
+        {% for asset in asset_paths %}
+          <tr><td>{{ asset.name }}</td><td>{{ 'yes' if asset.exists else 'no' }}</td><td><code>{{ asset.path }}</code></td></tr>
+        {% else %}
+          <tr><td colspan="3" class="muted">No assets referenced.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>Review actions</h3>
+      <form method="post" action="/ops/schedule/{{ post.post_id }}/approve">
+        <label>Actor<input name="actor" value="ops_console"></label>
+        <button type="submit">Approve draft</button>
+      </form>
+      <hr style="margin:16px 0; border:none; border-top:1px solid #dbe2ea;">
+      <form method="post" action="/ops/schedule/{{ post.post_id }}/reject">
+        <label>Actor<input name="actor" value="ops_console"></label>
+        <label>Reason<textarea name="reason" placeholder="Explain why this needs changes."></textarea></label>
+        <button type="submit" class="secondary">Reject draft</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>Upload assets</h3>
+      <form method="post" action="/ops/schedule/{{ post.post_id }}/upload-assets" enctype="multipart/form-data">
+        <label>Actor<input name="actor" value="ops_console"></label>
+        <label>Asset files<input type="file" name="assets" multiple required></label>
+        <label>Merge mode
+          <select name="merge_mode">
+            <option value="append">Append to existing asset list</option>
+            <option value="replace">Replace schedule asset list</option>
+          </select>
+        </label>
+        <label><input type="checkbox" name="switch_post_type" value="1" checked> Switch text posts to image mode automatically when assets are uploaded</label>
+        <button type="submit">Upload asset files</button>
+      </form>
+    </div>
+    <div class="panel">
+      <h3>Publish controls</h3>
+      {% if can_retry %}
+        <form method="post" action="/ops/schedule/{{ post.post_id }}/retry-publish">
+          <label>Actor<input name="actor" value="ops_console"></label>
+          <button type="submit">{{ retry_label }}</button>
+        </form>
+      {% else %}
+        <div class="muted">This post is not in a retryable state. LinkedIn publish controls are available for approved, queued, generated, or failed LinkedIn rows.</div>
+      {% endif %}
+    </div>
+    <div class="panel">
+      <h3>Brand config snapshot</h3>
+      <pre>{{ brand_config | tojson(indent=2) }}</pre>
+    </div>
+    <div class="panel">
+      <h3>Recent publish attempts</h3>
+      <table>
+        <tr><th>Status</th><th>Time</th><th>Message</th></tr>
+        {% for row in publish_attempts %}
+          <tr><td>{{ row.status }}</td><td>{{ row.updated_at }}</td><td>{{ row.error_message or row.platform_post_id or '—' }}</td></tr>
+        {% else %}<tr><td colspan="3" class="muted">No publish attempts logged for this post.</td></tr>{% endfor %}
+      </table>
+    </div>
+    <div class="panel">
+      <h3>Recent audit events</h3>
+      <table>
+        <tr><th>Event</th><th>Actor</th><th>Time</th><th>Message</th></tr>
+        {% for row in audit_events %}
+          <tr><td>{{ row.event_type }}</td><td>{{ row.actor or 'system' }}</td><td>{{ row.created_at }}</td><td>{{ row.message or '—' }}</td></tr>
+        {% else %}<tr><td colspan="4" class="muted">No audit events logged for this post.</td></tr>{% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

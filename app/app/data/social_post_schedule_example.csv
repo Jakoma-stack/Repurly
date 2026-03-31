@@ -1,0 +1,2 @@
+post_id,post_date,post_time,brand,platform,post_type,theme,campaign,status,content_folder,asset_filename,caption_filename,notes,approval_status,draft_payload_file
+jakoma_2026-03-25_linkedin_001,2026-03-25,18:43,jakoma,linkedin,text,offer_launch,automation_launch,posted,content/jakoma/2026-03-25,,jakoma_2026-03-25_linkedin_text_001.txt,Launch post,approved,/mnt/data/socials_scheduler_repo/socials_scheduler/content/jakoma/2026-03-25/generated/jakoma_2026-03-25_linkedin_001_draft.json
