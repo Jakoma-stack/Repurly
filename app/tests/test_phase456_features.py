@@ -27,7 +27,7 @@ def phase456_client(tmp_path, monkeypatch):
     )
     user_id = conn.execute("SELECT id FROM users WHERE email='owner@example.com'").fetchone()[0]
     conn.execute(
-        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'growth', ?)",
+        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'agency', ?)",
         (user_id,),
     )
     workspace_id = conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0]
@@ -36,7 +36,7 @@ def phase456_client(tmp_path, monkeypatch):
         (workspace_id, user_id),
     )
     conn.execute(
-        "INSERT INTO subscriptions (user_id, workspace_id, stripe_customer_id, stripe_subscription_id, stripe_price_id, plan_name, status, billing_email) VALUES (?, ?, 'cus_123', 'sub_123', 'price_growth', 'growth', 'active', 'owner@example.com')",
+        "INSERT INTO subscriptions (user_id, workspace_id, stripe_customer_id, stripe_subscription_id, stripe_price_id, plan_name, status, billing_email) VALUES (?, ?, 'cus_123', 'sub_123', 'price_agency', 'agency', 'active', 'owner@example.com')",
         (user_id, workspace_id),
     )
     conn.commit()
@@ -55,7 +55,7 @@ def test_active_subscription_guards_duplicate_checkout(phase456_client):
     client, _, _ = phase456_client
     response = client.post(
         "/account/billing/create-checkout-session",
-        data={"selected_plan": "growth"},
+        data={"selected_plan": "agency"},
         follow_redirects=False,
     )
     assert response.status_code == 302

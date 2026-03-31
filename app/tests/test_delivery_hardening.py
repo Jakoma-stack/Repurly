@@ -73,9 +73,9 @@ def test_build_daily_queue_excludes_blank_approval(tmp_path, monkeypatch):
 
 
 def test_normalise_plan_name_supports_founding_aliases():
-    assert billing.normalise_plan_name("founding_starter") == "starter"
-    assert billing.normalise_plan_name("founding_growth") == "growth"
-    assert billing.normalise_plan_name("founding_plus") == "pro"
+    assert billing.normalise_plan_name("founding_starter") == "agency"
+    assert billing.normalise_plan_name("founding_growth") == "agency"
+    assert billing.normalise_plan_name("founding_plus") == "agency"
 
 
 def test_bootstrap_file_copies_example_to_working_path(tmp_path):

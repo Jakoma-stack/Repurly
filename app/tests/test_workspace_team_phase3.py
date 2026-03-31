@@ -56,7 +56,7 @@ def test_workspace_team_invite_and_accept_flow(team_client):
     owner_id = _create_active_user(conn, email="owner@example.com", full_name="Owner User")
     conn.execute(
         "INSERT INTO workspaces (slug, display_name, company_name, selected_plan, owner_user_id) VALUES (?, ?, ?, ?, ?)",
-        ("agency-co", "Agency Co", "Agency Co", "growth", owner_id),
+        ("agency-co", "Agency Co", "Agency Co", "agency", owner_id),
     )
     workspace_id = int(conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0])
     conn.execute(
@@ -107,7 +107,7 @@ def test_workspace_owner_can_change_role_and_remove_member(team_client):
     member_id = _create_active_user(conn, email="member@example.com", full_name="Member User")
     conn.execute(
         "INSERT INTO workspaces (slug, display_name, company_name, selected_plan, owner_user_id) VALUES (?, ?, ?, ?, ?)",
-        ("agency-co", "Agency Co", "Agency Co", "growth", owner_id),
+        ("agency-co", "Agency Co", "Agency Co", "agency", owner_id),
     )
     workspace_id = int(conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0])
     conn.execute("INSERT INTO workspace_memberships (workspace_id, user_id, membership_role, status) VALUES (?, ?, 'owner', 'active')", (workspace_id, owner_id))
@@ -136,7 +136,7 @@ def test_member_cannot_manage_team_or_billing(team_client):
     member_id = _create_active_user(conn, email="member@example.com", full_name="Member User")
     conn.execute(
         "INSERT INTO workspaces (slug, display_name, company_name, selected_plan, owner_user_id) VALUES (?, ?, ?, ?, ?)",
-        ("agency-co", "Agency Co", "Agency Co", "growth", owner_id),
+        ("agency-co", "Agency Co", "Agency Co", "agency", owner_id),
     )
     workspace_id = int(conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0])
     conn.execute("INSERT INTO workspace_memberships (workspace_id, user_id, membership_role, status) VALUES (?, ?, 'owner', 'active')", (workspace_id, owner_id))

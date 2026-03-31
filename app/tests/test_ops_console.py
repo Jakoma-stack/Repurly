@@ -432,7 +432,7 @@ def test_beta_signup_requires_privacy_consent(app_client):
             "email": "buyer@example.com",
             "full_name": "Buyer Person",
             "company_name": "Agency Co",
-            "selected_plan": "starter",
+            "selected_plan": "agency",
         },
         follow_redirects=True,
     )
@@ -449,7 +449,7 @@ def test_billing_checkout_session_route_fails_cleanly_when_stripe_not_configured
     client, _, _ = app_client
     monkeypatch.delenv("STRIPE_SECRET_KEY", raising=False)
     monkeypatch.delenv("STRIPE_PRICE_STARTER", raising=False)
-    monkeypatch.delenv("STRIPE_PRICE_GROWTH", raising=False)
+    monkeypatch.delenv("STRIPE_PRICE_AGENCY", raising=False)
     monkeypatch.delenv("STRIPE_PRICE_PRO", raising=False)
 
     response = client.post(
@@ -458,7 +458,7 @@ def test_billing_checkout_session_route_fails_cleanly_when_stripe_not_configured
             "email": "buyer@example.com",
             "full_name": "Buyer Person",
             "company_name": "Agency Co",
-            "selected_plan": "starter",
+            "selected_plan": "agency",
             "privacy_consent": "yes",
         },
         follow_redirects=True,

@@ -45,12 +45,12 @@ def seed_customer(db_path: Path, *, active_subscription: bool = False):
     user_id = conn.execute("SELECT id FROM users WHERE email='paid@example.com'").fetchone()[0]
     conn.execute(
         "INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, invite_status) VALUES (?, ?, ?, ?, ?)",
-        ("paid@example.com", "Paid User", "Paid Co", "growth", "activated"),
+        ("paid@example.com", "Paid User", "Paid Co", "agency", "activated"),
     )
     signup_id = conn.execute("SELECT id FROM founding_user_signups WHERE email='paid@example.com'").fetchone()[0]
     conn.execute(
         "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id, signup_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        ("paid-co", "Paid Co", "Paid Co", "active", "growth", user_id, signup_id),
+        ("paid-co", "Paid Co", "Paid Co", "active", "agency", user_id, signup_id),
     )
     workspace_id = conn.execute("SELECT id FROM workspaces WHERE slug='paid-co'").fetchone()[0]
     conn.execute(
@@ -60,7 +60,7 @@ def seed_customer(db_path: Path, *, active_subscription: bool = False):
     if active_subscription:
         conn.execute(
             "INSERT INTO subscriptions (user_id, workspace_id, stripe_customer_id, stripe_subscription_id, stripe_price_id, plan_name, status, billing_email) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (user_id, workspace_id, "cus_123", "sub_123", "price_growth", "growth", "active", "paid@example.com"),
+            (user_id, workspace_id, "cus_123", "sub_123", "price_agency", "agency", "active", "paid@example.com"),
         )
     conn.commit()
     conn.close()
@@ -101,7 +101,7 @@ def test_dashboard_allows_access_with_active_subscription(billing_client):
     response = client.get("/dashboard")
     assert response.status_code == 200
     assert b"Paid Co" in response.data
-    assert b"growth" in response.data.lower()
+    assert b"agency" in response.data.lower()
 
 
 def test_customer_billing_checkout_uses_workspace_context(billing_client, monkeypatch):
@@ -113,18 +113,18 @@ def test_customer_billing_checkout_uses_workspace_context(billing_client, monkey
 
     def fake_create_checkout_session(**kwargs):
         captured.update(kwargs)
-        return {"id": "cs_test", "url": "https://checkout.example.com", "price_id": "price_growth", "plan_name": kwargs["plan_name"]}
+        return {"id": "cs_test", "url": "https://checkout.example.com", "price_id": "price_agency", "plan_name": kwargs["plan_name"]}
 
     monkeypatch.setattr(onboarding_app, "create_checkout_session", fake_create_checkout_session)
 
     response = client.post(
         "/account/billing/create-checkout-session",
-        data={"selected_plan": "growth"},
+        data={"selected_plan": "agency"},
         follow_redirects=False,
     )
     assert response.status_code == 302
     assert response.headers["Location"] == "https://checkout.example.com"
-    assert captured["plan_name"] == "growth"
+    assert captured["plan_name"] == "agency"
     assert captured["workspace_id"] == workspace_id
     assert captured["user_id"] > 0
     assert captured["success_path"] == "/account/billing?billing=success"
@@ -132,7 +132,7 @@ def test_customer_billing_checkout_uses_workspace_context(billing_client, monkey
     conn = sqlite3.connect(db_path)
     selected_plan = conn.execute("SELECT selected_plan FROM workspaces WHERE id=?", (workspace_id,)).fetchone()[0]
     conn.close()
-    assert selected_plan == "growth"
+    assert selected_plan == "agency"
 
 
 def test_process_stripe_event_persists_workspace_subscription(tmp_path, monkeypatch):
@@ -148,7 +148,7 @@ def test_process_stripe_event_persists_workspace_subscription(tmp_path, monkeypa
     conn.close()
 
     monkeypatch.setattr(billing, "APP_DB", db_path)
-    monkeypatch.setenv("STRIPE_PRICE_GROWTH", "price_growth")
+    monkeypatch.setenv("STRIPE_PRICE_AGENCY", "price_agency")
 
     event = {
         "id": "evt_workspace_1",
@@ -158,9 +158,9 @@ def test_process_stripe_event_persists_workspace_subscription(tmp_path, monkeypa
                 "id": "sub_workspace_1",
                 "customer": "cus_workspace_1",
                 "status": "active",
-                "items": {"data": [{"price": {"id": "price_growth"}}]},
+                "items": {"data": [{"price": {"id": "price_agency"}}]},
                 "metadata": {
-                    "selected_plan": "growth",
+                    "selected_plan": "agency",
                     "user_id": str(user_id),
                     "workspace_id": str(workspace_id),
                     "billing_email": "ws@example.com",
@@ -182,7 +182,7 @@ def test_process_stripe_event_persists_workspace_subscription(tmp_path, monkeypa
 
     assert row[0] == workspace_id
     assert row[1] == user_id
-    assert row[2] == "growth"
+    assert row[2] == "agency"
     assert row[3] == "active"
     assert row[4] == "ws@example.com"
 
@@ -232,7 +232,7 @@ def test_ops_billing_handles_legacy_db_without_workspace_subscription_column(tmp
         CREATE TABLE schedules (id INTEGER PRIMARY KEY AUTOINCREMENT, brand_id INTEGER, post_id TEXT UNIQUE, platform TEXT, post_type TEXT, post_date TEXT, post_time TEXT, theme TEXT, campaign TEXT, status TEXT DEFAULT 'planned', approval_status TEXT DEFAULT '', content_folder TEXT, asset_filename TEXT, caption_filename TEXT, notes TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
         CREATE TABLE publish_attempts (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id TEXT, brand_slug TEXT, platform TEXT, request_fingerprint TEXT, status TEXT DEFAULT 'started', response_json TEXT DEFAULT '{}', error_message TEXT, platform_post_id TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
         CREATE TABLE audit_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT, post_id TEXT, brand_slug TEXT, platform TEXT, actor TEXT, message TEXT, payload_json TEXT DEFAULT '{}', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
-        INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan) VALUES ('legacy@example.com', 'Legacy User', 'Legacy Co', 'starter');
+        INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan) VALUES ('legacy@example.com', 'Legacy User', 'Legacy Co', 'agency');
         """
     )
     conn.commit()
@@ -314,7 +314,7 @@ def test_sync_latest_subscription_prefers_customer_with_active_subscription(tmp_
 
     monkeypatch.setattr(billing, "APP_DB", db_path)
     monkeypatch.setenv("STRIPE_SECRET_KEY", "sk_test_example")
-    monkeypatch.setenv("STRIPE_PRICE_GROWTH", "price_growth")
+    monkeypatch.setenv("STRIPE_PRICE_AGENCY", "price_agency")
 
     customers = [
         {"id": "cus_old", "email": "paid@example.com", "created": 100},
@@ -328,7 +328,7 @@ def test_sync_latest_subscription_prefers_customer_with_active_subscription(tmp_
                 "customer": "cus_live",
                 "status": "active",
                 "created": 300,
-                "items": {"data": [{"price": {"id": "price_growth"}}]},
+                "items": {"data": [{"price": {"id": "price_agency"}}]},
                 "metadata": {},
                 "current_period_end": 1770000000,
                 "cancel_at_period_end": False,

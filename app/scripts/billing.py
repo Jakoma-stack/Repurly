@@ -22,31 +22,28 @@ except ImportError:  # pragma: no cover
 class BillingConfig:
     secret_key: str
     webhook_secret: str
-    starter_price_id: str
-    growth_price_id: str
-    pro_price_id: str
+    agency_price_id: str
     app_base_url: str
     billing_portal_configuration_id: str
     billing_portal_return_path: str
 
 
 PLAN_ALIASES = {
-    "starter": "starter",
-    "growth": "growth",
-    "pro": "pro",
-    "founding": "starter",
-    "founding_starter": "starter",
-    "founding_growth": "growth",
-    "founding_plus": "pro",
-    "linkedin-first": "starter",
-    "linkedin_first": "starter",
-    "linkedin first": "starter",
+    "agency": "agency",
+    "starter": "agency",
+    "growth": "agency",
+    "pro": "agency",
+    "founding": "agency",
+    "founding_starter": "agency",
+    "founding_growth": "agency",
+    "founding_plus": "agency",
+    "linkedin-first": "agency",
+    "linkedin_first": "agency",
+    "linkedin first": "agency",
 }
 
 PLAN_TO_ENV = {
-    "starter": "STRIPE_PRICE_STARTER",
-    "growth": "STRIPE_PRICE_GROWTH",
-    "pro": "STRIPE_PRICE_PRO",
+    "agency": "STRIPE_PRICE_AGENCY",
 }
 
 WORKSPACE_ACCESS_STATUSES = {"active", "trialing"}
@@ -61,9 +58,7 @@ def get_billing_config() -> BillingConfig:
     return BillingConfig(
         secret_key=os.getenv("STRIPE_SECRET_KEY", "").strip(),
         webhook_secret=os.getenv("STRIPE_WEBHOOK_SECRET", "").strip(),
-        starter_price_id=os.getenv("STRIPE_PRICE_STARTER", "").strip(),
-        growth_price_id=os.getenv("STRIPE_PRICE_GROWTH", "").strip(),
-        pro_price_id=os.getenv("STRIPE_PRICE_PRO", "").strip(),
+        agency_price_id=(os.getenv("STRIPE_PRICE_AGENCY", "").strip() or os.getenv("STRIPE_PRICE_GROWTH", "").strip() or os.getenv("STRIPE_PRICE_STARTER", "").strip() or os.getenv("STRIPE_PRICE_PRO", "").strip()),
         app_base_url=os.getenv("APP_BASE_URL", "https://beta.repurly.org").rstrip("/"),
         billing_portal_configuration_id=os.getenv("STRIPE_BILLING_PORTAL_CONFIGURATION_ID", STRIPE_BILLING_PORTAL_CONFIGURATION_ID).strip(),
         billing_portal_return_path=os.getenv("BILLING_PORTAL_RETURN_PATH", BILLING_PORTAL_RETURN_PATH).strip() or "/account/billing",
@@ -74,9 +69,7 @@ def price_id_for_plan(plan_name: str, cfg: BillingConfig | None = None) -> str:
     cfg = cfg or get_billing_config()
     canonical_plan = normalise_plan_name(plan_name)
     lookup = {
-        "starter": cfg.starter_price_id,
-        "growth": cfg.growth_price_id,
-        "pro": cfg.pro_price_id,
+        "agency": cfg.agency_price_id,
     }
     return lookup.get(canonical_plan, "")
 
@@ -84,9 +77,7 @@ def price_id_for_plan(plan_name: str, cfg: BillingConfig | None = None) -> str:
 def plan_name_for_price_id(price_id: str, cfg: BillingConfig | None = None) -> str:
     cfg = cfg or get_billing_config()
     mapping = {
-        cfg.starter_price_id: "starter",
-        cfg.growth_price_id: "growth",
-        cfg.pro_price_id: "pro",
+        cfg.agency_price_id: "agency",
     }
     return mapping.get((price_id or "").strip(), "")
 

@@ -45,7 +45,7 @@ def test_invite_activation_login_and_logout_flow(auth_client):
     conn.row_factory = sqlite3.Row
     conn.execute(
         "INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan) VALUES (?, ?, ?, ?)",
-        ("owner@example.com", "Casey Owner", "Agency Co", "starter"),
+        ("owner@example.com", "Casey Owner", "Agency Co", "agency"),
     )
     conn.commit()
     conn.close()

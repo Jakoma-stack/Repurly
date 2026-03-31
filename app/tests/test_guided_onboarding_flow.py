@@ -23,7 +23,7 @@ def guided_client(tmp_path, monkeypatch):
     conn.executescript(schema)
     conn.execute(
         "INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes) VALUES (?, ?, ?, ?, ?)",
-        ("new@example.com", "New User", "New Co", "growth", ""),
+        ("new@example.com", "New User", "New Co", "agency", ""),
     )
     conn.execute(
         "INSERT INTO users (email, full_name, company_name, role, status, password_hash, activated_at, email_verified_at) VALUES (?, ?, ?, 'customer', 'active', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
@@ -31,7 +31,7 @@ def guided_client(tmp_path, monkeypatch):
     )
     user_id = conn.execute("SELECT id FROM users WHERE email='owner@example.com'").fetchone()[0]
     conn.execute(
-        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'growth', ?)",
+        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'agency', ?)",
         (user_id,),
     )
     workspace_id = conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0]
@@ -67,7 +67,7 @@ def test_signup_complete_redirects_to_activation(monkeypatch, guided_client):
             "status": "complete",
             "customer": "cus_test_123",
             "customer_details": {"email": "new@example.com"},
-            "metadata": {"signup_id": "1", "selected_plan": "growth"},
+            "metadata": {"signup_id": "1", "selected_plan": "agency"},
             "client_reference_id": "1",
         },
     )

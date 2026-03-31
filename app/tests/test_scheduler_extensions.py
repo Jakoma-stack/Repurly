@@ -140,7 +140,7 @@ def test_process_stripe_event_is_idempotent(tmp_path, monkeypatch):
                 "customer": "cus_123",
                 "status": "active",
                 "items": {"data": [{"price": {"id": "price_123"}}]},
-                "metadata": {"selected_plan": "starter"},
+                "metadata": {"selected_plan": "agency"},
                 "current_period_end": 1770000000,
                 "cancel_at_period_end": False,
             }

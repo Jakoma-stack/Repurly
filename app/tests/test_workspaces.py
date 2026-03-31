@@ -66,7 +66,7 @@ def test_invite_creates_workspace_membership(workspace_client):
     conn = sqlite3.connect(db_path)
     conn.execute(
         "INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan) VALUES (?, ?, ?, ?)",
-        ("workspace-owner@example.com", "Workspace Owner", "Workspace Co", "growth"),
+        ("workspace-owner@example.com", "Workspace Owner", "Workspace Co", "agency"),
     )
     conn.commit()
     conn.close()
@@ -82,7 +82,7 @@ def test_invite_creates_workspace_membership(workspace_client):
     conn.close()
 
     assert workspace[0] == "Workspace Co"
-    assert workspace[1] == "growth"
+    assert workspace[1] == "agency"
     assert workspace[2] == user_id
     assert membership[0] == "owner"
     assert membership[1] == "active"

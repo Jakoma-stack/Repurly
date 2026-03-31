@@ -29,7 +29,7 @@ def content_client(tmp_path, monkeypatch):
     )
     user_id = conn.execute("SELECT id FROM users WHERE email='owner@example.com'").fetchone()[0]
     conn.execute(
-        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'growth', ?)",
+        "INSERT INTO workspaces (slug, display_name, company_name, status, selected_plan, owner_user_id) VALUES ('agency-co', 'Agency Co', 'Agency Co', 'active', 'agency', ?)",
         (user_id,),
     )
     workspace_id = conn.execute("SELECT id FROM workspaces WHERE slug='agency-co'").fetchone()[0]

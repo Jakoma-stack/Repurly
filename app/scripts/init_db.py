@@ -116,24 +116,28 @@ def ensure_runtime_schema(conn: sqlite3.Connection) -> None:
     existing_tables = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
 
     user_columns = table_columns(conn, "users") if "users" in existing_tables else set()
-    for column_name, column_def in AUTH_USER_COLUMNS.items():
-        if column_name not in user_columns:
-            conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_def}")
+    if "users" in existing_tables:
+        for column_name, column_def in AUTH_USER_COLUMNS.items():
+            if column_name not in user_columns:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_def}")
 
     brand_columns = table_columns(conn, "brands") if "brands" in existing_tables else set()
-    for column_name, column_def in BRAND_COLUMNS.items():
-        if column_name not in brand_columns:
-            conn.execute(f"ALTER TABLE brands ADD COLUMN {column_name} {column_def}")
+    if "brands" in existing_tables:
+        for column_name, column_def in BRAND_COLUMNS.items():
+            if column_name not in brand_columns:
+                conn.execute(f"ALTER TABLE brands ADD COLUMN {column_name} {column_def}")
 
     asset_columns = table_columns(conn, "assets") if "assets" in existing_tables else set()
-    for column_name, column_def in ASSET_COLUMNS.items():
-        if "assets" in existing_tables and column_name not in asset_columns:
-            conn.execute(f"ALTER TABLE assets ADD COLUMN {column_name} {column_def}")
+    if "assets" in existing_tables:
+        for column_name, column_def in ASSET_COLUMNS.items():
+            if column_name not in asset_columns:
+                conn.execute(f"ALTER TABLE assets ADD COLUMN {column_name} {column_def}")
 
     subscription_columns = table_columns(conn, "subscriptions") if "subscriptions" in existing_tables else set()
-    for column_name, column_def in SUBSCRIPTION_COLUMNS.items():
-        if column_name not in subscription_columns:
-            conn.execute(f"ALTER TABLE subscriptions ADD COLUMN {column_name} {column_def}")
+    if "subscriptions" in existing_tables:
+        for column_name, column_def in SUBSCRIPTION_COLUMNS.items():
+            if column_name not in subscription_columns:
+                conn.execute(f"ALTER TABLE subscriptions ADD COLUMN {column_name} {column_def}")
 
     if "generated_posts" in existing_tables:
         generated_post_columns = table_columns(conn, "generated_posts")

@@ -15,9 +15,9 @@ Set these in the live `replury-beta` service:
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `STRIPE_PUBLISHABLE_KEY`
-- `STRIPE_PRICE_STARTER`
-- `STRIPE_PRICE_GROWTH`
-- `STRIPE_PRICE_PRO`
+- `STRIPE_PRICE_AGENCY`
+- `STRIPE_PRICE_AGENCY`
+- `STRIPE_PRICE_AGENCY`
 - `STRIPE_BILLING_PORTAL_CONFIGURATION_ID` (optional but recommended)
 - `BILLING_PORTAL_RETURN_PATH=/account/billing`
 - `WORKSPACE_BILLING_REQUIRED=false` while monitoring first live signups

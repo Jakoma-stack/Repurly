@@ -1,43 +1,30 @@
 # Repurly pricing page copy
 
 ## Pricing philosophy
-Lead with implementation and outcomes, not cheap self-serve. The fastest route to revenue is a hybrid of setup + recurring subscription.
+Lead with a single clear paid plan so first-visit buyers do not have to compare artificial tiers. Repurly is easiest to buy when it is positioned as a focused agency workflow product, not a broad menu of feature-gated subscriptions.
 
-## Plans
-### Starter
-For founder-led teams and small operators who want a clean approval and publishing workflow.
+## Public pricing
 
-- 1 workspace
-- up to 2 brands
-- core planning, approvals, scheduling, and publishing
-- onboarding support
-
-**Recommended price:** from GBP 299 per month + setup
-
-### Growth
-For teams managing multiple brands or a higher publishing cadence.
+### Repurly Agency
+For agencies managing LinkedIn content across client brands and wanting a cleaner workflow for onboarding, approvals, scheduling, and supported publishing.
 
 - 1 workspace
-- up to 5 brands
-- team access and approval flow
-- reporting and operational visibility
-- priority onboarding
+- up to 10 team seats included
+- brand setup and asset handling
+- drafting, review, scheduling, and publish tracking
+- billing portal and support access
 
-**Recommended price:** from GBP 749 per month + setup
+**Price:** GBP 297 per month
 
-### Agency
-For agencies running content across multiple clients.
+## Setup and expansion
 
-- multi-brand setup
-- multi-user team access
-- premium onboarding and support
-- custom workflows
+### Initial setup
+**Price:** GBP 750 one-off
 
-**Recommended price:** custom, typically GBP 1,000 to GBP 3,000+ per month plus setup
+Use this when you are handling workspace setup, onboarding, launch support, templates, or implementation help.
 
-## Setup fee guidance
-Charge a setup fee whenever you are handling onboarding, workflow configuration, templates, or support-led implementation.
+### Additional brands and managed support
+Quote separately based on workflow complexity, number of brands, and level of hands-on support required.
 
-- Starter: GBP 750 to GBP 1,500
-- Growth: GBP 2,000 to GBP 5,000
-- Agency: custom
+## Positioning note
+Do not present Starter / Growth / Pro publicly. Keep one recurring price and one setup/custom path until real usage data justifies more packaging.
