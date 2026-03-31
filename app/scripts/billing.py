@@ -133,7 +133,10 @@ def retrieve_checkout_session(session_id: str) -> dict[str, Any]:
         raise RuntimeError("Stripe checkout session ID is missing.")
     stripe_sdk = require_stripe_sdk()
     stripe_sdk.api_key = cfg.secret_key
-    session = stripe_sdk.checkout.Session.retrieve((session_id or "").strip(), expand=["subscription", "customer_details"])
+    try:
+        session = stripe_sdk.checkout.Session.retrieve((session_id or "").strip(), expand=["subscription"])
+    except Exception as exc:
+        raise RuntimeError(f"Unable to retrieve Stripe checkout session {session_id}: {exc}") from exc
     return stripe_object_to_dict(session)
 
 
