@@ -1541,6 +1541,7 @@ def healthz():
 def home():
     if current_customer() is not None:
         return redirect(url_for("customer_dashboard"))
+<<<<<<< HEAD
     billing_state = (request.args.get("billing") or "").strip().lower()
     form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
     errors: list[str] = []
@@ -1577,6 +1578,9 @@ def home():
             )
 
     return render_beta_template(saved=None, errors=errors, billing_state=billing_state, form_data=form_data)
+=======
+    return beta_signup()
+>>>>>>> 32f2b37b490bb59b907bf74b2202d43c82afa202
 
 
 @app.route("/login", methods=["GET", "POST"])
