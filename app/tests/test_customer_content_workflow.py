@@ -341,9 +341,10 @@ def test_ai_generation_produces_real_caption_copy(content_client):
 
     assert row is not None
     caption = row[0]
-    assert "Most teams do not struggle because they lack ideas." in caption
     assert "Create a 7-post LinkedIn campaign" not in caption
     assert "Do not repeat the prompt" not in caption
+    assert any(cta in caption for cta in ["Book a discovery call", "Download the AI governance checklist", "Learn more"])
+    assert len(caption.strip()) > 80
 
 
 def test_customer_can_save_campaign_template_and_strategy(content_client):

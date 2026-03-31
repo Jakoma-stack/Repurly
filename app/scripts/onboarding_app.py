@@ -30,11 +30,13 @@ from billing import (
     create_checkout_session,
     get_billing_config,
     normalise_plan_name,
+    normalise_public_app_base_url,
     process_stripe_event,
     retrieve_checkout_session,
     subscription_allows_workspace_access,
     sync_latest_subscription_for_customer,
     verify_stripe_webhook_signature,
+    store_checkout_session_reference,
 )
 
 from auth import (
@@ -344,6 +346,11 @@ def build_app_url(path: str) -> str:
     return f"{APP_BASE_URL}{path}"
 
 
+def current_public_app_base_url() -> str:
+    request_base = request.url_root.rstrip("/")
+    return normalise_public_app_base_url(request_base, APP_BASE_URL)
+
+
 def store_pending_checkout_context(*, email: str, full_name: str, company_name: str, selected_plan: str, signup_id: int | None = None, user_id: int | None = None, workspace_id: int | None = None, session_id: str = "") -> None:
     session["pending_checkout"] = {
         "email": (email or "").strip().lower(),
@@ -406,9 +413,62 @@ def active_or_recent_checkout_conflict(*, email: str, workspace_id: int | None =
         if signup is not None:
             existing_customer = conn.execute("SELECT id FROM users WHERE lower(email)=? LIMIT 1", (email,)).fetchone()
             if existing_customer is not None:
+                if workspace_id:
+                    linked_membership = conn.execute(
+                        "SELECT 1 FROM workspace_memberships WHERE workspace_id=? AND user_id=? AND lower(ifnull(status, 'active'))='active' LIMIT 1",
+                        (int(workspace_id), int(existing_customer["id"])),
+                    ).fetchone()
+                    if linked_membership is not None:
+                        return None
                 return "An account already exists for this email. Sign in or reset your password instead of paying again."
     return None
 
+
+
+
+def ensure_signup_row_for_checkout(
+    conn: sqlite3.Connection,
+    *,
+    billing_email: str,
+    full_name: str = "",
+    company_name: str = "",
+    selected_plan: str = "agency",
+    session_id: str = "",
+    signup_id: int | None = None,
+) -> sqlite3.Row | None:
+    billing_email = (billing_email or "").strip().lower()
+    if not billing_email and not signup_id:
+        return None
+    signup = None
+    if signup_id:
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (int(signup_id),)).fetchone()
+    if signup is None and billing_email:
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (billing_email,)).fetchone()
+    if signup is None:
+        conn.execute(
+            """
+            INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes, stripe_checkout_session_id, invite_status)
+            VALUES (?, ?, ?, ?, '', ?, 'requested')
+            """,
+            (billing_email, (full_name or billing_email.split('@', 1)[0]).strip(), (company_name or '').strip(), normalise_plan_name(selected_plan or 'agency') or 'agency', (session_id or '').strip()),
+        )
+        signup_id = int(conn.execute("SELECT last_insert_rowid()").fetchone()[0])
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (signup_id,)).fetchone()
+    else:
+        new_full_name = (full_name or signup["full_name"] or billing_email.split('@', 1)[0]).strip()
+        new_company_name = (company_name or signup["company_name"] or '').strip()
+        new_plan = normalise_plan_name(selected_plan or signup["selected_plan"] or 'agency') or 'agency'
+        new_session = (session_id or signup["stripe_checkout_session_id"] or '').strip()
+        conn.execute(
+            """
+            UPDATE founding_user_signups
+            SET email=?, full_name=?, company_name=?, selected_plan=?, stripe_checkout_session_id=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+            """,
+            (billing_email or signup["email"], new_full_name, new_company_name, new_plan, new_session, signup["id"]),
+        )
+        signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (signup["id"],)).fetchone()
+    return signup
 
 def retrieve_checkout_session_with_retry(session_id: str, *, attempts: int = 4, delay_seconds: float = 0.9) -> dict[str, Any]:
     last_error: Exception | None = None
@@ -417,29 +477,40 @@ def retrieve_checkout_session_with_retry(session_id: str, *, attempts: int = 4, 
             return retrieve_checkout_session(session_id)
         except Exception as exc:  # pragma: no cover - depends on Stripe timing/network
             last_error = exc
+            app.logger.warning(
+                "Stripe checkout confirmation attempt %s/%s failed for session %s: %s",
+                attempt + 1,
+                max(attempts, 1),
+                session_id,
+                exc,
+            )
             if attempt < attempts - 1:
                 sleep(delay_seconds)
     raise RuntimeError(str(last_error or "Unable to confirm checkout session."))
 
 
 
-def build_signup_handoff_state(*, billing_email: str, signup_id: int | None = None, stripe_customer_id: str = "") -> dict[str, Any] | None:
+def build_signup_handoff_state(*, billing_email: str, signup_id: int | None = None, stripe_customer_id: str = "", full_name: str = "", company_name: str = "", selected_plan: str = "agency", session_id: str = "") -> dict[str, Any] | None:
     billing_email = (billing_email or "").strip().lower()
     if not billing_email and not signup_id:
         return None
     with get_conn() as conn:
-        signup = None
-        if signup_id:
-            signup = conn.execute("SELECT * FROM founding_user_signups WHERE id=?", (int(signup_id),)).fetchone()
-        if signup is None and billing_email:
-            signup = conn.execute("SELECT * FROM founding_user_signups WHERE lower(email)=? ORDER BY id DESC LIMIT 1", (billing_email,)).fetchone()
+        signup = ensure_signup_row_for_checkout(
+            conn,
+            billing_email=billing_email,
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
+            signup_id=signup_id,
+        )
         if signup is None:
             return None
         user = ensure_customer_user_for_signup(conn, signup=signup)
         workspace = ensure_workspace_for_signup(conn, signup=signup, user_id=int(user["id"]))
         conn.execute(
-            "UPDATE founding_user_signups SET invite_status='invited', updated_at=CURRENT_TIMESTAMP WHERE id=?",
-            (signup["id"],),
+            "UPDATE founding_user_signups SET invite_status='invited', stripe_checkout_session_id=COALESCE(NULLIF(?, ''), stripe_checkout_session_id), updated_at=CURRENT_TIMESTAMP WHERE id=?",
+            ((session_id or '').strip(), signup["id"]),
         )
         conn.commit()
 
@@ -1541,7 +1612,42 @@ def healthz():
 def home():
     if current_customer() is not None:
         return redirect(url_for("customer_dashboard"))
-    return beta_signup()
+    billing_state = (request.args.get("billing") or "").strip().lower()
+    form_data = normalised_beta_form_data(request.form if request.method == "POST" else {})
+    errors: list[str] = []
+
+    if request.method == "POST":
+        errors = validate_beta_form(request.form)
+        email = form_data["email"]
+        full_name = form_data["full_name"]
+        company_name = form_data["company_name"]
+        selected_plan = form_data["selected_plan"]
+        beta_notes = build_beta_notes(request.form)
+
+        if not errors:
+            with get_conn() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO founding_user_signups (email, full_name, company_name, selected_plan, beta_notes)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(email) DO UPDATE SET
+                        full_name=excluded.full_name,
+                        company_name=excluded.company_name,
+                        selected_plan=excluded.selected_plan,
+                        beta_notes=excluded.beta_notes,
+                        updated_at=CURRENT_TIMESTAMP
+                    """,
+                    (email, full_name, company_name, selected_plan, beta_notes),
+                )
+                conn.commit()
+            return render_beta_template(
+                saved="Workspace enquiry saved. We will follow up using the details you provided.",
+                errors=[],
+                billing_state=billing_state,
+                form_data=normalised_beta_form_data({}),
+            )
+
+    return render_beta_template(saved=None, errors=errors, billing_state=billing_state, form_data=form_data)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -1666,8 +1772,16 @@ def signup_complete_from_checkout():
     confirmation_error = ""
     try:
         checkout_session = retrieve_checkout_session_with_retry(session_id)
+        app.logger.info(
+            "Checkout confirmation loaded for session %s with payment_status=%s status=%s customer=%s",
+            session_id,
+            (checkout_session or {}).get("payment_status"),
+            (checkout_session or {}).get("status"),
+            (checkout_session or {}).get("customer"),
+        )
     except Exception as exc:
         confirmation_error = str(exc)
+        app.logger.exception("Checkout confirmation failed for session %s", session_id)
 
     metadata = (checkout_session or {}).get("metadata") or {}
     billing_email = (
@@ -1677,6 +1791,9 @@ def signup_complete_from_checkout():
         or pending.get("email")
         or ""
     ).strip().lower()
+    selected_plan = normalise_plan_name(str(metadata.get("selected_plan") or pending.get("selected_plan") or "agency")) or "agency"
+    full_name = str(metadata.get("full_name") or pending.get("full_name") or "").strip()
+    company_name = str(metadata.get("company_name") or pending.get("company_name") or "").strip()
     signup_id_raw = str(metadata.get("signup_id") or (checkout_session or {}).get("client_reference_id") or pending.get("signup_id") or "").strip()
     signup_id = int(signup_id_raw) if signup_id_raw.isdigit() else None
 
@@ -1696,6 +1813,10 @@ def signup_complete_from_checkout():
             billing_email=billing_email,
             signup_id=signup_id,
             stripe_customer_id=str((checkout_session.get("customer") or "")).strip(),
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
         )
         handoff_response = maybe_finish_signup_handoff(handoff_state=handoff_state, paid_flag="1")
         if handoff_response is not None:
@@ -1706,19 +1827,28 @@ def signup_complete_from_checkout():
             billing_email=billing_email,
             signup_id=signup_id,
             stripe_customer_id="",
+            full_name=full_name,
+            company_name=company_name,
+            selected_plan=selected_plan,
+            session_id=session_id,
         )
         if handoff_state and handoff_state.get("subscription"):
             handoff_response = maybe_finish_signup_handoff(handoff_state=handoff_state, paid_flag="1")
             if handoff_response is not None:
                 return handoff_response
 
+    user_facing_error = "We have your payment, but Repurly is still creating or linking your workspace. Retry in a moment. If it still does not move forward, contact support with the session reference below."
+    if confirmation_error:
+        lowered_error = confirmation_error.strip().lower()
+        if "no such checkout.session" in lowered_error or "checkout session" in lowered_error or "stripe" in lowered_error:
+            user_facing_error = "Repurly could not confirm the Stripe checkout session yet. Please wait a few seconds and retry confirmation."
     return render_template(
         "auth/checkout_pending.html",
         session_id=session_id,
         retry_url=url_for("signup_complete_from_checkout", session_id=session_id),
         support_email=PUBLIC_SUPPORT_EMAIL,
         billing_email=billing_email,
-        error_message=confirmation_error or "We are still finishing your Repurly setup. Refresh in a moment or use the link in your welcome email once it arrives.",
+        error_message=user_facing_error,
         pending_context=pending,
     ), 202
 
