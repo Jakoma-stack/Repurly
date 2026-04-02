@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Analytics | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><div class="eyebrow">Workspace analytics</div><h2>{{ workspace.display_name }}</h2><p>Track output, delivery confidence, engagement response, and lead flow so the next campaign is easier to justify and improve.</p></div>
+  {% if can_export %}<div class="actions"><a href="/workspace/analytics/export.csv" class="button-link secondary">Export CSV</a></div>{% endif %}
+</div>
+<div class="note info" style="margin-bottom:18px;"><strong>How to read this page:</strong> use delivery rate to judge publishing reliability, reply rate to judge engagement handling, and lead conversion to see whether content is turning comments into pipeline.</div>
+<div class="stats-grid" style="margin-bottom:18px;">
+  <div class="card"><h3>Brands</h3><p class="metric-value">{{ reporting_summary.brand_count }}</p></div>
+  <div class="card"><h3>Total scheduled</h3><p class="metric-value">{{ reporting_summary.total_posts }}</p></div>
+  <div class="card"><h3>Posted</h3><p class="metric-value">{{ reporting_summary.posted_posts }}</p></div>
+  <div class="card"><h3>Ready</h3><p class="metric-value">{{ reporting_summary.ready_posts }}</p></div>
+  <div class="card"><h3>Failed</h3><p class="metric-value">{{ reporting_summary.failed_posts }}</p></div>
+  <div class="card"><h3>Seats</h3><p class="metric-value">{{ reporting_summary.seat_summary.seats_used }}/{{ reporting_summary.seat_summary.seat_limit }}</p></div>
+  <div class="card"><h3>Comments</h3><p class="metric-value">{{ reporting_summary.engagement_comments }}</p></div>
+  <div class="card"><h3>Pending replies</h3><p class="metric-value">{{ reporting_summary.engagement_pending_replies }}</p></div>
+  <div class="card"><h3>Leads</h3><p class="metric-value">{{ reporting_summary.lead_count }}</p></div>
+  <div class="card"><h3>Hot leads</h3><p class="metric-value">{{ reporting_summary.engagement_hot_leads }}</p></div>
+</div>
+<div class="grid-2" style="margin-bottom:18px;">
+  <div class="panel">
+    <h3>Commercial outcomes</h3>
+    <div class="grid-3">
+      <div class="insight-item"><strong>Delivery rate</strong><div class="subtle">{{ reporting_summary.delivery_rate }}%</div></div>
+      <div class="insight-item"><strong>Reply send rate</strong><div class="subtle">{{ reporting_summary.reply_send_rate }}%</div></div>
+      <div class="insight-item"><strong>Lead conversion</strong><div class="subtle">{{ reporting_summary.lead_conversion_rate }}%</div></div>
+    </div>
+    <div class="grid-3" style="margin-top:12px;">
+      <div class="insight-item"><strong>Qualified leads</strong><div class="subtle">{{ reporting_summary.qualified_leads }}</div></div>
+      <div class="insight-item"><strong>Qualified rate</strong><div class="subtle">{{ reporting_summary.qualified_rate }}%</div></div>
+      <div class="insight-item"><strong>Failure rate</strong><div class="subtle">{{ reporting_summary.failure_rate }}%</div></div>
+    </div>
+    <div class="section-divider"></div>
+    <h3 style="margin-bottom:10px;">Pipeline funnel</h3>
+    <div class="progress-strip" style="margin-bottom:0;">
+      <div class="progress-node"><strong>Comments</strong><div class="state">{{ reporting_summary.engagement_comments }}</div><div class="subtle">Signals entering the inbox</div></div>
+      <div class="progress-node"><strong>Replies sent</strong><div class="state">{{ reporting_summary.engagement_comments - reporting_summary.engagement_pending_replies if reporting_summary.engagement_comments >= reporting_summary.engagement_pending_replies else 0 }}</div><div class="subtle">Handled in public or DM</div></div>
+      <div class="progress-node"><strong>Leads</strong><div class="state">{{ reporting_summary.lead_count }}</div><div class="subtle">Tracked for follow-up</div></div>
+      <div class="progress-node"><strong>Qualified</strong><div class="state">{{ reporting_summary.qualified_leads }}</div><div class="subtle">Worth direct commercial follow-up</div></div>
+      <div class="progress-node"><strong>Reliability</strong><div class="state">{{ reporting_summary.delivery_rate }}%</div><div class="subtle">Publishing confidence</div></div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>What good looks like</h3>
+    <div class="insight-list">
+      <div class="insight-item"><strong>Delivery confidence</strong><p style="margin:8px 0 0;">Aim for a high delivery rate with very low failure rate before relying on automated publishing heavily.</p></div>
+      <div class="insight-item"><strong>Engagement follow-through</strong><p style="margin:8px 0 0;">If pending replies stay high while reply send rate stays low, the workflow still needs simplification or more automation trust.</p></div>
+      <div class="insight-item"><strong>Pipeline signal</strong><p style="margin:8px 0 0;">A good campaign should move some comments into leads, then a smaller subset into qualified next steps.</p></div>
+    </div>
+  </div>
+</div>
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel"><h3>Campaign mix</h3><div class="insight-list">{% for item in reporting_summary.campaign_breakdown %}<div class="insight-item"><strong>{{ item.label }}</strong><div class="subtle">{{ item.count }} post(s)</div></div>{% else %}<div class="compact-empty"><strong>No campaign labels yet.</strong><p class="muted">Use campaign labels in the content studio so output ties back to strategy here.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Format mix</h3><div class="insight-list">{% for item in reporting_summary.format_breakdown %}<div class="insight-item"><strong>{{ item.label|replace('_',' ')|title }}</strong><div class="subtle">{{ item.count }} post(s)</div></div>{% else %}<div class="compact-empty"><strong>No format data yet.</strong><p class="muted">Once drafts are created, Repurly shows how content mix is distributed.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Best time signals</h3><div class="insight-list">{% for item in reporting_summary.best_time_windows %}<div class="insight-item"><strong>{{ item.label }}</strong><div class="subtle">Used {{ item.count }} time(s)</div></div>{% else %}<div class="compact-empty"><strong>No time data yet.</strong><p class="muted">As your queue grows, your strongest posting windows appear here.</p></div>{% endfor %}</div></div>
+  </div>
+  <div class="stack">
+    <div class="panel"><h3>Planning feedback loop</h3><div class="insight-list">{% for item in reporting_summary.feedback_loop %}<div class="insight-item"><strong>{{ item.label|replace('_',' ')|title }}</strong><p style="margin:8px 0 0;">{{ item.insight }}</p></div>{% else %}<div class="compact-empty"><strong>No insights yet.</strong><p class="muted">Create and schedule a few posts so Repurly can surface better planning guidance.</p></div>{% endfor %}</div></div>
+    <div class="panel"><h3>Recent queue</h3><table><tr><th>Post</th><th>Brand</th><th>Date</th><th>Status</th></tr>{% for item in reporting_summary.upcoming_posts %}<tr><td>{{ item.post_id }}</td><td>{{ item.brand }}</td><td>{{ item.post_date }} {{ item.post_time }}</td><td>{{ item.status }}</td></tr>{% else %}<tr><td colspan="4" class="muted">No scheduled posts yet.</td></tr>{% endfor %}</table></div>
+  </div>
+</div>
+{% endblock %}

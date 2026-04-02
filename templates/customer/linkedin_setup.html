@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}LinkedIn setup | Repurly{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="eyebrow">LinkedIn setup</div>
+    <h2>{{ workspace.display_name }}</h2>
+    <p>Connect LinkedIn once, then finish the posting identity per brand. Personal-profile posting can be made ready automatically after OAuth. Company-page posting still needs the organization URN and page-admin confirmation.</p>
+  </div>
+</div>
+{% if saved == 'brand_saved' %}<div class="note success">LinkedIn setup saved.</div>{% endif %}
+{% if saved == 'oauth_connected' %}<div class="note success">LinkedIn connected. Repurly captured the member token and profile details for this workspace.</div>{% endif %}
+{% if saved == 'oauth_disconnected' %}<div class="note success">LinkedIn was disconnected for this workspace.</div>{% endif %}
+{% if saved == 'error' %}<div class="note error">{{ error or 'We could not save LinkedIn setup.' }}</div>{% endif %}
+<div class="grid-2">
+  <div class="stack">
+    <div class="panel">
+      <h3>Workspace LinkedIn connection</h3>
+      {% if linkedin_oauth_configured %}
+        {% if integration_meta.access_token %}
+          <p><strong>Connected.</strong> {% if integration_meta.member_display_name %}Signed in as {{ integration_meta.member_display_name }}.{% endif %} {% if integration_meta.member_profile_url %}<a href="{{ integration_meta.member_profile_url }}" target="_blank" rel="noreferrer">View LinkedIn profile</a>.{% endif %}</p>
+          {% if integration_meta.expires_at %}<p class="muted">Token expires at {{ integration_meta.expires_at }}.</p>{% endif %}
+          <form method="post" action="/workspace/linkedin/disconnect" style="margin-top:12px;">
+            <button type="submit" class="secondary">Disconnect LinkedIn</button>
+          </form>
+        {% else %}
+          <p>Connect LinkedIn to capture a reusable member token and auto-fill the personal author URN. Repurly uses LinkedIn’s 3-legged OAuth flow for member authorization.</p>
+          {% if selected_brand %}
+          <div class="actions" style="margin-top:12px;">
+            <a class="button-link primary" href="/workspace/linkedin/connect?brand_id={{ selected_brand.id }}">Connect LinkedIn</a>
+          </div>
+          {% else %}
+          <p class="muted">Create or select a brand first.</p>
+          {% endif %}
+        {% endif %}
+        <p class="muted" style="margin-top:12px;">Redirect URI: <code>{{ linkedin_redirect_uri }}</code><br>Scopes requested: {{ linkedin_scopes|join(', ') }}</p>
+      {% else %}
+        <p class="muted">OAuth is not configured yet. Add <code>LINKEDIN_CLIENT_ID</code> and <code>LINKEDIN_CLIENT_SECRET</code> in Render before connecting LinkedIn.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h3>Brand connection details</h3>
+      {% if manage_brands %}
+      <form method="get" action="/workspace/linkedin-setup" style="margin-bottom:14px;">
+        <label>Brand<select name="brand_id" onchange="this.form.submit()"><option value="">Select brand</option>{% for brand in brands %}<option value="{{ brand.id }}" {% if selected_brand and brand.id == selected_brand.id %}selected{% endif %}>{{ brand.display_name }}</option>{% endfor %}</select></label>
+      </form>
+      {% if selected_brand %}
+      {% set li = brand_linkedin_summaries.get(selected_brand.id) %}
+      <form method="post" action="/workspace/linkedin-setup">
+        <input type="hidden" name="brand_id" value="{{ selected_brand.id }}">
+        <label>LinkedIn profile URL<input name="linkedin_profile_url" value="{{ linkedin_setup_defaults.profile_url }}" placeholder="https://www.linkedin.com/in/your-name"></label>
+        <label>LinkedIn company page URL<input name="linkedin_company_url" value="{{ linkedin_setup_defaults.company_url }}" placeholder="https://www.linkedin.com/company/your-page"></label>
+        <div class="grid-2" style="margin-top:12px;">
+          <label>Posting identity<select name="linkedin_identity_type"><option value="person" {% if linkedin_setup_defaults.identity_type == 'person' %}selected{% endif %}>Personal profile</option><option value="organization" {% if linkedin_setup_defaults.identity_type == 'organization' %}selected{% endif %}>Company page</option></select></label>
+          <label>Setup path<select name="linkedin_connection_mode"><option value="manual" {% if linkedin_setup_defaults.connection_mode == 'manual' %}selected{% endif %}>Manual</option><option value="oauth" {% if linkedin_setup_defaults.connection_mode == 'oauth' %}selected{% endif %}>OAuth connected</option><option value="setup_fee" {% if linkedin_setup_defaults.connection_mode == 'setup_fee' %}selected{% endif %}>Setup fee / done for you</option></select></label>
+        </div>
+        <div class="grid-2" style="margin-top:12px;">
+          <label>Author URN<input name="linkedin_author_urn" value="{{ selected_brand.linkedin_author_urn or '' }}" placeholder="urn:li:person:... or urn:li:organization:..."></label>
+          <label>Token source<input name="linkedin_token_env" value="{{ selected_brand.linkedin_token_env or 'LINKEDIN_ACCESS_TOKEN' }}" placeholder="LINKEDIN_ACCESS_TOKEN or __db_linkedin_token__"></label>
+        </div>
+        {% if li and li.token_connected %}<p class="muted" style="margin-top:10px;">Workspace token connected. For personal posting, keep <code>__db_linkedin_token__</code>. For company-page posting, keep the same token source and change only the author URN to the company page organization URN.</p>{% endif %}
+        <label style="margin-top:12px;">Setup notes<textarea name="linkedin_setup_notes" placeholder="Document page roles, access checks, or what still needs doing.">{{ linkedin_setup_defaults.setup_notes }}</textarea></label>
+        <div class="actions" style="margin-top:14px;">
+          <button type="submit">Save LinkedIn setup</button>
+          {% if linkedin_oauth_configured and not integration_meta.access_token %}<a class="button-link secondary" href="/workspace/linkedin/connect?brand_id={{ selected_brand.id }}">Connect LinkedIn</a>{% endif %}
+          <a class="button-link secondary" href="/workspace/brands?brand_id={{ selected_brand.id }}">Back to brand</a>
+        </div>
+      </form>
+      {% else %}<p class="muted">Create a brand first, then come back here.</p>{% endif %}
+      {% else %}<p class="muted">Only workspace owners or admins can manage LinkedIn setup.</p>{% endif %}
+    </div>
+  </div>
+  <div class="stack">
+    <div class="panel">
+      <h3>How this works</h3>
+      <div class="progress-list">
+        <div class="progress-item"><strong>1. Connect the workspace token</strong><span class="muted">Repurly opens LinkedIn OAuth, exchanges the authorization code for an access token, and stores that token in the workspace integration record.</span></div>
+        <div class="progress-item"><strong>2. Auto-fill the personal posting identity</strong><span class="muted">After OAuth, Repurly calls LinkedIn’s member profile endpoint and builds a person URN in the format <code>urn:li:person:{id}</code>.</span></div>
+        <div class="progress-item"><strong>3. Switch to company-page posting when needed</strong><span class="muted">For organization posts, keep the connected token but replace the author URN with the company page organization URN once page-admin access is confirmed.</span></div>
+        <div class="progress-item"><strong>4. Keep setup fee as an option</strong><span class="muted">If clients should not do this themselves, choose the setup-fee path and keep the operational notes here.</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Brand readiness</h3>
+      <table>
+        <tr><th>Brand</th><th>Status</th><th>Action</th></tr>
+        {% for brand in brands %}
+        {% set li = brand_linkedin_summaries.get(brand.id) %}
+        <tr>
+          <td>{{ brand.display_name }}</td>
+          <td>
+            {% if li.ready %}Ready
+            {% elif li.status == 'setup_requested' %}Setup fee
+            {% elif li.status == 'token_connected' %}Token connected
+            {% elif li.status == 'details_captured' %}Details captured
+            {% else %}Pending{% endif %}
+          </td>
+          <td><a href="/workspace/linkedin-setup?brand_id={{ brand.id }}">Open</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3" class="muted">No brands yet.</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

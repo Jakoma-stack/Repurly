@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Schedule{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Schedule review queue</h2>
+    <p>Filter posts, jump into detail pages, and process approvals or failures faster.</p>
+  </div>
+</div>
+{% set bulk_status = request.args.get('bulk_status') %}
+{% set bulk_message = request.args.get('bulk_message') %}
+{% if bulk_status == 'done' %}<div class="note success">{{ bulk_message }}</div>{% endif %}
+{% if bulk_status == 'no_selection' %}<div class="note warning">Select at least one retryable post, or use the filtered bulk retry button.</div>{% endif %}
+<form method="get" class="filters panel">
+  <label>Brand
+    <select name="brand">
+      <option value="">All</option>
+      {% for item in brands %}<option value="{{ item }}" {% if filters.brand == item %}selected{% endif %}>{{ item }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Status
+    <select name="status">
+      <option value="">All</option>
+      {% for item in statuses %}<option value="{{ item }}" {% if filters.status == item %}selected{% endif %}>{{ item }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Approval
+    <select name="approval_status">
+      <option value="">All</option>
+      {% for item in approval_statuses %}<option value="{{ item }}" {% if filters.approval_status == item %}selected{% endif %}>{{ item or '<blank>' }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Date<input name="post_date" value="{{ filters.post_date }}" placeholder="2026-03-26"></label>
+  <label>Search<input name="q" value="{{ filters.q }}" placeholder="post id, brand, campaign"></label>
+  <div class="actions"><button type="submit">Apply filters</button></div>
+</form>
+<form method="post" action="/ops/schedule/bulk-retry" class="panel">
+  <input type="hidden" name="brand" value="{{ filters.brand }}">
+  <input type="hidden" name="status" value="{{ filters.status }}">
+  <input type="hidden" name="approval_status" value="{{ filters.approval_status }}">
+  <input type="hidden" name="post_date" value="{{ filters.post_date }}">
+  <input type="hidden" name="q" value="{{ filters.q }}">
+  <div class="actions" style="margin-bottom:12px; align-items:flex-end;">
+    <label style="max-width:220px;">Actor<input name="actor" value="ops_console"></label>
+    <button type="submit">Retry selected posts</button>
+    <button type="submit" name="apply_to_filtered" value="1" class="secondary">Retry all filtered retryable posts</button>
+  </div>
+  <table>
+    <tr><th></th><th>Date</th><th>Brand</th><th>Post</th><th>Status</th><th>Approval</th><th>Campaign</th><th>Error</th><th>Actions</th></tr>
+    {% for row in posts %}
+      <tr>
+        <td>
+          {% if row.platform == 'linkedin' and row.status in retryable_statuses %}
+            <input type="checkbox" name="post_ids" value="{{ row.post_id }}" style="width:auto;">
+          {% endif %}
+        </td>
+        <td>{{ row.post_date }} {{ row.post_time }}</td>
+        <td>{{ row.brand }}</td>
+        <td><a href="/ops/schedule/{{ row.post_id }}">{{ row.post_id }}</a></td>
+        <td>{{ row.status }}</td>
+        <td>{{ row.approval_status or '—' }}</td>
+        <td>{{ row.campaign or row.theme or '—' }}</td>
+        <td>{{ row.last_publish_error or '—' }}</td>
+        <td>
+          <a href="/ops/schedule/{{ row.post_id }}">View</a>
+          {% if row.platform == 'linkedin' and row.status in retryable_statuses %}
+            <form method="post" action="/ops/schedule/{{ row.post_id }}/retry-publish" style="display:inline-block; margin-left:8px;">
+              <input type="hidden" name="actor" value="ops_console">
+              <button type="submit" class="secondary">Retry</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" class="muted">No schedule rows match the current filters.</td></tr>
+    {% endfor %}
+  </table>
+</form>
+{% endblock %}
