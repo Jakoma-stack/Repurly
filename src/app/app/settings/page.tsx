@@ -131,7 +131,7 @@ export default async function SettingsPage({
                     </span>
                   ) : null}
 
-                  <Link href={item.href} className="text-sm font-medium text-primary">
+                  <a href={item.href} className="text-sm font-medium text-primary">
                     {isConnected ? 'Reconnect' : 'Connect'}
                   </Link>
                 </div>
