@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createPresignedUpload } from "@/lib/storage/presign";
 
+export const runtime = "nodejs";
+
 const schema = z.object({
   fileName: z.string().min(1),
   contentType: z.string().min(1),
@@ -10,11 +12,33 @@ const schema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  const input = schema.parse(await request.json());
-  const objectKey = `${input.workspaceId}/${Date.now()}-${input.fileName}`;
-  const result = await createPresignedUpload(objectKey, input.contentType);
-  return NextResponse.json(result);
+    const parsed = schema.safeParse(await request.json());
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid request body",
+          details: parsed.error.flatten(),
+        },
+        { status: 400 },
+      );
+    }
+
+    const { fileName, contentType, workspaceId } = parsed.data;
+    const objectKey = `${workspaceId}/${Date.now()}-${fileName}`;
+    const result = await createPresignedUpload(objectKey, contentType);
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Failed to create presigned upload", error);
+    return NextResponse.json(
+      { error: "Failed to create presigned upload" },
+      { status: 500 },
+    );
+  }
 }
