@@ -133,7 +133,7 @@ export default async function SettingsPage({
 
                   <a href={item.href} className="text-sm font-medium text-primary">
                     {isConnected ? 'Reconnect' : 'Connect'}
-                  </Link>
+                  </a>
                 </div>
               </div>
             );
