@@ -167,9 +167,9 @@ export function ActivityFeed({
                       </form>
                     ) : null}
                     {item.actionHref && item.actionLabel && !item.actionType ? (
-                      <Link href={item.actionHref} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
+                      <a href={item.actionHref} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
                         {item.actionLabel}
-                      </Link>
+                      </a>
                     ) : null}
                     {item.externalLabel ? <span className="text-xs font-medium text-primary">{item.externalLabel}</span> : null}
                   </div>
