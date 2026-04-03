@@ -3,11 +3,24 @@
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
-import { and, desc, eq } from 'drizzle-orm';
+import { cookies } from 'next/headers';
+import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { generateContentDrafts } from '@/lib/ai/content';
 import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
+
+const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
+
+type SavedCampaign = {
+  workspaceId: string;
+  brandId: string;
+  brief: string;
+  commercialGoal: string;
+  postFormat: string;
+  count: number;
+  savedAt: string;
+};
 
 async function getDefaultBrandId(workspaceId: string) {
   const row = await db
@@ -55,6 +68,40 @@ async function getTargetForWorkspace(workspaceId: string, targetId: string) {
 
 function requiredString(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
+}
+
+function parseCount(formData: FormData) {
+  return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 6));
+}
+
+async function persistSavedCampaign(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const brandId = requiredString(formData, 'brandId');
+  const brief = requiredString(formData, 'brief');
+
+  if (!workspaceId || !brandId || !brief) {
+    return false;
+  }
+
+  const payload: SavedCampaign = {
+    workspaceId,
+    brandId,
+    brief,
+    commercialGoal: requiredString(formData, 'commercialGoal'),
+    postFormat: requiredString(formData, 'postFormat') || 'text',
+    count: parseCount(formData),
+    savedAt: new Date().toISOString(),
+  };
+
+  const cookieStore = await cookies();
+  cookieStore.set(SAVED_CAMPAIGN_COOKIE, Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url'), {
+    path: '/app/content',
+    maxAge: 60 * 60 * 24 * 30,
+    sameSite: 'lax',
+    httpOnly: true,
+  });
+
+  return true;
 }
 
 async function resolveBrandId(formData: FormData, workspaceId: string) {
@@ -208,6 +255,45 @@ async function refreshWorkflowPages() {
   revalidatePath('/app/leads');
 }
 
+export async function saveCampaign(formData: FormData) {
+  const saved = await persistSavedCampaign(formData);
+  if (!saved) {
+    redirect('/app/content?error=invalid' as Route);
+  }
+
+  redirect('/app/content?ok=campaign-saved' as Route);
+}
+
+export async function clearSavedCampaign() {
+  const cookieStore = await cookies();
+  cookieStore.delete(SAVED_CAMPAIGN_COOKIE);
+  redirect('/app/content?ok=campaign-cleared' as Route);
+}
+
+export async function clearRecentDrafts(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const brandId = requiredString(formData, 'brandId');
+  const currentPostId = requiredString(formData, 'postId');
+
+  if (!workspaceId) {
+    redirect('/app/content?error=invalid' as Route);
+  }
+
+  const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
+
+  if (brandId) {
+    filters.push(eq(posts.brandId, brandId));
+  }
+
+  if (currentPostId) {
+    filters.push(ne(posts.id, currentPostId));
+  }
+
+  await db.delete(posts).where(and(...filters));
+  await refreshWorkflowPages();
+  redirect(`/app/content?ok=drafts-cleared${currentPostId ? `&postId=${currentPostId}` : ''}` as Route);
+}
+
 export async function saveDraft(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'draft');
   if (error || !post) {
@@ -285,7 +371,7 @@ export async function generateAiDrafts(formData: FormData) {
   const authorId = requiredString(formData, 'authorId');
   const brandId = requiredString(formData, 'brandId');
   const brief = requiredString(formData, 'brief');
-  const count = Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 6));
+  const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
   const postFormat = requiredString(formData, 'postFormat');
 
@@ -297,6 +383,8 @@ export async function generateAiDrafts(formData: FormData) {
   if (!brand) {
     redirect('/app/content?error=missing-brand' as Route);
   }
+
+  await persistSavedCampaign(formData);
 
   const drafts = await generateContentDrafts({
     brandName: brand.name,

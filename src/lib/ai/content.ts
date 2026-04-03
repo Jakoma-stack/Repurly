@@ -27,39 +27,70 @@ function parseHashtags(input?: string[] | null) {
   return unique((input ?? []).map((item) => item.replace(/^#/, '').trim()).filter(Boolean));
 }
 
+function cleanSentence(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function summarizeBrief(brief: string) {
+  const normalized = brief
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^audience\s*:/i.test(line))
+    .filter((line) => !/^goal\s*:/i.test(line))
+    .filter((line) => !/^positioning\s*:/i.test(line))
+    .filter((line) => !/^important constraints\s*:/i.test(line))
+    .filter((line) => !/^tone\s*:/i.test(line))
+    .filter((line) => !/^create \d+/i.test(line))
+    .filter((line) => !/^each post should\s*:/i.test(line))
+    .filter((line) => !line.startsWith('-'))
+    .join(' ');
+
+  const firstSentence = normalized.split(/(?<=[.!?])\s+/)[0] ?? normalized;
+  const summary = cleanSentence(firstSentence).replace(/^write\s+/i, '').replace(/^create\s+/i, '');
+
+  if (!summary) {
+    return 'Use a narrow, reliable LinkedIn workflow that gets good posts approved and published without extra tool sprawl.';
+  }
+
+  return summary.length > 220 ? `${summary.slice(0, 217).trim()}...` : summary;
+}
+
 function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
   const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const hashtags = parseHashtags(args.hashtags);
-  const cta = args.primaryCta?.trim() || 'Reply "workflow" and I will send the checklist.';
+  const cta = args.primaryCta?.trim() || 'Book a pilot demo.';
   const tone = args.brandTone?.trim() || 'clear, sharp, commercially realistic';
   const audience = args.audience?.trim() || 'B2B marketing and operations teams';
   const goal = args.commercialGoal?.trim() || 'start more qualified buyer conversations';
   const format = args.postFormat?.trim() || 'text';
+  const briefSummary = summarizeBrief(args.brief);
 
   const patterns = [
     {
       title: `${args.brandName}: the workflow lesson most teams miss`,
-      opener: `Most teams do not have a content problem. They have a workflow problem.`,
-      middle: `When approvals, targets, and recovery steps are vague, good ideas stall and deadlines slip. ${args.brief}`,
-      closer: `The practical fix is a tighter operating system: one owner, one target, one approval path, one queue.`,
+      opener: 'Most teams do not have a content problem. They have a workflow problem.',
+      middle: `When approvals, targets, and recovery steps are vague, good ideas stall and deadlines slip. ${briefSummary}`,
+      closer: 'The practical fix is a tighter operating system: one owner, one target, one approval path, one queue.',
     },
     {
       title: `${args.brandName}: the buyer pain behind the brief`,
-      opener: `A lot of "we need more content" requests are really a signal that the underlying process is too loose.`,
-      middle: `What buyers usually want is confidence: clear messaging, reliable posting, and fewer handoff gaps. ${args.brief}`,
-      closer: `That is why we bias toward fewer channels, higher quality, and a workflow the team will actually use.`,
+      opener: 'A lot of "we need more content" requests are really a signal that the underlying process is too loose.',
+      middle: `What buyers usually want is confidence: clear messaging, reliable posting, and fewer handoff gaps. ${briefSummary}`,
+      closer: 'That is why we bias toward fewer channels, higher quality, and a workflow the team will actually use.',
     },
     {
       title: `${args.brandName}: a point of view post for ${audience}`,
-      opener: `A useful content system should make commercial follow-up easier, not create more admin.`,
-      middle: `For ${audience}, the best workflow is the one that keeps strategy, drafting, approvals, and next actions connected. ${args.brief}`,
-      closer: `If the system cannot help the team move from post to reply to lead follow-up, it is only solving half the problem.`,
+      opener: 'A useful content system should make commercial follow-up easier, not create more admin.',
+      middle: `For ${audience}, the best workflow is the one that keeps strategy, drafting, approvals, and next actions connected. ${briefSummary}`,
+      closer: 'If the system cannot help the team move from post to reply to lead follow-up, it is only solving half the problem.',
     },
     {
       title: `${args.brandName}: proof-driven post idea`,
-      opener: `One of the fastest ways to improve LinkedIn performance is to reduce workflow drag before you increase volume.`,
-      middle: `Less time lost in approvals means more time refining the message. ${args.brief}`,
-      closer: `Teams that treat publishing like an operational process usually outperform teams that treat it like ad hoc posting.`,
+      opener: 'One of the fastest ways to improve LinkedIn performance is to reduce workflow drag before you increase volume.',
+      middle: `Less time lost in approvals means more time refining the message. ${briefSummary}`,
+      closer: 'Teams that treat publishing like an operational process usually outperform teams that treat it like ad hoc posting.',
     },
   ];
 
@@ -96,6 +127,8 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     'You are writing LinkedIn-first B2B posts for Repurly.',
     'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
+    'Do not paste the brief verbatim into the post body.',
+    'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
     `Brand: ${args.brandName}`,
     `Tone: ${args.brandTone ?? 'clear, sharp, commercially realistic'}`,
     `Audience: ${args.audience ?? 'B2B teams'}`,
