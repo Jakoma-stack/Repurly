@@ -1,1 +1,0 @@
-Launch materials aligned to the current commercial offer: Repurly Agency at £297/month, with £750 one-off setup and custom expansion support. Remove or regenerate any asset that still shows old tiered pricing before sending externally.

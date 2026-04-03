@@ -1,1 +1,0 @@
-Use one recurring public plan only: **Repurly Agency — £297/month**. Treat setup as **£750 one-off** and quote additional brands or managed support separately. Before launch, remove or replace any Starter/Growth/Pro collateral.
