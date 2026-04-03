@@ -1,6 +1,7 @@
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { workspaceMemberships, workspaces } from '../../../drizzle/schema';
@@ -35,13 +36,13 @@ export async function listAccessibleWorkspaces(userId: string) {
 
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
   const [{ userId, orgId }, user] = await Promise.all([auth(), currentUser()]);
-  if (!userId || !user) redirect('/sign-in');
+  if (!userId || !user) redirect('/sign-in' as Route);
 
   const available = await listAccessibleWorkspaces(userId);
 
   if (!available.length) {
     if (process.env.NODE_ENV !== 'development') {
-      redirect('/');
+      redirect('/' as Route);
     }
 
     const name =
