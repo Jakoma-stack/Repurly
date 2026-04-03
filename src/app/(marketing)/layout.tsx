@@ -8,7 +8,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <nav className="hidden gap-6 text-sm text-slate-600 md:flex">
           <Link href="#features">Features</Link>
           <Link href="#pricing">Pricing</Link>
-          <Link href="/sign-in">Sign in</Link>
+          <Link href="/sign-in">Sign in</a>
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-4 pb-16 lg:px-8">{children}</main>
