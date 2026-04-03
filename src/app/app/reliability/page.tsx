@@ -33,7 +33,7 @@ export default async function ReliabilityPage() {
               </div>
             </div>
           ))}
-                  <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">Workspace in scope: <span className="font-medium text-slate-900">{session.workspaceName}</span>. Customer-facing updates now also surface in <Link className="text-primary" href="/app/notifications">Notifications</Link>.</div>
+                  <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">Workspace in scope: <span className="font-medium text-slate-900">{session.workspaceName}</span>. Customer-facing updates now also surface in <a className="text-primary" href="/app/notifications">Notifications</a>.</div>
         </CardContent>
       </Card>
     </div>
