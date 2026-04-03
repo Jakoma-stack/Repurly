@@ -27,7 +27,7 @@ export async function ReconnectNudges({ workspaceId }: { workspaceId?: string })
               <span className={`rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-wide ${toneClasses[item.severity]}`}>{item.severity}</span>
             </div>
             <div className="mt-3">
-              <Link href={item.href} className="text-sm font-medium text-primary">{item.actionLabel}</Link>
+              <a href={item.href} className="text-sm font-medium text-primary">{item.actionLabel}</a>
             </div>
           </div>
         ))}
