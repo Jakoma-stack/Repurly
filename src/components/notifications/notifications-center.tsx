@@ -36,7 +36,7 @@ export function NotificationsCenter({ items }: { items: WorkspaceNotification[] 
             </div>
             <div className="mt-3 flex flex-wrap gap-3">
               {item.actionableHref ? (
-                <Link href={item.actionableHref} className="text-sm font-medium text-primary">{item.actionableLabel ?? 'View details'}</Link>
+                <a href={item.actionableHref} className="text-sm font-medium text-primary">{item.actionableLabel ?? 'View details'}</a>
               ) : null}
               <Link href="/app/settings/notifications" className="text-sm font-medium text-slate-600">Notification settings</Link>
             </div>
