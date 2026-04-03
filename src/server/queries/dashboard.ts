@@ -10,9 +10,10 @@ export async function getDashboardSnapshot(workspaceId: string) {
     metrics: [
       { label: 'Drafts', value: String(metrics.drafts) },
       { label: 'Approvals pending', value: String(metrics.approvalsPending) },
-      { label: 'Scheduled', value: String(metrics.scheduled) },
-      { label: 'Published', value: String(metrics.published) },
+      { label: 'Brands', value: String(metrics.brandCount) },
+      { label: 'Hot leads', value: String(metrics.hotLeads) },
     ],
     queue,
+    workflow: metrics,
   };
 }

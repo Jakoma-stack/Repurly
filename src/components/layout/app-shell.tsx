@@ -1,18 +1,20 @@
-import Link from "next/link";
-import { BellRing, CreditCard, History, LayoutDashboard, PencilLine, Send, Settings, Sparkles, PanelsTopLeft, Building2 } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
-import type { WorkspaceSession } from "@/lib/auth/workspace";
+import { BellRing, CreditCard, History, LayoutDashboard, PencilLine, Send, Settings, Sparkles, PanelsTopLeft, Building2, BriefcaseBusiness, MessageSquareQuote, Users } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
+import type { WorkspaceSession } from '@/lib/auth/workspace';
 
 const nav = [
-  { href: "/app", label: "Overview", icon: LayoutDashboard },
-  { href: "/app/content", label: "Composer", icon: PencilLine },
-  { href: "/app/calendar", label: "Calendar & queue", icon: Send },
-  { href: "/app/channels", label: "Channel setup", icon: PanelsTopLeft },
-  { href: "/app/activity", label: "Job detail", icon: History },
-  { href: "/app/reliability", label: "Reliability", icon: BellRing },
-  { href: "/app/notifications", label: "Notifications", icon: BellRing },
-  { href: "/app/billing", label: "Billing", icon: CreditCard },
-  { href: "/app/settings", label: "Settings", icon: Settings },
+  { href: '/app', label: 'Overview', icon: LayoutDashboard },
+  { href: '/app/content', label: 'Composer', icon: PencilLine },
+  { href: '/app/brands', label: 'Brands', icon: BriefcaseBusiness },
+  { href: '/app/calendar', label: 'Calendar & queue', icon: Send },
+  { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
+  { href: '/app/leads', label: 'Leads', icon: Users },
+  { href: '/app/channels', label: 'Channel setup', icon: PanelsTopLeft },
+  { href: '/app/activity', label: 'Job detail', icon: History },
+  { href: '/app/reliability', label: 'Reliability', icon: BellRing },
+  { href: '/app/notifications', label: 'Notifications', icon: BellRing },
+  { href: '/app/billing', label: 'Billing', icon: CreditCard },
+  { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
 export function AppShell({ children, session }: { children: React.ReactNode; session: WorkspaceSession }) {

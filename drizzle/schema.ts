@@ -33,8 +33,20 @@ export const brands = pgTable("brands", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
   name: varchar("name", { length: 120 }).notNull(),
+  slug: varchar("slug", { length: 120 }),
+  status: varchar("status", { length: 24 }).notNull().default("active"),
+  website: varchar("website", { length: 255 }),
+  contactEmail: varchar("contact_email", { length: 255 }),
   defaultTone: text("default_tone"),
+  audience: text("audience"),
+  primaryCta: varchar("primary_cta", { length: 160 }),
+  secondaryCta: varchar("secondary_cta", { length: 160 }),
+  hashtags: jsonb("hashtags").$type<string[]>(),
+  linkedinProfileUrl: varchar("linkedin_profile_url", { length: 255 }),
+  linkedinCompanyUrl: varchar("linkedin_company_url", { length: 255 }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const integrations = pgTable("integrations", {
@@ -125,7 +137,6 @@ export const postAssets = pgTable("post_assets", {
   sortOrder: integer("sort_order").notNull().default(0),
 });
 
-
 export const approvalRequests = pgTable("approval_requests", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
@@ -198,6 +209,58 @@ export const usageEvents = pgTable("usage_events", {
   referenceId: varchar("reference_id", { length: 255 }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const engagementComments = pgTable("engagement_comments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
+  brandId: uuid("brand_id").references(() => brands.id, { onDelete: "set null" }),
+  sourcePostId: uuid("source_post_id").references(() => posts.id, { onDelete: "set null" }),
+  platform: integrationEnum("platform").notNull().default("linkedin"),
+  commenterName: varchar("commenter_name", { length: 160 }).notNull(),
+  commenterHandle: varchar("commenter_handle", { length: 160 }),
+  sourcePostTitle: varchar("source_post_title", { length: 160 }),
+  commentText: text("comment_text").notNull(),
+  intentLabel: varchar("intent_label", { length: 24 }).notNull().default("nurture"),
+  intentScore: integer("intent_score").notNull().default(20),
+  sentiment: varchar("sentiment", { length: 24 }).notNull().default("neutral"),
+  replyOptions: jsonb("reply_options").$type<string[]>(),
+  selectedReplyText: text("selected_reply_text"),
+  suggestedDmText: text("suggested_dm_text"),
+  replyStatus: varchar("reply_status", { length: 24 }).notNull().default("not_started"),
+  dmStatus: varchar("dm_status", { length: 24 }).notNull().default("not_started"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const engagementReplyDrafts = pgTable("engagement_reply_drafts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  commentId: uuid("comment_id").references(() => engagementComments.id, { onDelete: "cascade" }).notNull(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
+  replyText: text("reply_text").notNull(),
+  channel: varchar("channel", { length: 16 }).notNull().default("comment"),
+  status: varchar("status", { length: 24 }).notNull().default("draft"),
+  approvedById: varchar("approved_by_id", { length: 128 }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const leadPipeline = pgTable("lead_pipeline", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
+  brandId: uuid("brand_id").references(() => brands.id, { onDelete: "set null" }),
+  commentId: uuid("comment_id").references(() => engagementComments.id, { onDelete: "set null" }),
+  leadName: varchar("lead_name", { length: 160 }).notNull(),
+  leadHandle: varchar("lead_handle", { length: 160 }),
+  stage: varchar("stage", { length: 24 }).notNull().default("new"),
+  intentScore: integer("intent_score").notNull().default(0),
+  nextAction: text("next_action"),
+  notes: text("notes"),
+  lastContactAt: timestamp("last_contact_at", { withTimezone: true }),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export const alertDestinations = pgTable("alert_destinations", {

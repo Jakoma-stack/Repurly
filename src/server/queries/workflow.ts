@@ -1,7 +1,7 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { approvalRequests, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
+import { approvalRequests, brands, engagementComments, leadPipeline, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 export async function getLinkedInTargets(workspaceId: string) {
   return db
@@ -29,6 +29,23 @@ export async function getLinkedInTargets(workspaceId: string) {
     .orderBy(desc(platformAccounts.isDefault), desc(platformAccounts.updatedAt));
 }
 
+export async function getWorkspaceBrandOptions(workspaceId: string) {
+  return db
+    .select({
+      id: brands.id,
+      name: brands.name,
+      slug: brands.slug,
+      defaultTone: brands.defaultTone,
+      audience: brands.audience,
+      primaryCta: brands.primaryCta,
+      hashtags: brands.hashtags,
+      status: brands.status,
+    })
+    .from(brands)
+    .where(eq(brands.workspaceId, workspaceId))
+    .orderBy(brands.name);
+}
+
 export async function getPostForEditing(workspaceId: string, postId?: string | null) {
   if (!postId) return null;
 
@@ -39,6 +56,9 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
       body: posts.body,
       scheduledFor: posts.scheduledFor,
       status: posts.status,
+      brandId: posts.brandId,
+      postType: posts.postType,
+      metadata: posts.metadata,
     })
     .from(posts)
     .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
@@ -48,26 +68,20 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
   if (!post) return null;
 
   const targetRows = await db
-    .select({
-      targetId: postTargets.platformAccountId,
-    })
+    .select({ targetId: postTargets.platformAccountId })
     .from(postTargets)
     .where(eq(postTargets.postId, post.id))
     .limit(1);
 
   const approvalRows = await db
-    .select({
-      approvalOwner: approvalRequests.note,
-    })
+    .select({ approvalOwner: approvalRequests.note })
     .from(approvalRequests)
     .where(and(eq(approvalRequests.postId, post.id), eq(approvalRequests.workspaceId, workspaceId)))
     .orderBy(desc(approvalRequests.createdAt))
     .limit(1);
 
   const scheduledForInput = post.scheduledFor
-    ? new Date(post.scheduledFor.getTime() - post.scheduledFor.getTimezoneOffset() * 60000)
-        .toISOString()
-        .slice(0, 16)
+    ? new Date(post.scheduledFor.getTime() - post.scheduledFor.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
     : '';
 
   return {
@@ -78,7 +92,26 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
     targetId: targetRows[0]?.targetId ?? null,
     approvalOwner: approvalRows[0]?.approvalOwner ?? '',
     status: post.status,
+    brandId: post.brandId,
+    postType: post.postType,
+    brief: String(post.metadata?.brief ?? ''),
   };
+}
+
+export async function getRecentPosts(workspaceId: string) {
+  return db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      status: posts.status,
+      brandName: brands.name,
+      updatedAt: posts.updatedAt,
+    })
+    .from(posts)
+    .innerJoin(brands, eq(brands.id, posts.brandId))
+    .where(eq(posts.workspaceId, workspaceId))
+    .orderBy(desc(posts.updatedAt))
+    .limit(8);
 }
 
 export async function getPublishingQueue(workspaceId: string) {
@@ -92,9 +125,11 @@ export async function getPublishingQueue(workspaceId: string) {
       provider: postTargets.provider,
       targetDisplayName: platformAccounts.displayName,
       targetHandle: platformAccounts.handle,
+      brandName: brands.name,
     })
     .from(publishJobs)
     .innerJoin(posts, eq(posts.id, publishJobs.postId))
+    .innerJoin(brands, eq(brands.id, posts.brandId))
     .innerJoin(postTargets, eq(postTargets.id, publishJobs.postTargetId))
     .innerJoin(platformAccounts, eq(platformAccounts.id, postTargets.platformAccountId))
     .where(eq(posts.workspaceId, workspaceId))
@@ -105,18 +140,47 @@ export async function getPublishingQueue(workspaceId: string) {
     postId: row.postId,
     scheduledFor: row.scheduledFor ? new Date(row.scheduledFor).toLocaleString() : 'Not scheduled',
     title: row.title,
+    brandName: row.brandName,
     targetLabel: row.targetDisplayName || row.targetHandle || 'LinkedIn target',
     provider: row.provider,
     status: row.status,
   }));
 }
 
-export async function getWorkflowMetrics(_workspaceId: string) {
+export async function getWorkflowMetrics(workspaceId: string) {
+  const [postCounts, pendingReplies, hotLeads, brandCount] = await Promise.all([
+    db
+      .select({
+        drafts: sql<number>`count(*) filter (where ${posts.status} = 'draft')`,
+        approvalsPending: sql<number>`count(*) filter (where ${posts.status} = 'in_review')`,
+        scheduled: sql<number>`count(*) filter (where ${posts.status} = 'scheduled')`,
+        published: sql<number>`count(*) filter (where ${posts.status} = 'published')`,
+        failed: sql<number>`count(*) filter (where ${posts.status} = 'failed')`,
+      })
+      .from(posts)
+      .where(eq(posts.workspaceId, workspaceId)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(engagementComments)
+      .where(and(eq(engagementComments.workspaceId, workspaceId), eq(engagementComments.replyStatus, 'not_started'))),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(leadPipeline)
+      .where(and(eq(leadPipeline.workspaceId, workspaceId), sql`${leadPipeline.intentScore} >= 70`)),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(brands)
+      .where(eq(brands.workspaceId, workspaceId)),
+  ]);
+
   return {
-    drafts: 0,
-    approvalsPending: 0,
-    scheduled: 0,
-    published: 0,
-    failed: 0,
+    drafts: Number(postCounts[0]?.drafts ?? 0),
+    approvalsPending: Number(postCounts[0]?.approvalsPending ?? 0),
+    scheduled: Number(postCounts[0]?.scheduled ?? 0),
+    published: Number(postCounts[0]?.published ?? 0),
+    failed: Number(postCounts[0]?.failed ?? 0),
+    pendingReplies: Number(pendingReplies[0]?.count ?? 0),
+    hotLeads: Number(hotLeads[0]?.count ?? 0),
+    brandCount: Number(brandCount[0]?.count ?? 0),
   };
 }
