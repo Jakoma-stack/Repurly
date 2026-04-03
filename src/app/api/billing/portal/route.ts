@@ -21,8 +21,13 @@ export async function GET(request: NextRequest) {
   if (!userId) return NextResponse.redirect(new URL('/sign-in', request.url));
 
   const workspace = await getWorkspaceForUser(userId);
-  if (!workspace?.stripeCustomerId || !process.env.STRIPE_SECRET_KEY) {
+
+  if (!process.env.STRIPE_SECRET_KEY) {
     return NextResponse.redirect(new URL('/app/billing?billing=portal-unavailable', request.url));
+  }
+
+  if (!workspace?.stripeCustomerId) {
+    return NextResponse.redirect(new URL('/app/billing?billing=no-customer', request.url));
   }
 
   try {
