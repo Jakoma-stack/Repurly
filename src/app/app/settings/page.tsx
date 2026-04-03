@@ -177,12 +177,12 @@ export default async function SettingsPage({
           </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Link href="/app/notifications" className="block text-sm font-medium text-primary">
+          <a href="/app/notifications" className="block text-sm font-medium text-primary">
             Open notifications center
-          </Link>
-          <Link href="/app/settings/notifications" className="block text-sm font-medium text-primary">
+          </a>
+          <a href="/app/settings/notifications" className="block text-sm font-medium text-primary">
             Edit notification preferences
-          </Link>
+          </a>
         </CardContent>
       </Card>
     </div>

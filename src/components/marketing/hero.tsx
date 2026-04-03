@@ -17,12 +17,12 @@ export function Hero() {
             Repurly helps agencies and B2B teams move from draft to approval to scheduled LinkedIn publishing with clearer recovery, better operator visibility, and less enterprise bloat.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="#pilot-offer" className="inline-flex items-center rounded-2xl bg-white px-5 py-3 font-medium text-slate-950">
+            <a href="#pilot-offer" className="inline-flex items-center rounded-2xl bg-white px-5 py-3 font-medium text-slate-950">
               View pilot offer <ArrowRight className="ml-2 size-4" />
-            </Link>
-            <Link href="#pricing" className="inline-flex items-center rounded-2xl border border-white/20 px-5 py-3 font-medium text-white/90">
+            </a>
+            <a href="#pricing" className="inline-flex items-center rounded-2xl border border-white/20 px-5 py-3 font-medium text-white/90">
               Pilot pricing
-            </Link>
+            </a>
           </div>
         </div>
         <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6 backdrop-blur">

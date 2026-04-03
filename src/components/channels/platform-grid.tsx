@@ -1,5 +1,6 @@
 import { listPlatformAdapters } from "@/lib/platforms/registry";
 import type { PlatformKey } from "@/lib/platforms/types";
+import Link from "next/link";
 
 const badges: Record<PlatformKey, string> = {
   linkedin: "Hero channel",

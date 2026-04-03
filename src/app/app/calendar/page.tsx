@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getPublishingQueue } from '@/server/queries/workflow';

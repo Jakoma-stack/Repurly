@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { getBillingSnapshot } from '@/server/queries/billing';
