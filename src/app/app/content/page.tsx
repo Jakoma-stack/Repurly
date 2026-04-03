@@ -11,7 +11,7 @@ import {
   saveDraft,
   schedulePost,
 } from '@/server/actions/workflow';
-import { getLinkedInTargets, getPostForEditing, getRecentPosts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
+import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentPosts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -57,12 +57,17 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const ok = firstParam(params.ok);
   const error = firstParam(params.error);
   const postId = firstParam(params.postId);
+  const generatedIds = (firstParam(params.generatedIds) ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-  const [targets, brandOptions, editingPost, recentPosts] = await Promise.all([
+  const [targets, brandOptions, editingPost, recentPosts, generatedBatch] = await Promise.all([
     getLinkedInTargets(session.workspaceId),
     getWorkspaceBrandOptions(session.workspaceId),
     getPostForEditing(session.workspaceId, postId ?? null),
     getRecentPosts(session.workspaceId),
+    generatedIds.length ? getPostsByIds(session.workspaceId, generatedIds) : Promise.resolve([]),
   ]);
 
   const selectedBrandId =
@@ -72,8 +77,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     brandOptions[0]?.id ??
     '';
 
-  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn post ideas about why B2B teams should keep content workflows narrow, reliable, and commercially useful.';
-  const plannerGoal = savedCampaign?.commercialGoal ?? 'Book qualified pilot conversations';
+  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows on LinkedIn.';
+  const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
   const plannerFormat = savedCampaign?.postFormat ?? 'text';
 
@@ -82,7 +87,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
       {ok === 'draft' && <Banner kind="success">Draft saved.</Banner>}
       {ok === 'approval' && <Banner kind="success">Approval request created.</Banner>}
       {ok === 'scheduled' && <Banner kind="success">Post scheduled into the publish queue.</Banner>}
-      {ok === 'generated' && <Banner kind="success">AI draft batch created. Review the drafts below and tighten the best one.</Banner>}
+      {ok === 'generated' && <Banner kind="success">AI draft batch created. Review the drafts below, then open the strongest one in the composer.</Banner>}
       {ok === 'campaign-saved' && <Banner kind="success">Campaign defaults saved for this workspace in this browser.</Banner>}
       {ok === 'campaign-cleared' && <Banner kind="success">Saved campaign defaults cleared.</Banner>}
       {ok === 'drafts-cleared' && <Banner kind="success">Recent draft backlog cleared for the selected brand.</Banner>}
@@ -95,8 +100,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
         <CardHeader>
           <h2 className="text-xl font-semibold">AI campaign planner</h2>
           <p className="text-sm text-muted-foreground">
-            Pull the AI drafting workflow from the older build into the current interface, but keep it narrow: LinkedIn-first,
-            buyer-focused, and draft-only.
+            Save a reusable campaign brief, generate LinkedIn-first drafts, and keep the workflow grounded in real approval and scheduling control.
           </p>
         </CardHeader>
         <CardContent>
@@ -114,12 +118,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>
-                <textarea
-                  name="brief"
-                  className="mt-2 min-h-[140px] w-full rounded-2xl border border-border px-4 py-3 text-sm"
-                  defaultValue={plannerBrief}
-                  required
-                />
+                <textarea name="brief" className="mt-2 min-h-[140px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBrief} required />
               </div>
             </div>
             <div className="space-y-4 rounded-3xl border border-border p-5">
@@ -152,12 +151,37 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
         </CardContent>
       </Card>
 
+      {generatedBatch.length ? (
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Generated draft batch</h2>
+            <p className="text-sm text-muted-foreground">Review each draft before opening it in the composer. This keeps the AI planner useful without hiding the batch behind a single editor view.</p>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-2">
+            {generatedBatch.map((draft) => (
+              <div key={draft.id} className="rounded-3xl border border-border p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Draft {draft.draftNumber || '?'}</div>
+                    <div className="mt-1 text-lg font-semibold text-slate-950">{draft.title}</div>
+                  </div>
+                  <a href={`/app/content?postId=${draft.id}`} className="rounded-2xl border border-border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    Open in composer
+                  </a>
+                </div>
+                <div className="mt-3 text-sm text-muted-foreground">{draft.brandName} · {draft.status}{draft.titleHint ? ` · ${draft.titleHint}` : ''}</div>
+                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-700">{draft.excerpt}</p>
+                {draft.callToAction ? <div className="mt-4 text-sm font-medium text-primary">CTA: {draft.callToAction}</div> : null}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">LinkedIn composer</h2>
-          <p className="text-sm text-muted-foreground">
-            Finish the core workflow: choose a brand, draft the post, select the LinkedIn target, request approval, then schedule.
-          </p>
+          <p className="text-sm text-muted-foreground">Finish the core workflow: choose a brand, draft the post, select the LinkedIn target, request approval, then schedule.</p>
         </CardHeader>
         <CardContent>
           <form className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -226,7 +250,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
             <div className="space-y-4">
               <div className="rounded-3xl border border-border p-5">
                 <h3 className="text-lg font-semibold">Target selection</h3>
-                <p className="mt-1 text-sm text-muted-foreground">LinkedIn remains the hero channel. Pick the profile or company page that should receive this post.</p>
+                <p className="mt-1 text-sm text-muted-foreground">LinkedIn remains the primary workflow. Pick the profile or company page that should receive this post.</p>
                 <div className="mt-4 space-y-3">
                   {targets.length ? targets.map((target) => (
                     <label key={target.id} className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm">
@@ -246,9 +270,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <h3 className="text-lg font-semibold">Recent drafts</h3>
                     <p className="mt-1 text-sm text-muted-foreground">Clear the draft backlog for the selected brand without touching scheduled or in-review posts.</p>
                   </div>
-                  <button formAction={clearRecentDrafts} formNoValidate className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">
-                    Clear recent drafts
-                  </button>
+                  <button formAction={clearRecentDrafts} formNoValidate className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Clear recent drafts</button>
                 </div>
                 <div className="mt-4 space-y-3">
                   {recentPosts.length ? recentPosts.map((item) => (

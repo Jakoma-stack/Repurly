@@ -5,12 +5,20 @@ This folder is designed to work for **both GitHub and ChatGPT execution**.
 ## How the pieces fit together
 
 - The **repo root** is the working codebase you can put in GitHub.
-- `docs/` contains the current strategy, execution, and decision materials.
+- `docs/` contains strategy, execution, and decision materials.
 - `_chatgpt/` contains the kickoff files for starting a fresh chat or project and giving ChatGPT the right context fast.
 
+## Current external positioning
 
-## Revision status
-This workspace already includes the **10 execution task** revision pass for the narrow LinkedIn-first launch. Review `docs/execution/launch-scope-complete.md` for the summary of what changed.
+Repurly should currently be presented as:
+
+**A premium LinkedIn-first content operations platform for agencies and B2B teams**
+
+Not as:
+
+- a cheap scheduler
+- a broad all-network social suite
+- a mini-Sprout clone
 
 ## Best way to use this folder
 
@@ -35,10 +43,10 @@ Upload this whole folder as a zip, then ask ChatGPT to read:
 Then paste the kickoff prompt from `_chatgpt/CHAT_KICKOFF_PROMPT.md`.
 
 ## Recommended operating stance
-- keep launch scope narrow
+- keep the workflow scope narrow and premium
 - prioritize workflow completion over more channels
 - treat LinkedIn as the hero channel
-- optimize for paid pilots, not feature breadth
+- optimize for paid subscriptions, not feature breadth
 - treat the richer delivery-logs build as the architecture base
 - avoid drifting into a mini-Sprout strategy
 
@@ -54,5 +62,5 @@ Then paste the kickoff prompt from `_chatgpt/CHAT_KICKOFF_PROMPT.md`.
 ## First actions
 1. Create a new GitHub repo from this folder.
 2. Review `docs/decision/` and `_chatgpt/PROJECT_CONTEXT_BRIEF.md`.
-3. Create issues from `docs/project-management/github-project-board.md`.
-4. Start execution against the narrow launch scope.
+3. Configure env vars and billing price IDs.
+4. Start execution against the current premium LinkedIn-first product story.

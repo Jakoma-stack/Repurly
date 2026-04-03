@@ -13,11 +13,7 @@ function firstParam(value: string | string[] | undefined) {
 }
 
 function Banner({ kind, children }: { kind: 'success' | 'error'; children: React.ReactNode }) {
-  const styles =
-    kind === 'success'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
-      : 'border-rose-200 bg-rose-50 text-rose-900';
-
+  const styles = kind === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900';
   return <div className={`rounded-2xl border px-4 py-3 text-sm ${styles}`}>{children}</div>;
 }
 
@@ -30,20 +26,10 @@ async function getWorkspaceConnectionState(workspaceId: string) {
       connectedHandle: platformAccounts.handle,
     })
     .from(integrations)
-    .leftJoin(
-      platformAccounts,
-      and(eq(platformAccounts.integrationId, integrations.id), eq(platformAccounts.isDefault, true)),
-    )
+    .leftJoin(platformAccounts, and(eq(platformAccounts.integrationId, integrations.id), eq(platformAccounts.isDefault, true)))
     .where(eq(integrations.workspaceId, workspaceId));
 
-  const byProvider = new Map<
-    string,
-    {
-      status: string;
-      connectedTargetName?: string;
-      connectedHandle?: string;
-    }
-  >();
+  const byProvider = new Map<string, { status: string; connectedTargetName?: string; connectedHandle?: string }>();
 
   for (const row of rows) {
     if (!byProvider.has(row.provider)) {
@@ -58,15 +44,10 @@ async function getWorkspaceConnectionState(workspaceId: string) {
   return byProvider;
 }
 
-export default async function SettingsPage({
-  searchParams,
-}: {
-  searchParams?: SearchParams;
-}) {
+export default async function SettingsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await requireWorkspaceSession();
   const params = (await searchParams) ?? {};
-  const highlightProvider =
-    typeof firstParam(params.provider) === 'string' ? String(firstParam(params.provider)) : 'linkedin';
+  const highlightProvider = typeof firstParam(params.provider) === 'string' ? String(firstParam(params.provider)) : 'linkedin';
   const linkedInStatus = firstParam(params.linkedin);
   const workspaceId = session.workspaceId;
 
@@ -81,21 +62,16 @@ export default async function SettingsPage({
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      <div className="lg:col-span-2 space-y-3">
-        {linkedInStatus === 'connected' && (
-          <Banner kind="success">LinkedIn connected. Repurly stored the workspace integration.</Banner>
-        )}
-        {linkedInStatus === 'error' && (
-          <Banner kind="error">LinkedIn connect failed. Check OAuth settings, scopes, and callback handling.</Banner>
-        )}
+      <div className="space-y-3 lg:col-span-2">
+        {linkedInStatus === 'connected' && <Banner kind="success">LinkedIn connected. Repurly stored the workspace integration.</Banner>}
+        {linkedInStatus === 'error' && <Banner kind="error">LinkedIn connect failed. Check OAuth settings, scopes, and callback handling.</Banner>}
       </div>
 
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">Workspace connections</h2>
           <p className="text-sm text-muted-foreground">
-            Every connect flow is now workspace-aware. Start with LinkedIn for the launch path, then add secondary
-            channels only if a pilot truly needs them.
+            Every connect flow is workspace-aware. Start with LinkedIn for the primary workflow, then add secondary channels only when the operating model supports them.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -105,35 +81,21 @@ export default async function SettingsPage({
             const highlighted = highlightProvider.toLowerCase().includes(item.key);
 
             return (
-              <div
-                key={item.label}
-                className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${
-                  highlighted ? 'border-primary bg-primary/5' : 'border-border'
-                }`}
-              >
+              <div key={item.label} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${highlighted ? 'border-primary bg-primary/5' : 'border-border'}`}>
                 <div>
                   <div className="font-medium">{item.label}</div>
                   <div className="text-sm text-muted-foreground">
                     {isConnected
-                      ? `${state?.connectedTargetName ?? 'Connected'}${
-                          state?.connectedHandle ? ` · ${state.connectedHandle}` : ''
-                        }`
+                      ? `${state?.connectedTargetName ?? 'Connected'}${state?.connectedHandle ? ` · ${state.connectedHandle}` : ''}`
                       : item.label === 'LinkedIn'
-                        ? 'Use this as the default pilot channel.'
-                        : 'Keep secondary to the LinkedIn workflow.'}
+                        ? 'Set this as the default workflow channel.'
+                        : 'Keep this secondary to the LinkedIn workflow.'}
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  {isConnected ? (
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">
-                      Connected
-                    </span>
-                  ) : null}
-
-                  <a href={item.href} className="text-sm font-medium text-primary">
-                    {isConnected ? 'Reconnect' : 'Connect'}
-                  </a>
+                  {isConnected ? <span className="rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-700">Connected</span> : null}
+                  <a href={item.href} className="text-sm font-medium text-primary">{isConnected ? 'Reconnect' : 'Connect'}</a>
                 </div>
               </div>
             );
@@ -146,9 +108,7 @@ export default async function SettingsPage({
           <h2 className="text-xl font-semibold">Billing</h2>
         </CardHeader>
         <CardContent>
-          <a href="/api/billing/portal" className="text-sm font-medium text-primary">
-            Open billing portal
-          </a>
+          <a href="/api/billing/portal" className="text-sm font-medium text-primary">Open billing portal</a>
         </CardContent>
       </Card>
 
@@ -157,32 +117,20 @@ export default async function SettingsPage({
           <h2 className="text-xl font-semibold">Reliability</h2>
         </CardHeader>
         <CardContent className="space-y-2">
-          <Link href="/app/reliability" className="block text-sm font-medium text-primary">
-            Open reliability console
-          </Link>
-          <Link href="/app/billing" className="block text-sm font-medium text-primary">
-            Review plan usage
-          </Link>
-          <Link href="/app/activity" className="block text-sm font-medium text-primary">
-            Review job detail and recovery history
-          </Link>
+          <Link href="/app/reliability" className="block text-sm font-medium text-primary">Open reliability console</Link>
+          <Link href="/app/billing" className="block text-sm font-medium text-primary">Review plan usage</Link>
+          <Link href="/app/activity" className="block text-sm font-medium text-primary">Review job detail and recovery history</Link>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">Notifications</h2>
-          <p className="text-sm text-muted-foreground">
-            Control in-app and email delivery of publish outcomes and digests.
-          </p>
+          <p className="text-sm text-muted-foreground">Control in-app and email delivery of publish outcomes and digests.</p>
         </CardHeader>
         <CardContent className="space-y-2">
-          <a href="/app/notifications" className="block text-sm font-medium text-primary">
-            Open notifications center
-          </a>
-          <a href="/app/settings/notifications" className="block text-sm font-medium text-primary">
-            Edit notification preferences
-          </a>
+          <a href="/app/notifications" className="block text-sm font-medium text-primary">Open notifications center</a>
+          <a href="/app/settings/notifications" className="block text-sm font-medium text-primary">Edit notification preferences</a>
         </CardContent>
       </Card>
     </div>

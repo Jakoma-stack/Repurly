@@ -11,9 +11,13 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.metrics.map((metric) => (
-          <Card key={metric.label}>
-            <CardHeader><div className="text-sm text-muted-foreground">{metric.label}</div></CardHeader>
-            <CardContent><div className="text-3xl font-semibold">{metric.value}</div></CardContent>
+          <Card key={metric.label} className="bg-white/95">
+            <CardHeader>
+              <div className="text-sm text-muted-foreground">{metric.label}</div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-semibold text-slate-950">{metric.value}</div>
+            </CardContent>
           </Card>
         ))}
       </section>
@@ -22,7 +26,7 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Publishing queue</h2>
-              <p className="text-sm text-muted-foreground">What is going out next in the LinkedIn-first launch workflow.</p>
+              <p className="text-sm text-muted-foreground">What is going out next across your LinkedIn workflow.</p>
             </div>
             <a href="/app/content"><Button>Create post</Button></a>
           </CardHeader>
@@ -43,13 +47,13 @@ export default async function DashboardPage() {
         </Card>
         <div className="space-y-6">
           <Card>
-            <CardHeader><h2 className="text-xl font-semibold">Launch discipline</h2></CardHeader>
+            <CardHeader><h2 className="text-xl font-semibold">Platform principles</h2></CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <div>1. LinkedIn stays the hero channel.</div>
-              <div>2. AI creates drafts, not automatic publishing.</div>
-              <div>3. Engagement is manual-first until live sync is hardened.</div>
-              <div>4. Leads are a lightweight pipeline, not a full CRM.</div>
-              <div>5. Multiple brands support agencies and multi-brand B2B teams without widening into mini-Sprout scope.</div>
+              <div>1. LinkedIn stays the primary workflow.</div>
+              <div>2. AI supports drafting, not automatic publishing.</div>
+              <div>3. Engagement is kept close to publishing so reply work is visible.</div>
+              <div>4. Leads stay lightweight and commercially useful.</div>
+              <div>5. Multi-brand support keeps agencies and B2B teams in one premium system without drifting into social-suite sprawl.</div>
             </CardContent>
           </Card>
           <Card>

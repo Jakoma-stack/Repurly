@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Repurly — LinkedIn-first content ops</title>
-  <meta name="description" content="Repurly is LinkedIn-first content ops for agencies and B2B teams: draft, approve, schedule, and recover with confidence." />
+  <title>Repurly — Premium LinkedIn content operations</title>
+  <meta name="description" content="Repurly is a premium LinkedIn-first content operations platform for agencies and B2B teams: draft, approve, schedule, recover, and manage multi-brand workflow with confidence." />
   <style>
     :root {
-      --bg: #071331;
-      --bg-soft: #0d1d47;
-      --text: #eaf1ff;
-      --muted: #b4c3ea;
-      --accent: #43b8f1;
+      --bg: #061226;
+      --bg-soft: #0c1d45;
+      --text: #eef4ff;
+      --muted: #bcc9e8;
+      --accent: #6d5efc;
+      --accent-soft: #c7c2ff;
       --card: #ffffff;
       --ink: #0d1733;
       --line: #dfe7f6;
@@ -25,20 +26,21 @@
       line-height: 1.5;
     }
     .hero {
-      background: linear-gradient(135deg, var(--bg), var(--bg-soft));
+      background: radial-gradient(circle at top right, rgba(109,94,252,.28), transparent 32%), linear-gradient(135deg, var(--bg), var(--bg-soft));
       color: var(--text);
       padding: 72px 24px;
     }
     .wrap {
-      max-width: 1080px;
+      max-width: 1120px;
       margin: 0 auto;
     }
     .badge {
       display: inline-block;
       padding: 8px 12px;
       border-radius: 999px;
-      background: rgba(67,184,241,.14);
-      color: var(--accent);
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      color: var(--accent-soft);
       font-size: 13px;
       font-weight: 700;
       letter-spacing: .02em;
@@ -47,7 +49,7 @@
       font-size: clamp(36px, 6vw, 58px);
       line-height: 1.05;
       margin: 18px 0 16px;
-      max-width: 760px;
+      max-width: 820px;
     }
     .sub {
       max-width: 760px;
@@ -57,22 +59,21 @@
     }
     .cta {
       display: inline-block;
-      background: var(--accent);
+      background: #fff;
       color: #071331;
       padding: 14px 22px;
       border-radius: 14px;
       font-weight: 700;
       text-decoration: none;
       margin-right: 12px;
+      margin-bottom: 12px;
     }
     .cta.secondary {
       background: transparent;
       color: var(--text);
-      border: 1px solid rgba(255,255,255,.2);
+      border: 1px solid rgba(255,255,255,.18);
     }
-    .section {
-      padding: 56px 24px;
-    }
+    .section { padding: 56px 24px; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -85,35 +86,30 @@
       padding: 22px;
       box-shadow: 0 8px 24px rgba(13, 23, 51, 0.05);
     }
-    h2 {
-      font-size: 32px;
-      margin: 0 0 14px;
+    .card.dark {
+      background: linear-gradient(180deg, #0f172a, #111827);
+      border-color: rgba(15,23,42,.4);
+      color: #fff;
+      box-shadow: 0 24px 80px rgba(15,23,42,.2);
     }
-    h3 {
-      margin: 0 0 10px;
-      font-size: 20px;
-    }
-    .footer {
-      padding: 32px 24px 56px;
-      color: #607096;
-      font-size: 14px;
-    }
-    a.inline {
-      color: #1f5fff;
-      text-decoration: none;
-    }
+    h2 { font-size: 32px; margin: 0 0 14px; }
+    h3 { margin: 0 0 10px; font-size: 20px; }
+    ul { margin: 14px 0 0; padding-left: 18px; }
+    li { margin: 8px 0; }
+    .footer { padding: 32px 24px 56px; color: #607096; font-size: 14px; }
+    a.inline { color: #1f5fff; text-decoration: none; }
   </style>
 </head>
 <body>
   <section class="hero">
     <div class="wrap">
-      <div class="badge">LinkedIn-first content ops</div>
-      <h1>Draft, approve, schedule, and recover LinkedIn content without workflow chaos.</h1>
+      <div class="badge">Premium LinkedIn content operations</div>
+      <h1>Run LinkedIn publishing with one premium system for drafting, approvals, scheduling, and recovery.</h1>
       <p class="sub">
-        Repurly helps boutique agencies and B2B teams run LinkedIn content operations with a clearer workflow from composer to queue to recovery.
+        Repurly helps agencies and B2B teams run multi-brand LinkedIn workflow with AI-assisted drafting, queue visibility, engagement handling, and operator-grade recovery.
       </p>
-      <a class="cta" href="mailto:support@repurly.org?subject=Repurly%20pilot">Request a pilot</a>
-      <a class="cta secondary" href="#workflow">See the workflow</a>
+      <a class="cta" href="https://app.repurly.org/sign-up">Open the platform</a>
+      <a class="cta secondary" href="#pricing">See pricing</a>
     </div>
   </section>
 
@@ -122,58 +118,71 @@
       <h2>Why Repurly</h2>
       <div class="grid">
         <div class="card">
-          <h3>One workflow item, not duplicate chaos</h3>
-          <p>Keep posts tied to the same record so edits and reschedules do not create duplicate queued jobs.</p>
+          <h3>Approval and routing control</h3>
+          <p>Move one LinkedIn post from draft to approval to scheduled publishing without losing target, timing, or accountability.</p>
         </div>
         <div class="card">
-          <h3>Approvals that fit real teams</h3>
-          <p>Move from draft to review to scheduled without losing track of target, timing, or accountability.</p>
+          <h3>Multi-brand workspaces</h3>
+          <p>Keep brand voice, audience, CTA, and LinkedIn context separate while managing workflow in one product.</p>
         </div>
         <div class="card">
-          <h3>Operational visibility</h3>
-          <p>See what is scheduled, what failed, what is retrying, and what needs operator action.</p>
+          <h3>AI drafting that stays useful</h3>
+          <p>Generate brand-aware LinkedIn drafts, review the batch, and tighten the strongest version inside the same workflow.</p>
+        </div>
+        <div class="card">
+          <h3>Recovery operators trust</h3>
+          <p>See queue state, reconnect nudges, and publish history before missed posts become customer-facing issues.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section" id="workflow">
+  <section class="section">
     <div class="wrap">
-      <h2>The launch workflow</h2>
+      <h2>What the platform includes</h2>
       <div class="grid">
-        <div class="card"><h3>1. Compose</h3><p>Create or reopen the same LinkedIn workflow item with the right target selected.</p></div>
+        <div class="card"><h3>1. Compose</h3><p>Create or reopen the same LinkedIn workflow item with the right brand and target selected.</p></div>
         <div class="card"><h3>2. Approve</h3><p>Route content for review before it enters the publish queue.</p></div>
-        <div class="card"><h3>3. Schedule</h3><p>Queue the post for a scheduled publish window with a visible operational state.</p></div>
-        <div class="card"><h3>4. Recover</h3><p>Use state-aware actions like Edit post, Retry now, and Requeue target when needed.</p></div>
+        <div class="card"><h3>3. Schedule</h3><p>Queue the post for a scheduled publish window with visible operational state.</p></div>
+        <div class="card"><h3>4. Recover</h3><p>Use job detail, reconnect, and retry actions when something needs operator attention.</p></div>
       </div>
     </div>
   </section>
 
-  <section class="section">
+  <section class="section" id="pricing">
     <div class="wrap">
-      <h2>Best fit</h2>
+      <h2>Pricing</h2>
       <div class="grid">
         <div class="card">
-          <h3>Boutique agencies</h3>
-          <p>Especially agencies running LinkedIn for B2B clients and needing reliable approvals and queue control.</p>
+          <h3>Core — £149/mo</h3>
+          <p>For focused teams that need a premium LinkedIn workflow without extra product sprawl.</p>
+          <ul>
+            <li>Up to 3 workspace members</li>
+            <li>120 posts per month</li>
+            <li>3 connected channels</li>
+            <li>Composer, queue, job detail, and recovery</li>
+          </ul>
+        </div>
+        <div class="card dark">
+          <h3>Growth — £399/mo</h3>
+          <p>The commercial default for agencies and multi-brand B2B teams.</p>
+          <ul>
+            <li>Up to 10 workspace members</li>
+            <li>1,000 posts per month</li>
+            <li>10 connected channels</li>
+            <li>Approvals, multi-brand workspaces, AI drafts, engagement, and leads</li>
+          </ul>
         </div>
         <div class="card">
-          <h3>In-house B2B teams</h3>
-          <p>Especially teams coordinating company-page and executive or founder posting.</p>
+          <h3>Scale — Custom</h3>
+          <p>For larger teams that need tailored volume, onboarding, and workflow support.</p>
+          <ul>
+            <li>Up to 50 workspace members</li>
+            <li>10,000 posts per month</li>
+            <li>30 connected channels</li>
+            <li>Tailored onboarding and workflow support</li>
+          </ul>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="wrap">
-      <h2>Pilot offer</h2>
-      <div class="card">
-        <h3>Repurly LinkedIn Ops Pilot</h3>
-        <p>30-day pilot focused on LinkedIn workflow operations, including setup support, target configuration, approval flow, queue visibility, and operator recovery.</p>
-        <p><strong>Suggested pilot pricing:</strong> £999 one-time pilot fee</p>
-        <p><strong>Website:</strong> https://repurly.org/<br><strong>App:</strong> https://app.repurly.org/<br><strong>Support:</strong> support@repurly.org</p>
-        <a class="cta" href="mailto:support@repurly.org?subject=Repurly%20pilot">Request pilot details</a>
       </div>
     </div>
   </section>
@@ -185,7 +194,7 @@
       <a class="inline" href="terms.html">Terms of Service</a>
     </p>
     <p>Website: <a class="inline" href="https://repurly.org/">https://repurly.org/</a> · App: <a class="inline" href="https://app.repurly.org/">https://app.repurly.org/</a> · Support: <a class="inline" href="mailto:support@repurly.org">support@repurly.org</a></p>
-    <p>Repurly is currently positioned as a narrow, premium LinkedIn-first content ops product, not a broad all-network social suite.</p>
+    <p>Repurly is a premium LinkedIn-first content operations platform for agencies and B2B teams.</p>
   </div>
 </body>
 </html>

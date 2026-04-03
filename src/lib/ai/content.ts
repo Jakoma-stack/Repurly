@@ -60,7 +60,7 @@ function summarizeBrief(brief: string) {
 function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
   const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const hashtags = parseHashtags(args.hashtags);
-  const cta = args.primaryCta?.trim() || 'Book a pilot demo.';
+  const cta = args.primaryCta?.trim() || 'Book a demo.';
   const tone = args.brandTone?.trim() || 'clear, sharp, commercially realistic';
   const audience = args.audience?.trim() || 'B2B marketing and operations teams';
   const goal = args.commercialGoal?.trim() || 'start more qualified buyer conversations';

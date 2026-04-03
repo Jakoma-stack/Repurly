@@ -23,12 +23,7 @@ type SavedCampaign = {
 };
 
 async function getDefaultBrandId(workspaceId: string) {
-  const row = await db
-    .select({ id: brands.id })
-    .from(brands)
-    .where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active')))
-    .limit(1);
-
+  const row = await db.select({ id: brands.id }).from(brands).where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active'))).limit(1);
   return row[0]?.id;
 }
 
@@ -54,11 +49,7 @@ async function getTargetForWorkspace(workspaceId: string, targetId: string) {
   if (!targetId) return null;
 
   const row = await db
-    .select({
-      id: platformAccounts.id,
-      provider: platformAccounts.provider,
-      targetType: platformAccounts.targetType,
-    })
+    .select({ id: platformAccounts.id, provider: platformAccounts.provider, targetType: platformAccounts.targetType })
     .from(platformAccounts)
     .where(and(eq(platformAccounts.id, targetId), eq(platformAccounts.workspaceId, workspaceId)))
     .limit(1);
@@ -79,9 +70,7 @@ async function persistSavedCampaign(formData: FormData) {
   const brandId = requiredString(formData, 'brandId');
   const brief = requiredString(formData, 'brief');
 
-  if (!workspaceId || !brandId || !brief) {
-    return false;
-  }
+  if (!workspaceId || !brandId || !brief) return false;
 
   const payload: SavedCampaign = {
     workspaceId,
@@ -126,9 +115,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
 
   const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
   const brandId = await resolveBrandId(formData, workspaceId);
-  if (!brandId) {
-    return { error: 'missing-brand' as const, post: null };
-  }
+  if (!brandId) return { error: 'missing-brand' as const, post: null };
 
   if (postId) {
     const updated = await db
@@ -145,15 +132,9 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
         updatedAt: new Date(),
       })
       .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
-      .returning({
-        id: posts.id,
-        workspaceId: posts.workspaceId,
-        scheduledFor: posts.scheduledFor,
-      });
+      .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
 
-    if (updated[0]) {
-      return { error: null, post: updated[0] };
-    }
+    if (updated[0]) return { error: null, post: updated[0] };
   }
 
   const inserted = await db
@@ -169,11 +150,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
       postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
       metadata: { source: 'manual', brief },
     })
-    .returning({
-      id: posts.id,
-      workspaceId: posts.workspaceId,
-      scheduledFor: posts.scheduledFor,
-    });
+    .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
 
   return { error: null, post: inserted[0] ?? null };
 }
@@ -181,24 +158,14 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
 async function attachTarget(postId: string, workspaceId: string, formData: FormData) {
   const targetId = requiredString(formData, 'targetId');
   const target = await getTargetForWorkspace(workspaceId, targetId);
-
   if (!target) return null;
 
-  const existing = await db
-    .select({ id: postTargets.id })
-    .from(postTargets)
-    .where(eq(postTargets.postId, postId))
-    .limit(1);
+  const existing = await db.select({ id: postTargets.id }).from(postTargets).where(eq(postTargets.postId, postId)).limit(1);
 
   if (existing[0]?.id) {
     const updated = await db
       .update(postTargets)
-      .set({
-        platformAccountId: target.id,
-        provider: target.provider,
-        targetType: target.targetType,
-        platformStatus: 'queued',
-      })
+      .set({ platformAccountId: target.id, provider: target.provider, targetType: target.targetType, platformStatus: 'queued' })
       .where(eq(postTargets.id, existing[0].id))
       .returning({ id: postTargets.id, provider: postTargets.provider, targetType: postTargets.targetType });
 
@@ -207,13 +174,7 @@ async function attachTarget(postId: string, workspaceId: string, formData: FormD
 
   const inserted = await db
     .insert(postTargets)
-    .values({
-      postId,
-      platformAccountId: target.id,
-      provider: target.provider,
-      targetType: target.targetType,
-      platformStatus: 'queued',
-    })
+    .values({ postId, platformAccountId: target.id, provider: target.provider, targetType: target.targetType, platformStatus: 'queued' })
     .returning({ id: postTargets.id, provider: postTargets.provider, targetType: postTargets.targetType });
 
   return inserted[0] ?? null;
@@ -232,16 +193,7 @@ async function upsertQueuedPublishJob(postId: string, postTargetId: string, sche
     return existingQueued[0].id;
   }
 
-  const inserted = await db
-    .insert(publishJobs)
-    .values({
-      postId,
-      postTargetId,
-      status: 'queued',
-      scheduledFor,
-    })
-    .returning({ id: publishJobs.id });
-
+  const inserted = await db.insert(publishJobs).values({ postId, postTargetId, status: 'queued', scheduledFor }).returning({ id: publishJobs.id });
   return inserted[0]?.id ?? null;
 }
 
@@ -257,10 +209,7 @@ async function refreshWorkflowPages() {
 
 export async function saveCampaign(formData: FormData) {
   const saved = await persistSavedCampaign(formData);
-  if (!saved) {
-    redirect('/app/content?error=invalid' as Route);
-  }
-
+  if (!saved) redirect('/app/content?error=invalid' as Route);
   redirect('/app/content?ok=campaign-saved' as Route);
 }
 
@@ -275,19 +224,11 @@ export async function clearRecentDrafts(formData: FormData) {
   const brandId = requiredString(formData, 'brandId');
   const currentPostId = requiredString(formData, 'postId');
 
-  if (!workspaceId) {
-    redirect('/app/content?error=invalid' as Route);
-  }
+  if (!workspaceId) redirect('/app/content?error=invalid' as Route);
 
   const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
-
-  if (brandId) {
-    filters.push(eq(posts.brandId, brandId));
-  }
-
-  if (currentPostId) {
-    filters.push(ne(posts.id, currentPostId));
-  }
+  if (brandId) filters.push(eq(posts.brandId, brandId));
+  if (currentPostId) filters.push(ne(posts.id, currentPostId));
 
   await db.delete(posts).where(and(...filters));
   await refreshWorkflowPages();
@@ -296,9 +237,7 @@ export async function clearRecentDrafts(formData: FormData) {
 
 export async function saveDraft(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'draft');
-  if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
-  }
+  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
 
   await attachTarget(post.id, post.workspaceId, formData);
   await refreshWorkflowPages();
@@ -307,14 +246,10 @@ export async function saveDraft(formData: FormData) {
 
 export async function requestApproval(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'in_review');
-  if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
-  }
+  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) {
-    redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
-  }
+  if (!target) redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
 
   const existingApproval = await db
     .select({ id: approvalRequests.id })
@@ -323,20 +258,12 @@ export async function requestApproval(formData: FormData) {
     .limit(1);
 
   if (existingApproval[0]?.id) {
-    await db.update(approvalRequests).set({
-      requestedById: requiredString(formData, 'authorId'),
-      status: 'pending',
-      note: requiredString(formData, 'approvalOwner') || null,
-      updatedAt: new Date(),
-    }).where(eq(approvalRequests.id, existingApproval[0].id));
+    await db
+      .update(approvalRequests)
+      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null, updatedAt: new Date() })
+      .where(eq(approvalRequests.id, existingApproval[0].id));
   } else {
-    await db.insert(approvalRequests).values({
-      workspaceId: post.workspaceId,
-      postId: post.id,
-      requestedById: requiredString(formData, 'authorId'),
-      status: 'pending',
-      note: requiredString(formData, 'approvalOwner') || null,
-    });
+    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null });
   }
 
   await refreshWorkflowPages();
@@ -351,14 +278,10 @@ export async function schedulePost(formData: FormData) {
   }
 
   const { error, post } = await createOrUpdateBasePost(formData, 'scheduled');
-  if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
-  }
+  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) {
-    redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
-  }
+  if (!target) redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
 
   await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
 
@@ -375,14 +298,10 @@ export async function generateAiDrafts(formData: FormData) {
   const commercialGoal = requiredString(formData, 'commercialGoal');
   const postFormat = requiredString(formData, 'postFormat');
 
-  if (!workspaceId || !authorId || !brandId || !brief) {
-    redirect('/app/content?error=invalid' as Route);
-  }
+  if (!workspaceId || !authorId || !brandId || !brief) redirect('/app/content?error=invalid' as Route);
 
   const brand = await getBrand(workspaceId, brandId);
-  if (!brand) {
-    redirect('/app/content?error=missing-brand' as Route);
-  }
+  if (!brand) redirect('/app/content?error=missing-brand' as Route);
 
   await persistSavedCampaign(formData);
 
@@ -420,5 +339,6 @@ export async function generateAiDrafts(formData: FormData) {
   ).returning({ id: posts.id });
 
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=generated&postId=${inserted[0]?.id ?? ''}` as Route);
+  const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
+  redirect(`/app/content?ok=generated&postId=${inserted[0]?.id ?? ''}${generatedIds ? `&generatedIds=${generatedIds}` : ''}` as Route);
 }

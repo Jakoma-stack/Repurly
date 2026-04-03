@@ -1,18 +1,17 @@
-import { listPlatformAdapters } from "@/lib/platforms/registry";
-import type { PlatformKey } from "@/lib/platforms/types";
-import Link from "next/link";
+import { listPlatformAdapters } from '@/lib/platforms/registry';
+import type { PlatformKey } from '@/lib/platforms/types';
 
 const badges: Record<PlatformKey, string> = {
-  linkedin: "Hero channel",
-  x: "Secondary path",
-  facebook: "Secondary path",
-  instagram: "Secondary path",
-  threads: "Hidden from launch",
-  youtube: "Hidden from launch",
-  tiktok: "Hidden from launch",
+  linkedin: 'Primary workflow',
+  x: 'Secondary path',
+  facebook: 'Secondary path',
+  instagram: 'Secondary path',
+  threads: 'Hidden from launch',
+  youtube: 'Hidden from launch',
+  tiktok: 'Hidden from launch',
 };
 
-const launchVisible: PlatformKey[] = ["linkedin", "x", "facebook", "instagram"];
+const launchVisible: PlatformKey[] = ['linkedin', 'x', 'facebook', 'instagram'];
 
 export function PlatformGrid() {
   const adapters = listPlatformAdapters().filter((platform) => launchVisible.includes(platform.key));
@@ -39,7 +38,7 @@ export function PlatformGrid() {
             <a href={`/app/settings?provider=${platform.key}`} className="font-medium text-primary">
               Connect
             </a>
-            <span className="text-muted-foreground">{platform.key === "linkedin" ? "Use for pilots" : "Keep secondary"}</span>
+            <span className="text-muted-foreground">{platform.key === 'linkedin' ? 'Set as primary' : 'Keep secondary'}</span>
           </div>
         </div>
       ))}

@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { approvalRequests, brands, engagementComments, leadPipeline, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
@@ -19,13 +19,7 @@ export async function getLinkedInTargets(workspaceId: string) {
       updatedAt: platformAccounts.updatedAt,
     })
     .from(platformAccounts)
-    .where(
-      and(
-        eq(platformAccounts.workspaceId, workspaceId),
-        eq(platformAccounts.provider, 'linkedin'),
-        eq(platformAccounts.publishEnabled, true),
-      ),
-    )
+    .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin'), eq(platformAccounts.publishEnabled, true)))
     .orderBy(desc(platformAccounts.isDefault), desc(platformAccounts.updatedAt));
 }
 
@@ -67,11 +61,7 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
   const post = postRows[0];
   if (!post) return null;
 
-  const targetRows = await db
-    .select({ targetId: postTargets.platformAccountId })
-    .from(postTargets)
-    .where(eq(postTargets.postId, post.id))
-    .limit(1);
+  const targetRows = await db.select({ targetId: postTargets.platformAccountId }).from(postTargets).where(eq(postTargets.postId, post.id)).limit(1);
 
   const approvalRows = await db
     .select({ approvalOwner: approvalRequests.note })
@@ -112,6 +102,37 @@ export async function getRecentPosts(workspaceId: string) {
     .where(eq(posts.workspaceId, workspaceId))
     .orderBy(desc(posts.updatedAt))
     .limit(8);
+}
+
+export async function getPostsByIds(workspaceId: string, postIds: string[]) {
+  if (!postIds.length) return [];
+
+  const rows = await db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      body: posts.body,
+      status: posts.status,
+      postType: posts.postType,
+      brandName: brands.name,
+      metadata: posts.metadata,
+      updatedAt: posts.updatedAt,
+    })
+    .from(posts)
+    .innerJoin(brands, eq(brands.id, posts.brandId))
+    .where(and(eq(posts.workspaceId, workspaceId), inArray(posts.id, postIds)))
+    .orderBy(desc(posts.updatedAt));
+
+  const order = new Map(postIds.map((id, index) => [id, index]));
+  return rows
+    .map((row) => ({
+      ...row,
+      titleHint: String(row.metadata?.titleHint ?? ''),
+      callToAction: String(row.metadata?.callToAction ?? ''),
+      draftNumber: Number(row.metadata?.draftNumber ?? 0),
+      excerpt: row.body.length > 220 ? `${row.body.slice(0, 217).trim()}...` : row.body,
+    }))
+    .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0));
 }
 
 export async function getPublishingQueue(workspaceId: string) {
@@ -167,10 +188,7 @@ export async function getWorkflowMetrics(workspaceId: string) {
       .select({ count: sql<number>`count(*)` })
       .from(leadPipeline)
       .where(and(eq(leadPipeline.workspaceId, workspaceId), sql`${leadPipeline.intentScore} >= 70`)),
-    db
-      .select({ count: sql<number>`count(*)` })
-      .from(brands)
-      .where(eq(brands.workspaceId, workspaceId)),
+    db.select({ count: sql<number>`count(*)` }).from(brands).where(eq(brands.workspaceId, workspaceId)),
   ]);
 
   return {
