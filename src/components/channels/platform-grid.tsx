@@ -1,6 +1,5 @@
 import { listPlatformAdapters } from "@/lib/platforms/registry";
 import type { PlatformKey } from "@/lib/platforms/types";
-import Link from "next/link";
 
 const badges: Record<PlatformKey, string> = {
   linkedin: "Hero channel",
@@ -36,9 +35,9 @@ export function PlatformGrid() {
             {platform.capabilities.scheduling && <span className="rounded-full bg-secondary px-2 py-1">Scheduling</span>}
           </div>
           <div className="mt-5 flex items-center justify-between text-sm">
-            <Link href={`/app/settings?provider=${platform.key}`} className="font-medium text-primary">
+            <a href={`/app/settings?provider=${platform.key}`} className="font-medium text-primary">
               Connect
-            </Link>
+            </a>
             <span className="text-muted-foreground">{platform.key === "linkedin" ? "Use for pilots" : "Keep secondary"}</span>
           </div>
         </div>

@@ -146,9 +146,9 @@ export default async function SettingsPage({
           <h2 className="text-xl font-semibold">Billing</h2>
         </CardHeader>
         <CardContent>
-          <Link href="/api/billing/portal" className="text-sm font-medium text-primary">
+          <a href="/api/billing/portal" className="text-sm font-medium text-primary">
             Open billing portal
-          </Link>
+          </a>
         </CardContent>
       </Card>
 
@@ -177,12 +177,12 @@ export default async function SettingsPage({
           </p>
         </CardHeader>
         <CardContent className="space-y-2">
-          <a href="/app/notifications" className="block text-sm font-medium text-primary">
+          <Link href="/app/notifications" className="block text-sm font-medium text-primary">
             Open notifications center
-          </a>
-          <a href="/app/settings/notifications" className="block text-sm font-medium text-primary">
+          </Link>
+          <Link href="/app/settings/notifications" className="block text-sm font-medium text-primary">
             Edit notification preferences
-          </a>
+          </Link>
         </CardContent>
       </Card>
     </div>

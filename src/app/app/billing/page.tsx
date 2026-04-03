@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { getBillingSnapshot } from '@/server/queries/billing';
@@ -24,8 +23,8 @@ export default async function BillingPage() {
             <h2 className="text-xl font-semibold">Billing actions</h2>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link href="/api/billing/portal" className="block text-sm font-medium text-primary">Open billing portal</Link>
-            <Link href="/api/billing/checkout?plan=scale" className="block text-sm font-medium text-primary">Preview upgrade flow</Link>
+            <a href="/api/billing/portal" className="block text-sm font-medium text-primary">Open billing portal</a>
+            <a href="/api/billing/checkout?plan=scale" className="block text-sm font-medium text-primary">Preview upgrade flow</a>
           </CardContent>
         </Card>
       </div>

@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getPublishingQueue } from '@/server/queries/workflow';
@@ -29,9 +27,9 @@ export default async function CalendarPage() {
             );
 
             return item.postId ? (
-              <Link key={item.id} href={`/app/content?postId=${item.postId}`} className="block">
+              <a key={item.id} href={`/app/content?postId=${item.postId}`} className="block">
                 {content}
-              </Link>
+              </a>
             ) : (
               <div key={item.id}>{content}</div>
             );

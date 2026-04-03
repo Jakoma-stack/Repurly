@@ -57,7 +57,7 @@ export default async function DashboardPage() {
             <div>5. Confirm billing and team roles</div>
             <div>6. Add a secondary channel only after the pilot workflow proves itself</div>
             <div className="pt-2">
-              <Link className="font-medium text-primary" href="/api/help/download-guide">Download quickstart guide</Link>
+              <a className="font-medium text-primary" href="/api/help/download-guide">Download quickstart guide</a>
             </div>
           </CardContent>
         </Card>

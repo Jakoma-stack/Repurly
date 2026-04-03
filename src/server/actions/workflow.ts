@@ -1,6 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
+import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { and, desc, eq } from 'drizzle-orm';
 
@@ -191,23 +192,23 @@ async function refreshWorkflowPages() {
 export async function saveDraft(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'draft');
   if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}`);
+    redirect((`/app/content?error=${error ?? 'invalid'}`) as Route);
   }
 
   await attachTarget(post.id, post.workspaceId, formData);
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=draft&postId=${post.id}`);
+  redirect((`/app/content?ok=draft&postId=${post.id}`) as Route);
 }
 
 export async function requestApproval(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'in_review');
   if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}`);
+    redirect((`/app/content?error=${error ?? 'invalid'}`) as Route);
   }
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
   if (!target) {
-    redirect(`/app/content?error=missing-target&postId=${post.id}`);
+    redirect((`/app/content?error=missing-target&postId=${post.id}`) as Route);
   }
 
   const existingApproval = await db
@@ -236,28 +237,28 @@ export async function requestApproval(formData: FormData) {
   }
 
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=approval&postId=${post.id}`);
+  redirect((`/app/content?ok=approval&postId=${post.id}`) as Route);
 }
 
 export async function schedulePost(formData: FormData) {
   const scheduledFor = requiredString(formData, 'scheduledFor');
   if (!scheduledFor) {
     const postId = requiredString(formData, 'postId');
-    redirect(`/app/content?error=missing-schedule${postId ? `&postId=${postId}` : ''}`);
+    redirect((`/app/content?error=missing-schedule${postId ? `&postId=${postId}` : ''}`) as Route);
   }
 
   const { error, post } = await createOrUpdateBasePost(formData, 'scheduled');
   if (error || !post) {
-    redirect(`/app/content?error=${error ?? 'invalid'}`);
+    redirect((`/app/content?error=${error ?? 'invalid'}`) as Route);
   }
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
   if (!target) {
-    redirect(`/app/content?error=missing-target&postId=${post.id}`);
+    redirect((`/app/content?error=missing-target&postId=${post.id}`) as Route);
   }
 
   await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
 
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=scheduled&postId=${post.id}`);
+  redirect((`/app/content?ok=scheduled&postId=${post.id}`) as Route);
 }
