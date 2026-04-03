@@ -230,9 +230,9 @@ export function ActivityDetail({ detail }: { detail: PublishActivityDetail }) {
                   <div className="font-medium text-slate-900">{entry.title}</div>
                   <div className="mt-1">{entry.body}</div>
                   {entry.actionHref ? (
-                    <Link href={entry.actionHref} className="mt-2 inline-block font-medium text-primary">
+                    <a href={entry.actionHref} className="mt-2 inline-block font-medium text-primary">
                       {entry.actionLabel ?? 'Open'}
-                    </Link>
+                    </a>
                   ) : null}
                 </div>
               ))}
