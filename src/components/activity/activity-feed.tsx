@@ -134,7 +134,7 @@ export function ActivityFeed({
                       <span className="text-xs uppercase tracking-wide text-muted-foreground">{item.postType.replace('_', ' ')}</span>
                     </div>
                     <div>
-                      <Link href={primaryHref} className="text-lg font-semibold text-slate-900 hover:text-primary">{item.title}</Link>
+                      <a href={primaryHref} className="text-lg font-semibold text-slate-900 hover:text-primary">{item.title}</a>
                       <p className="text-sm text-muted-foreground">{item.targetLabel}</p>
                     </div>
                     <div className="grid gap-1 text-sm text-slate-600">
