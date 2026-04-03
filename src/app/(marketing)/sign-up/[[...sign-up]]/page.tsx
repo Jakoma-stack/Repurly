@@ -1,12 +1,12 @@
-import { SignIn } from "@clerk/nextjs";
+import { SignUp } from "@clerk/nextjs";
 
 export default function Page() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center">
-      <SignIn
+      <SignUp
         routing="path"
-        path="/sign-in"
-        signUpUrl="/sign-up"
+        path="/sign-up"
+        signInUrl="/sign-in"
         forceRedirectUrl="/app"
         fallbackRedirectUrl="/app"
       />

@@ -1,13 +1,13 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import type { Route } from 'next';
-import { and, eq } from 'drizzle-orm';
-import { db } from '@/lib/db/client';
-import { workspaceMemberships, workspaces } from '../../../drizzle/schema';
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/lib/db/client";
+import { workspaceMemberships, workspaces } from "../../../drizzle/schema";
 
-const WORKSPACE_COOKIE = 'repurly_workspace';
-const LOCAL_SETUP_WORKSPACE_ID = '__local_setup__';
+const WORKSPACE_COOKIE = "repurly_workspace";
+
+type ClerkUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
 export type WorkspaceSession = {
   userId: string;
@@ -34,44 +34,107 @@ export async function listAccessibleWorkspaces(userId: string) {
   return rows;
 }
 
+function buildWorkspaceName(user: ClerkUser) {
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+
+  if (fullName) return `${fullName}'s workspace`;
+
+  return `${user.username || user.primaryEmailAddress?.emailAddress || "Repurly"} workspace`;
+}
+
+function slugify(value: string) {
+  return (
+    value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 80) || "workspace"
+  );
+}
+
+async function createStarterWorkspaceForUser(args: {
+  userId: string;
+  orgId: string | null;
+  user: ClerkUser;
+}) {
+  const { userId, orgId, user } = args;
+
+  const workspaceName = buildWorkspaceName(user);
+  const baseSlug = slugify(workspaceName.replace(/'s workspace$/i, ""));
+  const userSuffix = userId.replace(/[^a-zA-Z0-9]/g, "").toLowerCase().slice(-6) || "owner";
+
+  let workspaceSlug = `${baseSlug}-${userSuffix}`.slice(0, 120);
+
+  const existingSlug = await db
+    .select({ id: workspaces.id })
+    .from(workspaces)
+    .where(eq(workspaces.slug, workspaceSlug))
+    .limit(1);
+
+  if (existingSlug[0]) {
+    workspaceSlug = `${baseSlug}-${Date.now().toString(36)}`.slice(0, 120);
+  }
+
+  const created = await db.transaction(async (tx) => {
+    const [workspace] = await tx
+      .insert(workspaces)
+      .values({
+        name: workspaceName,
+        slug: workspaceSlug,
+        clerkOrganizationId: orgId ?? null,
+      })
+      .returning({
+        id: workspaces.id,
+        name: workspaces.name,
+        slug: workspaces.slug,
+        clerkOrganizationId: workspaces.clerkOrganizationId,
+      });
+
+    await tx.insert(workspaceMemberships).values({
+      workspaceId: workspace.id,
+      clerkUserId: userId,
+      role: "owner",
+    });
+
+    return workspace;
+  });
+
+  return {
+    id: created.id,
+    name: created.name,
+    slug: created.slug,
+    role: "owner" as const,
+    clerkOrganizationId: created.clerkOrganizationId,
+  };
+}
+
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
   const [{ userId, orgId }, user] = await Promise.all([auth(), currentUser()]);
-  if (!userId || !user) redirect('/sign-in' as Route);
 
-  const available = await listAccessibleWorkspaces(userId);
+  if (!userId || !user) {
+    redirect("/sign-in");
+  }
+
+  let available = await listAccessibleWorkspaces(userId);
 
   if (!available.length) {
-    if (process.env.NODE_ENV !== 'development') {
-      redirect('/' as Route);
-    }
-
-    const name =
-      [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
-      user.username ||
-      user.primaryEmailAddress?.emailAddress ||
-      'Local user';
-
-    return {
+    const createdWorkspace = await createStarterWorkspaceForUser({
       userId,
-      workspaceId: LOCAL_SETUP_WORKSPACE_ID,
-      workspaceName: 'Set up your workspace',
-      workspaceSlug: 'setup',
-      role: 'owner',
-      availableWorkspaces: [
-        {
-          id: LOCAL_SETUP_WORKSPACE_ID,
-          name: `${name} workspace`,
-          slug: 'setup',
-          role: 'owner',
-        },
-      ],
-    };
+      orgId: orgId ?? null,
+      user,
+    });
+
+    available = [createdWorkspace];
   }
 
   const cookieStore = await cookies();
   const requestedWorkspaceId = cookieStore.get(WORKSPACE_COOKIE)?.value;
 
-  const matchingOrg = orgId ? available.find((item) => item.clerkOrganizationId === orgId) : undefined;
+  const matchingOrg = orgId
+    ? available.find((item) => item.clerkOrganizationId === orgId)
+    : undefined;
+
   const selected =
     available.find((item) => item.id === requestedWorkspaceId) ??
     matchingOrg ??
@@ -83,19 +146,25 @@ export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
     workspaceName: selected.name,
     workspaceSlug: selected.slug,
     role: selected.role,
-    availableWorkspaces: available.map((item) => ({ id: item.id, name: item.name, slug: item.slug, role: item.role })),
+    availableWorkspaces: available.map((item) => ({
+      id: item.id,
+      name: item.name,
+      slug: item.slug,
+      role: item.role,
+    })),
   };
 }
 
 export async function assertWorkspaceAccess(userId: string, workspaceId: string) {
-  if (workspaceId === LOCAL_SETUP_WORKSPACE_ID && process.env.NODE_ENV === 'development') {
-    return true;
-  }
-
   const rows = await db
     .select({ id: workspaceMemberships.id })
     .from(workspaceMemberships)
-    .where(and(eq(workspaceMemberships.clerkUserId, userId), eq(workspaceMemberships.workspaceId, workspaceId)))
+    .where(
+      and(
+        eq(workspaceMemberships.clerkUserId, userId),
+        eq(workspaceMemberships.workspaceId, workspaceId)
+      )
+    )
     .limit(1);
 
   return Boolean(rows[0]?.id);
