@@ -13,7 +13,6 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/repurly
       NEXT_PUBLIC_APP_URL: https://app.repurly.test
       CLERK_SECRET_KEY: sk_test_placeholder
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_placeholder
