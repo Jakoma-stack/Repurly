@@ -30,7 +30,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
         <CardHeader>
           <h2 className="text-xl font-semibold">Multi-brand workspace setup</h2>
           <p className="text-sm text-muted-foreground">
-            One workspace can hold multiple brands or clients, each with its own tone, CTA, and LinkedIn context. The dashboard, queue, notifications, and reliability views stay shared at workspace level so operators can manage everything from one place.
+            One workspace can hold multiple brands or clients, each with its own tone, CTA, and LinkedIn context. The dashboard, queue, notifications, and reliability views stay shared at workspace level so operators can manage everything from one place. If a brand needs a completely separate LinkedIn login or permissions boundary, use a separate workspace instead of assuming brand records isolate channel access.
           </p>
         </CardHeader>
       </Card>
@@ -106,6 +106,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
                   <input name="linkedinCompanyUrl" defaultValue={editingBrand?.linkedinCompanyUrl ?? ''} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground">Brand records shape planning, copy, and reporting. They do not create separate LinkedIn containers or isolated auth on their own.</p>
               <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Save brand</button>
             </form>
           </CardContent>

@@ -19,6 +19,8 @@ type SavedCampaign = {
   commercialGoal: string;
   postFormat: string;
   count: number;
+  cadence: string;
+  preferredTimeOfDay: string;
   savedAt: string;
 };
 
@@ -95,6 +97,8 @@ async function persistSavedCampaign(formData: FormData) {
     commercialGoal: requiredString(formData, 'commercialGoal'),
     postFormat: requiredString(formData, 'postFormat') || 'text',
     count: parseCount(formData),
+    cadence: requiredString(formData, 'cadence') || 'weekly',
+    preferredTimeOfDay: requiredString(formData, 'preferredTimeOfDay') || 'morning',
     savedAt: new Date().toISOString(),
   };
 
@@ -219,6 +223,8 @@ function buildGeneratedDraftRows(args: {
   authorId: string;
   postFormat: string;
   brief: string;
+  cadence: string;
+  preferredTimeOfDay: string;
   drafts: ContentDraft[];
 }) {
   return args.drafts.map((draft, index) => ({
@@ -232,6 +238,8 @@ function buildGeneratedDraftRows(args: {
     metadata: {
       source: 'ai-generated',
       brief: args.brief,
+      cadence: args.cadence,
+      preferredTimeOfDay: args.preferredTimeOfDay,
       titleHint: draft.titleHint,
       callToAction: draft.callToAction,
       hashtags: draft.hashtags,
@@ -347,6 +355,8 @@ export async function generateAiDrafts(formData: FormData) {
   const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
   const postFormat = requiredString(formData, 'postFormat');
+  const cadence = requiredString(formData, 'cadence') || 'weekly';
+  const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
 
   if (!workspaceId || !authorId || !brandId || !brief) {
     redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
@@ -374,6 +384,8 @@ export async function generateAiDrafts(formData: FormData) {
     count,
     commercialGoal,
     postFormat,
+    cadence,
+    preferredTimeOfDay,
   };
 
   let drafts: ContentDraft[];
@@ -391,27 +403,29 @@ export async function generateAiDrafts(formData: FormData) {
       authorId,
       postFormat,
       brief,
+      cadence,
+      preferredTimeOfDay,
       drafts: draftBatch,
     })).returning({ id: posts.id });
   };
 
+  let inserted: Array<{ id: string }>;
+
   try {
-    const inserted = await tryInsert(drafts);
-    await refreshWorkflowPages();
-    const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
-    redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
+    inserted = await tryInsert(drafts);
   } catch (error) {
     console.error('generateAiDrafts: initial draft save failed, retrying with fallback drafts', error);
 
     try {
       const fallbackDrafts = buildFallbackContentDrafts(generationArgs);
-      const inserted = await tryInsert(fallbackDrafts);
-      await refreshWorkflowPages();
-      const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
-      redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
+      inserted = await tryInsert(fallbackDrafts);
     } catch (fallbackError) {
       console.error('generateAiDrafts: fallback draft save failed', fallbackError);
       redirect(buildContentPath({ error: 'generate-failed-save' }, 'campaign-planner') as Route);
     }
   }
+
+  await refreshWorkflowPages();
+  const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
+  redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
 }

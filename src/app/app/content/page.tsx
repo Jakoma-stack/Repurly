@@ -22,6 +22,8 @@ type SavedCampaign = {
   commercialGoal: string;
   postFormat: string;
   count: number;
+  cadence: string;
+  preferredTimeOfDay: string;
   savedAt: string;
 };
 
@@ -43,9 +45,20 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
   if (!rawValue) return null;
 
   try {
-    const parsed = JSON.parse(Buffer.from(rawValue, 'base64url').toString('utf8')) as SavedCampaign;
+    const parsed = JSON.parse(Buffer.from(rawValue, 'base64url').toString('utf8')) as Partial<SavedCampaign>;
     if (parsed.workspaceId !== workspaceId) return null;
-    return parsed;
+
+    return {
+      workspaceId: parsed.workspaceId ?? workspaceId,
+      brandId: parsed.brandId ?? '',
+      brief: parsed.brief ?? '',
+      commercialGoal: parsed.commercialGoal ?? '',
+      postFormat: parsed.postFormat ?? 'text',
+      count: Number(parsed.count ?? 3),
+      cadence: parsed.cadence ?? 'weekly',
+      preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
+      savedAt: parsed.savedAt ?? new Date(0).toISOString(),
+    };
   } catch {
     return null;
   }
@@ -72,7 +85,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Post added to the queue',
-      body: 'Repurly saved the schedule and target selection. The queue will publish it when the background worker picks it up.',
+      body: 'Repurly saved the schedule and target selection. If it stays queued, check that your background publish worker is hitting /api/inngest on schedule.',
     };
   }
 
@@ -227,6 +240,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
   const plannerFormat = savedCampaign?.postFormat ?? 'text';
+  const plannerCadence = savedCampaign?.cadence ?? 'weekly';
+  const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
@@ -279,12 +294,35 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                   </select>
                 </div>
               </div>
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Posting frequency</label>
+                  <select name="cadence" defaultValue={plannerCadence} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="daily">Daily</option>
+                    <option value="weekdays">Weekdays</option>
+                    <option value="twice-weekly">Twice weekly</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="ad-hoc">Ad hoc</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Preferred time of day</label>
+                  <select name="preferredTimeOfDay" defaultValue={plannerPreferredTime} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="early-morning">Early morning</option>
+                    <option value="morning">Morning</option>
+                    <option value="midday">Midday</option>
+                    <option value="afternoon">Afternoon</option>
+                    <option value="evening">Evening</option>
+                    <option value="varied">Varied</option>
+                  </select>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-3">
                 <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Generate AI drafts</button>
                 <button formAction={saveCampaign} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Save campaign for later</button>
                 <button formAction={clearSavedCampaign} formNoValidate className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Clear saved campaign</button>
               </div>
-              <p className="text-xs text-muted-foreground">This creates drafts only. It does not auto-schedule or auto-publish.</p>
+              <p className="text-xs text-muted-foreground">Cadence and time-of-day shape the draft planning only. Repurly still requires you to confirm each final schedule manually.</p>
             </div>
           </form>
         </CardContent>
@@ -366,6 +404,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
               <div>
                 <label className="text-sm font-medium text-slate-900">Brief or angle (optional)</label>
                 <textarea name="brief" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.brief ?? ''} />
+                <p className="mt-2 text-xs text-muted-foreground">This is internal working context for the drafter or approver. It is not published as part of the final post.</p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -377,6 +416,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <div>
                   <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
                   <input name="scheduledFor" type="datetime-local" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.scheduledForInput ?? ''} />
+                  <p className="mt-2 text-xs text-muted-foreground">Queued posts only publish automatically when the background worker is live and reaching /api/inngest on schedule.</p>
                 </div>
               </div>
 

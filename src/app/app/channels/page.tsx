@@ -183,8 +183,8 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
           <div className="rounded-2xl border border-border p-4">1. Connect LinkedIn first and make that the live launch channel for this workspace.</div>
           <div className="rounded-2xl border border-border p-4">2. Confirm the correct profile or company page is present as the workspace default target.</div>
-          <div className="rounded-2xl border border-border p-4">3. Only after LinkedIn is clean end to end should the workflow move into drafting, approval, and scheduling.</div>
-          <div className="rounded-2xl border border-border p-4">4. Keep secondary channels out of the launch path until the core workflow is stable.</div>
+          <div className="rounded-2xl border border-border p-4">3. If a second brand needs a completely different LinkedIn login or permissions boundary, create a separate workspace instead of overloading one shared container.</div>
+          <div className="rounded-2xl border border-border p-4">4. Only after LinkedIn is clean end to end should the workflow move into drafting, approval, and scheduling.</div>
         </CardContent>
       </Card>
 
@@ -194,8 +194,8 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
           <div className="rounded-2xl border border-border p-4">Brands live inside the same workspace, so drafting and reporting can stay in one shared operating view.</div>
-          <div className="rounded-2xl border border-border p-4">Connected channels are workspace-level today. Pick the correct LinkedIn destination per post, and confirm the workspace default carefully.</div>
-          <div className="rounded-2xl border border-border p-4">If a client or business line needs separate permissions, billing, or publishing isolation, use a separate workspace rather than overloading one shared container.</div>
+          <div className="rounded-2xl border border-border p-4">Connected channels are workspace-level today. Pick the correct LinkedIn destination per post, and confirm the workspace default carefully before switching brands.</div>
+          <div className="rounded-2xl border border-border p-4">Repurly is safest when one workspace maps to one LinkedIn permission boundary. If brand two needs a different LinkedIn login, create a separate workspace rather than reconnecting over the top of brand one.</div>
         </CardContent>
       </Card>
 

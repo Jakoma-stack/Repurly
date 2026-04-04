@@ -16,6 +16,8 @@ export type GenerateContentDraftsArgs = {
   brief: string;
   postFormat?: string | null;
   commercialGoal?: string | null;
+  cadence?: string | null;
+  preferredTimeOfDay?: string | null;
   count?: number;
 };
 
@@ -73,6 +75,15 @@ function fallbackTitle(args: GenerateContentDraftsArgs, index: number) {
   return trimTo(`${args.brandName} LinkedIn draft ${index + 1}`, TITLE_MAX_LENGTH);
 }
 
+function stripMetaLines(body: string) {
+  return body
+    .split('\n')
+    .filter((line) => !/^(tone|audience|title hint|format)\s*:/i.test(line.trim()))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: GenerateContentDraftsArgs, index: number): ContentDraft {
   const hashtags = unique([
     ...parseHashtags(args.hashtags),
@@ -96,7 +107,7 @@ function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: G
 
   const rawBody = draft?.body?.trim();
   const body = trimTo(
-    rawBody || [
+    stripMetaLines(rawBody || [
       'Most teams do not need more posts. They need a cleaner way to brief, approve, and publish the right post without delay.',
       '',
       summarizeBrief(args.brief),
@@ -104,7 +115,7 @@ function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: G
       callToAction,
       '',
       hashtags.map((tag) => `#${tag}`).join(' '),
-    ].filter(Boolean).join('\n'),
+    ].filter(Boolean).join('\n')),
     BODY_MAX_LENGTH,
   );
 
@@ -142,10 +153,11 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
   const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const hashtags = parseHashtags(args.hashtags);
   const cta = args.primaryCta?.trim() || 'Book a demo.';
-  const tone = args.brandTone?.trim() || 'clear, sharp, commercially realistic';
   const audience = args.audience?.trim() || 'B2B marketing and operations teams';
   const goal = args.commercialGoal?.trim() || 'start more qualified buyer conversations';
   const format = args.postFormat?.trim() || 'text';
+  const cadence = args.cadence?.trim() || 'weekly';
+  const preferredTimeOfDay = args.preferredTimeOfDay?.trim() || 'morning';
   const briefSummary = summarizeBrief(args.brief);
 
   const patterns = [
@@ -180,7 +192,7 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
     const finalHashtags = unique(['linkedin', 'b2bmarketing', ...hashtags]).slice(0, HASHTAG_LIMIT);
     return normalizeDraft({
       title: pattern.title,
-      titleHint: `${goal} (${format})`,
+      titleHint: `${goal} · ${cadence} · ${preferredTimeOfDay} (${format})`,
       callToAction: cta,
       hashtags: finalHashtags,
       body: [
@@ -190,7 +202,6 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
         '',
         pattern.closer,
         '',
-        `Tone: ${tone}.`,
         cta,
         '',
         finalHashtags.map((tag) => `#${tag}`).join(' '),
@@ -213,6 +224,7 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
     'Do not paste the brief verbatim into the post body.',
+    'Never include internal labels like Tone:, Audience:, Format:, or Title Hint: inside the post body.',
     'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
     `Brand: ${args.brandName}`,
     `Tone: ${args.brandTone ?? 'clear, sharp, commercially realistic'}`,
@@ -222,6 +234,8 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     `Hashtags: ${(args.hashtags ?? []).join(', ')}`,
     `Commercial goal: ${args.commercialGoal ?? ''}`,
     `Preferred format: ${args.postFormat ?? 'text'}`,
+    `Planning cadence: ${args.cadence ?? 'weekly'}`,
+    `Preferred time of day: ${args.preferredTimeOfDay ?? 'morning'}`,
     `Brief: ${args.brief}`,
     `Draft count: ${count}`,
   ].join('\n');
@@ -272,8 +286,8 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     const outputText = readOutputText(payload);
     if (!outputText) return null;
 
-    const parsed = JSON.parse(outputText) as { drafts?: Partial<ContentDraft>[] };
-    if (!Array.isArray(parsed.drafts) || !parsed.drafts.length) return null;
+    const parsed = JSON.parse(outputText) as { drafts?: Array<Partial<ContentDraft>> };
+    if (!parsed.drafts?.length) return null;
 
     return parsed.drafts.slice(0, count).map((draft, index) => normalizeDraft(draft, args, index));
   } catch {
