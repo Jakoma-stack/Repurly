@@ -1,74 +1,75 @@
-<<<<<<< HEAD
 import { NextRequest, NextResponse } from 'next/server';
-
+import { plans, stripe } from '@/lib/billing/stripe';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
-import { plans, stripe } from '@/lib/billing/stripe';
 
-export const runtime = 'nodejs';
-
-const BILLING_ROLES = new Set(['owner', 'admin']);
-type SelfServePlanKey = 'core' | 'growth';
+type PlanKey = keyof typeof plans;
 
 type CheckoutSessionResult =
   | { error: 'checkout-unavailable'; url: null }
   | { error: 'forbidden'; url: null }
+  | { error: 'invalid-plan'; url: null }
   | { error: null; url: string };
 
-function normalizePlan(input: unknown): SelfServePlanKey {
-  return input === 'growth' ? 'growth' : 'core';
+function isSelfServePlan(plan: string): plan is Extract<PlanKey, 'core' | 'growth'> {
+  return plan === 'core' || plan === 'growth';
 }
 
-function getBaseUrl(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-}
-
-async function createCheckoutSession(request: NextRequest, plan: SelfServePlanKey): Promise<CheckoutSessionResult> {
-  const workspaceSession = await requireWorkspaceSession();
-
-  if (!BILLING_ROLES.has(workspaceSession.role)) {
-    return { error: 'forbidden', url: null };
+function normalizePlan(input: unknown): Extract<PlanKey, 'core' | 'growth'> {
+  if (typeof input === 'string' && isSelfServePlan(input)) {
+    return input;
   }
+  return 'core';
+}
 
-  const price = plans[plan];
-  if (!price || !process.env.STRIPE_SECRET_KEY) {
+async function createCheckoutSession(
+  request: NextRequest,
+  plan: Extract<PlanKey, 'core' | 'growth'>,
+): Promise<CheckoutSessionResult> {
+  if (!process.env.STRIPE_SECRET_KEY) {
     return { error: 'checkout-unavailable', url: null };
   }
 
-  try {
-    const customerId = await getOrCreateStripeCustomer(workspaceSession.workspaceId);
-    const baseUrl = getBaseUrl(request);
+  const price = plans[plan];
+  if (!price) {
+    return { error: 'checkout-unavailable', url: null };
+  }
 
-    const checkoutSession = await stripe.checkout.sessions.create({
+  const session = await requireWorkspaceSession();
+
+  if (!['owner', 'admin'].includes(session.role)) {
+    return { error: 'forbidden', url: null };
+  }
+
+  try {
+    const customerId = await getOrCreateStripeCustomer(session.workspaceId);
+
+    const origin = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
+
+    const checkout = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
-<<<<<<< HEAD
- 	allow_promotion_codes: true,
-=======
-       allow_promotion_codes: true,
->>>>>>> 3f419162b363aff82a1b1403e43c4118cbb13eb1
-      success_url: `${baseUrl}/app/billing?checkout=success`,
-      cancel_url: `${baseUrl}/app/billing?checkout=cancelled&plan=${plan}`,
+      allow_promotion_codes: true,
+      success_url: `${origin}/app/billing?checkout=success`,
+      cancel_url: `${origin}/app/billing?checkout=cancelled`,
       metadata: {
-        workspaceId: workspaceSession.workspaceId,
-        workspaceSlug: workspaceSession.workspaceSlug,
+        workspaceId: session.workspaceId,
         plan,
       },
       subscription_data: {
         metadata: {
-          workspaceId: workspaceSession.workspaceId,
-          workspaceSlug: workspaceSession.workspaceSlug,
+          workspaceId: session.workspaceId,
           plan,
         },
       },
     });
 
-    if (!checkoutSession.url) {
+    if (!checkout.url) {
       return { error: 'checkout-unavailable', url: null };
     }
 
-    return { error: null, url: checkoutSession.url };
+    return { error: null, url: checkout.url };
   } catch {
     return { error: 'checkout-unavailable', url: null };
   }
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (result.error || !result.url) {
-    return NextResponse.redirect(new URL(`/app/billing?billing=checkout-unavailable&plan=${plan}`, request.url));
+    return NextResponse.redirect(new URL('/app/billing?billing=checkout-unavailable', request.url));
   }
 
   return NextResponse.redirect(result.url);
@@ -104,110 +105,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ url: result.url });
 }
-=======
-import { NextRequest, NextResponse } from 'next/server';
-
-import { requireWorkspaceSession } from '@/lib/auth/workspace';
-import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
-import { plans, stripe } from '@/lib/billing/stripe';
-
-export const runtime = 'nodejs';
-
-const BILLING_ROLES = new Set(['owner', 'admin']);
-type SelfServePlanKey = 'core' | 'growth';
-
-type CheckoutSessionResult =
-  | { error: 'checkout-unavailable'; url: null }
-  | { error: 'forbidden'; url: null }
-  | { error: null; url: string };
-
-function normalizePlan(input: unknown): SelfServePlanKey {
-  return input === 'growth' ? 'growth' : 'core';
-}
-
-function getBaseUrl(request: NextRequest) {
-  return process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-}
-
-async function createCheckoutSession(request: NextRequest, plan: SelfServePlanKey): Promise<CheckoutSessionResult> {
-  const workspaceSession = await requireWorkspaceSession();
-
-  if (!BILLING_ROLES.has(workspaceSession.role)) {
-    return { error: 'forbidden', url: null };
-  }
-
-  const price = plans[plan];
-  if (!price || !process.env.STRIPE_SECRET_KEY) {
-    return { error: 'checkout-unavailable', url: null };
-  }
-
-  try {
-    const customerId = await getOrCreateStripeCustomer(workspaceSession.workspaceId);
-    const baseUrl = getBaseUrl(request);
-
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      customer: customerId,
-      line_items: [{ price, quantity: 1 }],
-<<<<<<< HEAD
- 	allow_promotion_codes: true,
-=======
-       allow_promotion_codes: true,
->>>>>>> 3f419162b363aff82a1b1403e43c4118cbb13eb1
-      success_url: `${baseUrl}/app/billing?checkout=success`,
-      cancel_url: `${baseUrl}/app/billing?checkout=cancelled&plan=${plan}`,
-      metadata: {
-        workspaceId: workspaceSession.workspaceId,
-        workspaceSlug: workspaceSession.workspaceSlug,
-        plan,
-      },
-      subscription_data: {
-        metadata: {
-          workspaceId: workspaceSession.workspaceId,
-          workspaceSlug: workspaceSession.workspaceSlug,
-          plan,
-        },
-      },
-    });
-
-    if (!checkoutSession.url) {
-      return { error: 'checkout-unavailable', url: null };
-    }
-
-    return { error: null, url: checkoutSession.url };
-  } catch {
-    return { error: 'checkout-unavailable', url: null };
-  }
-}
-
-export async function GET(request: NextRequest) {
-  const plan = normalizePlan(request.nextUrl.searchParams.get('plan'));
-  const result = await createCheckoutSession(request, plan);
-
-  if (result.error === 'forbidden') {
-    return NextResponse.redirect(new URL('/app/billing?billing=forbidden', request.url));
-  }
-
-  if (result.error || !result.url) {
-    return NextResponse.redirect(new URL(`/app/billing?billing=checkout-unavailable&plan=${plan}`, request.url));
-  }
-
-  return NextResponse.redirect(result.url);
-}
-
-export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as { plan?: string };
-  const plan = normalizePlan(body.plan);
-  const result = await createCheckoutSession(request, plan);
-
-  if (result.error === 'forbidden') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  if (result.error || !result.url) {
-    return NextResponse.json({ error: 'Checkout unavailable' }, { status: 400 });
-  }
-
-  return NextResponse.json({ url: result.url });
-}
->>>>>>> fc3ccfcb63335f357e77e6709186593827d788dd
