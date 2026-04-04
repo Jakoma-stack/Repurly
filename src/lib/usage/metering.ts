@@ -88,18 +88,31 @@ export async function getReconnectNudges(workspaceId?: string) {
     .where(eq(integrations.workspaceId, workspaceId));
 
   const now = Date.now();
+  const warningWindowMs = 1000 * 60 * 60 * 24 * 14;
+
   return rows
-    .filter((row) => row.status !== 'connected' || !row.expiresAt || row.expiresAt.getTime() - now < 1000 * 60 * 60 * 24 * 14)
+    .filter((row) => {
+      if (row.status !== 'connected') return true;
+      if (!row.expiresAt) return false;
+      return row.expiresAt.getTime() - now < warningWindowMs;
+    })
     .map((row) => {
       const provider = row.provider as PlatformKey;
-      const isExpired = !row.expiresAt || row.expiresAt.getTime() <= now;
+      const isStatusIssue = row.status !== 'connected';
+      const isExpired = Boolean(row.expiresAt && row.expiresAt.getTime() <= now);
+      const severity = isStatusIssue || isExpired ? ('critical' as const) : ('warning' as const);
+      const label = `${provider[0].toUpperCase()}${provider.slice(1)} ${severity === 'critical' ? 'reconnect required' : 'reconnect due soon'}`;
+      const description = isStatusIssue
+        ? `Repurly marked ${provider} as disconnected for this workspace. Reconnect now before queued posts miss their publish window.`
+        : isExpired
+          ? `Repurly can see that ${provider} authorization expired. Reconnect now to resume publishing.`
+          : `${provider} authorization expires on ${row.expiresAt?.toLocaleDateString()}. Reconnect early to avoid missed scheduled posts.`;
+
       return {
         provider,
-        label: `${provider[0].toUpperCase()}${provider.slice(1)} ${isExpired ? 'reconnect required' : 'reconnect due soon'}`,
-        severity: isExpired || row.status !== 'connected' ? ('critical' as const) : ('warning' as const),
-        description: isExpired
-          ? `Repurly no longer has a valid ${provider} refresh window. Reconnect now to resume publishing.`
-          : `${provider} authorization expires on ${row.expiresAt?.toLocaleDateString()}. Reconnect early to avoid missed scheduled posts.`,
+        label,
+        severity,
+        description,
         actionLabel: `Reconnect ${provider[0].toUpperCase()}${provider.slice(1)}`,
         href: buildReconnectHref(provider, workspaceId),
       };

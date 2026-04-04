@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getPublishingQueue } from '@/server/queries/workflow';
@@ -16,7 +14,10 @@ export default async function CalendarPage() {
           <p className="mt-2 text-sm text-muted-foreground">The launch view focuses on what is waiting for approval, what is scheduled next, and what might need operator attention.</p>
         </CardHeader>
         <CardContent className="space-y-4">
-          {queue.map((item) => {
+          <div className="rounded-2xl border border-border bg-slate-50 p-4 text-sm text-slate-600">
+            Scheduling places the post into Repurly&apos;s publish queue. Automatic posting depends on the background publish worker reaching <span className="font-medium text-slate-900">/api/inngest</span> on a live schedule. If items remain queued, check your worker or cron setup first.
+          </div>
+          {queue.length ? queue.map((item) => {
             const content = (
               <div className="flex flex-col gap-3 rounded-2xl border border-border p-4 transition hover:border-primary/40 hover:bg-slate-50 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -35,7 +36,9 @@ export default async function CalendarPage() {
             ) : (
               <div key={item.id}>{content}</div>
             );
-          })}
+          }) : (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-sm text-muted-foreground">Nothing is scheduled yet. Once a post is queued, it will show up here with its target and current status.</div>
+          )}
         </CardContent>
       </Card>
     </div>

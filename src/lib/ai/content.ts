@@ -19,6 +19,12 @@ export type GenerateContentDraftsArgs = {
   count?: number;
 };
 
+const TITLE_MAX_LENGTH = 150;
+const BODY_MAX_LENGTH = 5000;
+const TITLE_HINT_MAX_LENGTH = 120;
+const CTA_MAX_LENGTH = 140;
+const HASHTAG_LIMIT = 5;
+
 function unique(items: string[]) {
   return Array.from(new Set(items.filter(Boolean)));
 }
@@ -29,6 +35,12 @@ function parseHashtags(input?: string[] | null) {
 
 function cleanSentence(value: string) {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function trimTo(value: string, maxLength: number) {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength - 3).trim()}...`;
 }
 
 function summarizeBrief(brief: string) {
@@ -55,6 +67,75 @@ function summarizeBrief(brief: string) {
   }
 
   return summary.length > 220 ? `${summary.slice(0, 217).trim()}...` : summary;
+}
+
+function fallbackTitle(args: GenerateContentDraftsArgs, index: number) {
+  return trimTo(`${args.brandName} LinkedIn draft ${index + 1}`, TITLE_MAX_LENGTH);
+}
+
+function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: GenerateContentDraftsArgs, index: number): ContentDraft {
+  const hashtags = unique([
+    ...parseHashtags(args.hashtags),
+    ...((draft?.hashtags ?? []).map((tag) => String(tag ?? '').replace(/^#/, '').trim()).filter(Boolean)),
+  ]).slice(0, HASHTAG_LIMIT);
+
+  const callToAction = trimTo(
+    draft?.callToAction?.trim() || args.primaryCta?.trim() || 'Book a demo.',
+    CTA_MAX_LENGTH,
+  );
+
+  const title = trimTo(
+    draft?.title?.trim() || fallbackTitle(args, index),
+    TITLE_MAX_LENGTH,
+  );
+
+  const titleHint = trimTo(
+    draft?.titleHint?.trim() || `${(args.commercialGoal || 'Drive qualified action').trim()} (${(args.postFormat || 'text').trim()})`,
+    TITLE_HINT_MAX_LENGTH,
+  );
+
+  const rawBody = draft?.body?.trim();
+  const body = trimTo(
+    rawBody || [
+      'Most teams do not need more posts. They need a cleaner way to brief, approve, and publish the right post without delay.',
+      '',
+      summarizeBrief(args.brief),
+      '',
+      callToAction,
+      '',
+      hashtags.map((tag) => `#${tag}`).join(' '),
+    ].filter(Boolean).join('\n'),
+    BODY_MAX_LENGTH,
+  );
+
+  return {
+    title,
+    body,
+    hashtags,
+    titleHint,
+    callToAction,
+  };
+}
+
+function readOutputText(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const direct = (payload as { output_text?: unknown }).output_text;
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct;
+  }
+
+  const output = (payload as { output?: Array<{ content?: Array<{ text?: string; type?: string }> }> }).output;
+  if (!Array.isArray(output)) return null;
+
+  const text = output
+    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+    .filter((item) => item?.type === 'output_text' || typeof item?.text === 'string')
+    .map((item) => item.text?.trim() ?? '')
+    .filter(Boolean)
+    .join('');
+
+  return text || null;
 }
 
 function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
@@ -96,8 +177,8 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
 
   return Array.from({ length: count }, (_, index) => {
     const pattern = patterns[index % patterns.length];
-    const finalHashtags = unique(['linkedin', 'b2bmarketing', ...hashtags]).slice(0, 5);
-    return {
+    const finalHashtags = unique(['linkedin', 'b2bmarketing', ...hashtags]).slice(0, HASHTAG_LIMIT);
+    return normalizeDraft({
       title: pattern.title,
       titleHint: `${goal} (${format})`,
       callToAction: cta,
@@ -114,8 +195,12 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
         '',
         finalHashtags.map((tag) => `#${tag}`).join(' '),
       ].join('\n'),
-    };
+    }, args, index);
   });
+}
+
+export function buildFallbackContentDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
+  return buildFallbackDrafts(args);
 }
 
 async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<ContentDraft[] | null> {
@@ -124,7 +209,7 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
 
   const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const prompt = [
-    'You are writing LinkedIn-first B2B posts for Repurly.',
+    `You are writing LinkedIn-first B2B posts for ${args.brandName}.`,
     'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
     'Do not paste the brief verbatim into the post body.',
@@ -183,11 +268,14 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     });
 
     if (!response.ok) return null;
-    const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
-    const parsed = JSON.parse(payload.output_text) as { drafts?: ContentDraft[] };
-    if (!parsed.drafts?.length) return null;
-    return parsed.drafts.slice(0, count);
+    const payload = await response.json();
+    const outputText = readOutputText(payload);
+    if (!outputText) return null;
+
+    const parsed = JSON.parse(outputText) as { drafts?: Partial<ContentDraft>[] };
+    if (!Array.isArray(parsed.drafts) || !parsed.drafts.length) return null;
+
+    return parsed.drafts.slice(0, count).map((draft, index) => normalizeDraft(draft, args, index));
   } catch {
     return null;
   }

@@ -190,6 +190,17 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
 
       <Card>
         <CardHeader>
+          <h3 className="text-lg font-semibold">How multi-brand setup works</h3>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
+          <div className="rounded-2xl border border-border p-4">Brands live inside the same workspace, so drafting and reporting can stay in one shared operating view.</div>
+          <div className="rounded-2xl border border-border p-4">Connected channels are workspace-level today. Pick the correct LinkedIn destination per post, and confirm the workspace default carefully.</div>
+          <div className="rounded-2xl border border-border p-4">If a client or business line needs separate permissions, billing, or publishing isolation, use a separate workspace rather than overloading one shared container.</div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <h3 className="text-lg font-semibold">Primary channel</h3>
         </CardHeader>
         <CardContent>

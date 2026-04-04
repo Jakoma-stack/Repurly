@@ -25,6 +25,14 @@ type SavedCampaign = {
   savedAt: string;
 };
 
+type NoticeKind = 'success' | 'error' | 'info';
+
+type WorkflowNotice = {
+  kind: NoticeKind;
+  title: string;
+  body: string;
+};
+
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
 
 function firstParam(value: string | string[] | undefined) {
@@ -43,15 +51,144 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
   }
 }
 
-function Banner({ kind, children }: { kind: 'success' | 'error' | 'info'; children: React.ReactNode }) {
+function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
+  if (ok === 'draft') {
+    return {
+      kind: 'success',
+      title: 'Draft saved',
+      body: 'You are still anchored on publish destination so you can keep moving into approval or scheduling.',
+    };
+  }
+
+  if (ok === 'approval') {
+    return {
+      kind: 'success',
+      title: 'Approval request created',
+      body: 'Destination selection stayed in view so you can confirm the right LinkedIn profile or company page.',
+    };
+  }
+
+  if (ok === 'scheduled') {
+    return {
+      kind: 'success',
+      title: 'Post added to the queue',
+      body: 'Repurly saved the schedule and target selection. The queue will publish it when the background worker picks it up.',
+    };
+  }
+
+  if (ok === 'generated') {
+    return {
+      kind: 'success',
+      title: 'Draft batch created',
+      body: 'Review the generated ideas below, then open the strongest one in the composer.',
+    };
+  }
+
+  if (ok === 'campaign-saved') {
+    return {
+      kind: 'success',
+      title: 'Campaign saved',
+      body: 'These planner defaults are now stored for this workspace in this browser.',
+    };
+  }
+
+  if (ok === 'campaign-cleared') {
+    return {
+      kind: 'success',
+      title: 'Saved campaign cleared',
+      body: 'Your planner defaults were removed for this workspace in this browser.',
+    };
+  }
+
+  if (ok === 'drafts-cleared') {
+    return {
+      kind: 'success',
+      title: 'Recent drafts cleared',
+      body: 'Only draft posts for the selected brand were removed. Scheduled and in-review items were left alone.',
+    };
+  }
+
+  if (ok === 'no-drafts') {
+    return {
+      kind: 'info',
+      title: 'No draft backlog to clear',
+      body: 'There were no other draft posts for the selected brand.',
+    };
+  }
+
+  if (error === 'missing-brand') {
+    return {
+      kind: 'error',
+      title: 'No active brand found',
+      body: 'Create or reactivate a brand before drafting or generating content.',
+    };
+  }
+
+  if (error === 'missing-target') {
+    return {
+      kind: 'error',
+      title: 'Choose a LinkedIn destination first',
+      body: 'Connect LinkedIn and pick a personal profile or company page before requesting approval or scheduling.',
+    };
+  }
+
+  if (error === 'missing-schedule') {
+    return {
+      kind: 'error',
+      title: 'Choose a publish time',
+      body: 'Pick a scheduled publish time before sending the post into the queue.',
+    };
+  }
+
+  if (error === 'generate-failed-save') {
+    return {
+      kind: 'error',
+      title: 'Draft generation could not be saved',
+      body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check your database connection and brand setup.',
+    };
+  }
+
+  if (error === 'generate-failed') {
+    return {
+      kind: 'error',
+      title: 'Draft generation failed',
+      body: 'Repurly kept your campaign brief locally so you can retry immediately.',
+    };
+  }
+
+  if (error === 'invalid') {
+    return {
+      kind: 'error',
+      title: 'Something is missing',
+      body: 'Check the required fields and try again.',
+    };
+  }
+
+  return null;
+}
+
+function FloatingNotice({ kind, title, body }: WorkflowNotice) {
   const styles =
     kind === 'success'
-      ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
       : kind === 'info'
-        ? 'border-sky-200 bg-sky-50 text-sky-900'
-        : 'border-rose-200 bg-rose-50 text-rose-900';
+        ? 'border-sky-200 bg-sky-50 text-sky-950'
+        : 'border-rose-200 bg-rose-50 text-rose-950';
 
-  return <div className={`rounded-2xl border px-4 py-3 text-sm ${styles}`}>{children}</div>;
+  return (
+    <div className="pointer-events-none fixed right-6 top-6 z-50 w-full max-w-md">
+      <div className={`pointer-events-auto rounded-3xl border px-5 py-4 shadow-lg shadow-slate-900/10 ${styles}`}>
+        <div className="text-sm font-semibold">{title}</div>
+        <p className="mt-1 text-sm leading-6">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+function describeTargetType(targetType: string) {
+  if (targetType === 'member' || targetType === 'profile') return 'Personal profile';
+  if (targetType === 'organization' || targetType === 'page') return 'Company page';
+  return targetType;
 }
 
 export default async function ContentPage({ searchParams }: { searchParams: SearchParams }) {
@@ -90,22 +227,12 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
   const plannerFormat = savedCampaign?.postFormat ?? 'text';
+  const notice = getWorkflowNotice(ok, error);
+  const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
   return (
     <div className="space-y-6">
-      {ok === 'draft' && <Banner kind="success">Draft saved. You are still anchored on target selection so you can keep moving through approval and scheduling.</Banner>}
-      {ok === 'approval' && <Banner kind="success">Approval request created. Target selection stayed in view so you can confirm the LinkedIn destination.</Banner>}
-      {ok === 'scheduled' && <Banner kind="success">Post scheduled into the publish queue. Review the selected target below before leaving the workflow.</Banner>}
-      {ok === 'generated' && <Banner kind="success">AI draft batch created. Review the drafts below, then open the strongest one in the composer.</Banner>}
-      {ok === 'campaign-saved' && <Banner kind="success">Campaign defaults saved for this workspace in this browser.</Banner>}
-      {ok === 'campaign-cleared' && <Banner kind="success">Saved campaign defaults cleared.</Banner>}
-      {ok === 'drafts-cleared' && <Banner kind="success">Recent draft backlog cleared for the selected brand.</Banner>}
-      {ok === 'no-drafts' && <Banner kind="info">There were no other draft posts to clear for the selected brand.</Banner>}
-      {error === 'missing-brand' && <Banner kind="error">No active brand was found for this workspace. Create a brand first.</Banner>}
-      {error === 'missing-target' && <Banner kind="error">Connect LinkedIn and create a publish target before requesting approval or scheduling.</Banner>}
-      {error === 'missing-schedule' && <Banner kind="error">Choose a scheduled publish time before scheduling a post.</Banner>}
-      {error === 'generate-failed' && <Banner kind="error">Draft generation hit an application error before the batch could be saved. Your campaign brief is still saved locally, so you can retry immediately.</Banner>}
-      {error === 'invalid' && <Banner kind="error">Required fields were missing. Check the form and try again.</Banner>}
+      {notice ? <FloatingNotice {...notice} /> : null}
 
       <Card id="campaign-planner" className="scroll-mt-24">
         <CardHeader>
@@ -126,7 +253,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Use a separate brand record for each client or business line, then run them through the same shared dashboard and work queue.</p>
+                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Audience context is inherited from the selected brand, so you do not need a separate target-audience field for every post.</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>
@@ -193,7 +320,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
       <Card id="composer" className="scroll-mt-24">
         <CardHeader>
           <h2 className="text-xl font-semibold">LinkedIn composer</h2>
-          <p className="text-sm text-muted-foreground">Finish the core workflow: choose a brand, draft the post, select the LinkedIn target, request approval, then schedule.</p>
+          <p className="text-sm text-muted-foreground">Finish the core workflow: choose a brand, draft the post, pick the LinkedIn destination, request approval if needed, then schedule.</p>
         </CardHeader>
         <CardContent>
           <form className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
@@ -237,14 +364,15 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
               </div>
 
               <div>
-                <label className="text-sm font-medium text-slate-900">Brief or angle</label>
+                <label className="text-sm font-medium text-slate-900">Brief or angle (optional)</label>
                 <textarea name="brief" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.brief ?? ''} />
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-slate-900">Approval owner</label>
+                  <label className="text-sm font-medium text-slate-900">Approval owner (optional)</label>
                   <input name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.approvalOwner ?? 'Client lead'} />
+                  <p className="mt-2 text-xs text-muted-foreground">Skip this if you are posting directly and do not need an approval step.</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
@@ -261,18 +389,35 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
 
             <div className="space-y-4">
               <div id="target-selection" className="scroll-mt-24 rounded-3xl border border-border p-5">
-                <h3 className="text-lg font-semibold">Target selection</h3>
-                <p className="mt-1 text-sm text-muted-foreground">LinkedIn remains the primary workflow. Pick the profile or company page that should receive this post.</p>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-semibold">Publish destination</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">Repurly defaults to the workspace default target. Switch between your personal profile and company page here before saving, approving, or scheduling.</p>
+                  </div>
+                  {defaultTarget ? (
+                    <div className="rounded-2xl border border-border bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                      Default: <span className="font-medium text-slate-900">{defaultTarget.displayName}</span>
+                    </div>
+                  ) : null}
+                </div>
                 <div className="mt-4 space-y-3">
-                  {targets.length ? targets.map((target) => (
-                    <label key={target.id} className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm">
-                      <input type="radio" name="targetId" value={target.id} defaultChecked={editingPost?.targetId === target.id || (!editingPost?.targetId && target.isDefault)} className="mt-1" />
-                      <div>
-                        <div className="font-medium text-slate-900">{target.displayName}</div>
-                        <div className="text-muted-foreground">{target.handle || 'LinkedIn target'} · {target.targetType}</div>
-                      </div>
-                    </label>
-                  )) : <div className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">No LinkedIn targets connected yet. Go to Channel setup first.</div>}
+                  {targets.length ? targets.map((target) => {
+                    const typeLabel = describeTargetType(target.targetType);
+                    const isDefault = target.isDefault;
+                    return (
+                      <label key={target.id} className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm">
+                        <input type="radio" name="targetId" value={target.id} defaultChecked={editingPost?.targetId === target.id || (!editingPost?.targetId && target.isDefault)} className="mt-1" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="font-medium text-slate-900">{target.displayName}</div>
+                            <span className="rounded-full border border-border bg-slate-50 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-500">{typeLabel}</span>
+                            {isDefault ? <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-emerald-700">Workspace default</span> : null}
+                          </div>
+                          <div className="text-muted-foreground">{target.handle || 'LinkedIn target'}</div>
+                        </div>
+                      </label>
+                    );
+                  }) : <div className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">No LinkedIn targets connected yet. Go to Channels setup first.</div>}
                 </div>
               </div>
 

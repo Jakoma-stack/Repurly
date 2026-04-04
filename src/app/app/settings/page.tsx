@@ -75,8 +75,17 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
             <p className="text-sm text-muted-foreground">Control in-app and email delivery of publish outcomes and digests.</p>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Link href="/app/notifications" className="block text-sm font-medium text-primary">Open notifications center</Link>
+            <Link href="/app/notifications" className="block text-sm font-medium text-primary">Open notifications centre</Link>
             <Link href="/app/settings/notifications" className="block text-sm font-medium text-primary">Edit notification preferences</Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold">Team access</h2>
+            <p className="text-sm text-muted-foreground">Workspace memberships exist in the data model, but self-serve domain-restricted invites are not in the pilot UI yet.</p>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border p-4">For the pilot, keep team access narrow and add members manually through your identity admin flow if needed.</div>
           </CardContent>
         </Card>
       </div>

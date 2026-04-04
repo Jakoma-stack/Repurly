@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation';
 import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { generateContentDrafts } from '@/lib/ai/content';
+import { buildFallbackContentDrafts, generateContentDrafts, type ContentDraft, type GenerateContentDraftsArgs } from '@/lib/ai/content';
 import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
@@ -213,6 +213,33 @@ async function upsertQueuedPublishJob(postId: string, postTargetId: string, sche
   return inserted[0]?.id ?? null;
 }
 
+function buildGeneratedDraftRows(args: {
+  workspaceId: string;
+  brandId: string;
+  authorId: string;
+  postFormat: string;
+  brief: string;
+  drafts: ContentDraft[];
+}) {
+  return args.drafts.map((draft, index) => ({
+    workspaceId: args.workspaceId,
+    brandId: args.brandId,
+    authorId: args.authorId,
+    title: draft.title,
+    body: draft.body,
+    status: 'draft' as const,
+    postType: (args.postFormat || 'text') as 'text' | 'image' | 'multi_image' | 'video' | 'link',
+    metadata: {
+      source: 'ai-generated',
+      brief: args.brief,
+      titleHint: draft.titleHint,
+      callToAction: draft.callToAction,
+      hashtags: draft.hashtags,
+      draftNumber: index + 1,
+    },
+  }));
+}
+
 async function refreshWorkflowPages() {
   revalidatePath('/app');
   revalidatePath('/app/content');
@@ -325,6 +352,10 @@ export async function generateAiDrafts(formData: FormData) {
     redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
   }
 
+  if (!process.env.DATABASE_URL) {
+    redirect(buildContentPath({ error: 'generate-failed-save' }, 'campaign-planner') as Route);
+  }
+
   const brand = await getBrand(workspaceId, brandId);
   if (!brand) {
     redirect(buildContentPath({ error: 'missing-brand' }, 'campaign-planner') as Route);
@@ -332,45 +363,55 @@ export async function generateAiDrafts(formData: FormData) {
 
   await persistSavedCampaign(formData);
 
+  const generationArgs: GenerateContentDraftsArgs = {
+    brandName: brand.name,
+    brandTone: brand.defaultTone,
+    audience: brand.audience,
+    primaryCta: brand.primaryCta,
+    secondaryCta: brand.secondaryCta,
+    hashtags: brand.hashtags ?? [],
+    brief,
+    count,
+    commercialGoal,
+    postFormat,
+  };
+
+  let drafts: ContentDraft[];
   try {
-    const drafts = await generateContentDrafts({
-      brandName: brand.name,
-      brandTone: brand.defaultTone,
-      audience: brand.audience,
-      primaryCta: brand.primaryCta,
-      secondaryCta: brand.secondaryCta,
-      hashtags: brand.hashtags ?? [],
-      brief,
-      count,
-      commercialGoal,
+    drafts = await generateContentDrafts(generationArgs);
+  } catch (error) {
+    console.error('generateAiDrafts: content generation failed, falling back to deterministic drafts', error);
+    drafts = buildFallbackContentDrafts(generationArgs);
+  }
+
+  const tryInsert = async (draftBatch: ContentDraft[]) => {
+    return db.insert(posts).values(buildGeneratedDraftRows({
+      workspaceId,
+      brandId,
+      authorId,
       postFormat,
-    });
+      brief,
+      drafts: draftBatch,
+    })).returning({ id: posts.id });
+  };
 
-    const inserted = await db.insert(posts).values(
-      drafts.map((draft, index) => ({
-        workspaceId,
-        brandId,
-        authorId,
-        title: draft.title,
-        body: draft.body,
-        status: 'draft' as const,
-        postType: (postFormat || 'text') as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-        metadata: {
-          source: 'ai-generated',
-          brief,
-          titleHint: draft.titleHint,
-          callToAction: draft.callToAction,
-          hashtags: draft.hashtags,
-          draftNumber: index + 1,
-        },
-      })),
-    ).returning({ id: posts.id });
-
+  try {
+    const inserted = await tryInsert(drafts);
     await refreshWorkflowPages();
-
     const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
     redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
-  } catch {
-    redirect(buildContentPath({ error: 'generate-failed' }, 'campaign-planner') as Route);
+  } catch (error) {
+    console.error('generateAiDrafts: initial draft save failed, retrying with fallback drafts', error);
+
+    try {
+      const fallbackDrafts = buildFallbackContentDrafts(generationArgs);
+      const inserted = await tryInsert(fallbackDrafts);
+      await refreshWorkflowPages();
+      const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
+      redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
+    } catch (fallbackError) {
+      console.error('generateAiDrafts: fallback draft save failed', fallbackError);
+      redirect(buildContentPath({ error: 'generate-failed-save' }, 'campaign-planner') as Route);
+    }
   }
 }

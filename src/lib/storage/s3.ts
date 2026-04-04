@@ -2,14 +2,6 @@ import { S3Client } from "@aws-sdk/client-s3";
 
 let client: S3Client | null = null;
 
-function required(name: string) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`${name} is missing`);
-  }
-  return value;
-}
-
 function getRegion() {
   return process.env.S3_REGION || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION;
 }

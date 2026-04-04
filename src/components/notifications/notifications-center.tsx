@@ -12,7 +12,7 @@ export function NotificationsCenter({ items }: { items: WorkspaceNotification[] 
   return (
     <Card>
       <CardHeader>
-        <h2 className="text-xl font-semibold">Notifications center</h2>
+        <h2 className="text-xl font-semibold">Notifications centre</h2>
         <p className="text-sm text-muted-foreground">
           Workspace-aware alerts, reconnect nudges, and live provider delivery signals surface here alongside the in-app or email delivery channel that carried the update.
         </p>

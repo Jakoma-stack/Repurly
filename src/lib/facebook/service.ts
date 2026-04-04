@@ -21,7 +21,7 @@ export async function connectFacebookWorkspace(workspaceId: string, code: string
     workspaceId,
     integration.id,
     "facebook",
-    pages.data.map((page, index) => ({
+    pages.data.map((page) => ({
       provider: "facebook" as const,
       handle: page.id,
       displayName: page.name,
