@@ -38,7 +38,7 @@ export async function recordUsageEvent(input: {
 export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageSnapshot> {
   if (!workspaceId || !process.env.DATABASE_URL) {
     return {
-      plan: 'starter',
+      plan: 'core',
       membersUsed: 0,
       postsUsedThisMonth: 0,
       storageUsedGb: 0,
@@ -47,7 +47,7 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
   }
 
   const { start, end } = getPeriodBounds();
-  const [{ plan } = { plan: 'starter' as const }] = await db.select({ plan: workspaces.plan }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+  const [{ plan } = { plan: 'core' as const }] = await db.select({ plan: workspaces.plan }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
 
   const [membersRow] = await db.select({ total: count() }).from(workspaceMemberships).where(eq(workspaceMemberships.workspaceId, workspaceId));
 
@@ -64,7 +64,7 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
   const [channelsRow] = await db.select({ total: count() }).from(platformAccounts).where(eq(platformAccounts.workspaceId, workspaceId));
 
   return {
-    plan: (plan as UsageSnapshot['plan']) ?? 'starter',
+    plan: (plan as UsageSnapshot['plan']) ?? 'core',
     membersUsed: Number(membersRow?.total ?? 0),
     postsUsedThisMonth: Number(postsRow?.total ?? 0),
     storageUsedGb: Math.max(0, Math.round(Number(storageRow?.totalBytes ?? 0) / (1024 * 1024 * 1024))),

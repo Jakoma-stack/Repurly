@@ -1824,7 +1824,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'starter'"
+          "default": "'core'"
         },
         "stripe_customer_id": {
           "name": "stripe_customer_id",
@@ -1907,7 +1907,7 @@
       "name": "plan",
       "schema": "public",
       "values": [
-        "starter",
+        "core",
         "growth",
         "scale"
       ]

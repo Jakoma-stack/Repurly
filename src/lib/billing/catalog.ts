@@ -14,8 +14,8 @@ export type PlanCatalogEntry = {
 };
 
 export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
-  starter: {
-    key: 'starter',
+  core: {
+    key: 'core',
     name: 'Core',
     eyebrow: 'For focused teams',
     priceLabel: '£149/mo',
@@ -28,7 +28,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
       'LinkedIn composer, queue, job detail, and recovery',
     ],
     ctaLabel: 'Start with Core',
-    ctaHref: '/api/billing/checkout?plan=starter',
+    ctaHref: '/api/billing/checkout?plan=core',
   },
   growth: {
     key: 'growth',
@@ -64,4 +64,4 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
   },
 };
 
-export const PLAN_ORDER: PlanKey[] = ['starter', 'growth', 'scale'];
+export const PLAN_ORDER: PlanKey[] = ['core', 'growth', 'scale'];

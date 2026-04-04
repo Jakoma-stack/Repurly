@@ -1,7 +1,7 @@
 CREATE TYPE "public"."approval_status" AS ENUM('pending', 'approved', 'rejected', 'changes_requested');--> statement-breakpoint
 CREATE TYPE "public"."asset_type" AS ENUM('image', 'video', 'document');--> statement-breakpoint
 CREATE TYPE "public"."integration_provider" AS ENUM('linkedin', 'x', 'facebook', 'instagram', 'threads', 'youtube', 'tiktok');--> statement-breakpoint
-CREATE TYPE "public"."plan" AS ENUM('starter', 'growth', 'scale');--> statement-breakpoint
+CREATE TYPE "public"."plan" AS ENUM('core', 'growth', 'scale');--> statement-breakpoint
 CREATE TYPE "public"."post_status" AS ENUM('draft', 'in_review', 'approved', 'scheduled', 'publishing', 'published', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."post_type" AS ENUM('text', 'image', 'multi_image', 'video', 'link');--> statement-breakpoint
 CREATE TYPE "public"."workspace_role" AS ENUM('owner', 'admin', 'editor', 'approver', 'viewer');--> statement-breakpoint
@@ -246,7 +246,7 @@ CREATE TABLE "workspaces" (
 	"name" varchar(120) NOT NULL,
 	"slug" varchar(120) NOT NULL,
 	"clerk_organization_id" varchar(128),
-	"plan" "plan" DEFAULT 'starter' NOT NULL,
+	"plan" "plan" DEFAULT 'core' NOT NULL,
 	"stripe_customer_id" varchar(128),
 	"stripe_subscription_id" varchar(128),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
