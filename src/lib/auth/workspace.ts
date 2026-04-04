@@ -64,6 +64,26 @@ function slugify(value: string) {
   );
 }
 
+function buildWorkspaceSlug(baseSlug: string, suffix: string) {
+  return `${baseSlug}-${suffix}`.slice(0, 120);
+}
+
+async function createWorkspaceMembership(workspaceId: string, userId: string) {
+  const existingMembership = await db
+    .select({ id: workspaceMemberships.id })
+    .from(workspaceMemberships)
+    .where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.clerkUserId, userId)))
+    .limit(1);
+
+  if (!existingMembership[0]) {
+    await db.insert(workspaceMemberships).values({
+      workspaceId,
+      clerkUserId: userId,
+      role: 'owner',
+    });
+  }
+}
+
 async function createStarterWorkspaceForUser(args: {
   userId: string;
   orgId: string | null;
@@ -79,55 +99,87 @@ async function createStarterWorkspaceForUser(args: {
   const workspaceName = buildWorkspaceName(user);
   const baseSlug = slugify(workspaceName.replace(/'s workspace$/i, ''));
   const userSuffix = userId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(-6) || 'owner';
+  const slugCandidates = [
+    buildWorkspaceSlug(baseSlug, userSuffix),
+    buildWorkspaceSlug(baseSlug, Date.now().toString(36)),
+    buildWorkspaceSlug(baseSlug, Math.random().toString(36).slice(2, 8)),
+  ];
 
-  let workspaceSlug = `${baseSlug}-${userSuffix}`.slice(0, 120);
+  for (const workspaceSlug of slugCandidates) {
+    try {
+      const created = await db.transaction(async (tx) => {
+        const [workspace] = await tx
+          .insert(workspaces)
+          .values({
+            name: workspaceName,
+            slug: workspaceSlug,
+            clerkOrganizationId: orgId,
+          })
+          .returning({
+            id: workspaces.id,
+            name: workspaces.name,
+            slug: workspaces.slug,
+            clerkOrganizationId: workspaces.clerkOrganizationId,
+          });
 
-  const slugCollision = await db
-    .select({ id: workspaces.id })
-    .from(workspaces)
-    .where(eq(workspaces.slug, workspaceSlug))
-    .limit(1);
+        await tx.insert(workspaceMemberships).values({
+          workspaceId: workspace.id,
+          clerkUserId: userId,
+          role: 'owner',
+        });
 
-  if (slugCollision[0]) {
-    workspaceSlug = `${baseSlug}-${Date.now().toString(36)}`.slice(0, 120);
-  }
+        return workspace;
+      });
 
-  try {
-    const created = await db.transaction(async (tx) => {
-      const [workspace] = await tx
-        .insert(workspaces)
-        .values({
-          name: workspaceName,
-          slug: workspaceSlug,
-          clerkOrganizationId: orgId,
-        })
-        .returning({
+      return {
+        ...created,
+        role: 'owner',
+      };
+    } catch (error) {
+      console.error('Workspace bootstrap attempt failed', {
+        userId,
+        orgId,
+        workspaceName,
+        workspaceSlug,
+        error,
+      });
+
+      const raced = await listAccessibleWorkspaces(userId);
+      if (raced.length) {
+        return raced[0];
+      }
+
+      const existingWorkspace = await db
+        .select({
           id: workspaces.id,
           name: workspaces.name,
           slug: workspaces.slug,
           clerkOrganizationId: workspaces.clerkOrganizationId,
-        });
+        })
+        .from(workspaces)
+        .where(eq(workspaces.slug, workspaceSlug))
+        .limit(1);
 
-      await tx.insert(workspaceMemberships).values({
-        workspaceId: workspace.id,
-        clerkUserId: userId,
-        role: 'owner',
-      });
-
-      return workspace;
-    });
-
-    return {
-      ...created,
-      role: 'owner',
-    };
-  } catch {
-    const raced = await listAccessibleWorkspaces(userId);
-    if (raced.length) {
-      return raced[0];
+      if (existingWorkspace[0]) {
+        try {
+          await createWorkspaceMembership(existingWorkspace[0].id, userId);
+          const repaired = await listAccessibleWorkspaces(userId);
+          if (repaired.length) {
+            return repaired[0];
+          }
+        } catch (repairError) {
+          console.error('Workspace bootstrap repair failed', {
+            userId,
+            workspaceId: existingWorkspace[0].id,
+            workspaceSlug,
+            repairError,
+          });
+        }
+      }
     }
-    throw new Error('Workspace setup failed');
   }
+
+  throw new Error('Workspace setup failed');
 }
 
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
