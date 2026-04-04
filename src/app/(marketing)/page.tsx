@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { Hero } from '@/components/marketing/hero';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { PLAN_CATALOG, PLAN_ORDER } from '@/lib/billing/catalog';
 
 const features = [
   [
@@ -20,13 +19,31 @@ const features = [
     'Recovery operators can trust',
     'Use queue visibility, publish history, reconnect nudges, and job detail before missed posts become customer-facing failures.',
   ],
-];
+] as const;
 
-const platformRows = [
-  ['LinkedIn-first workflow', 'Repurly is intentionally strongest where agencies and B2B teams feel the most workflow drag: company pages, executive posting, approvals, scheduling, and recovery.'],
-  ['Engagement to lead follow-up', 'Keep comments, reply drafting, and lightweight lead tracking close to the publishing workflow instead of splitting them across disconnected tools.'],
-  ['Premium focus over feature sprawl', 'Repurly is priced and presented as a focused operating system for high-value LinkedIn work, not a cheap scheduler and not a faux-enterprise social suite.'],
-];
+const pricing = [
+  {
+    name: 'Core',
+    price: 'From £297/mo',
+    body: 'For focused LinkedIn workflows with a tighter team, clear limits, and reliable publishing fundamentals.',
+    ctaLabel: 'Start with Core',
+    ctaHref: '/sign-up',
+  },
+  {
+    name: 'Growth',
+    price: 'From £697/mo',
+    body: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial controls.',
+    ctaLabel: 'Talk to us about Growth',
+    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Growth%20plan',
+  },
+  {
+    name: 'Scale',
+    price: 'Custom',
+    body: 'For higher-governance pilots and service-heavy accounts that should be sold deliberately rather than self-serve.',
+    ctaLabel: 'Talk to sales',
+    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Scale%20plan',
+  },
+] as const;
 
 export default function HomePage() {
   return (
@@ -46,82 +63,50 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section id="platform" className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-        <Card className="border-slate-200/80 bg-white/95">
-          <CardHeader>
-            <h2 className="text-2xl font-semibold text-slate-950">A focused platform for premium LinkedIn operations</h2>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-6 text-slate-600">
-            <p>
-              Repurly is built for teams that care about commercial control as much as post output: approvals, target selection,
-              queue management, publish reliability, and clear recovery when something breaks.
-            </p>
-            <p>
-              The product includes the workflow surface most teams actually need to run high-value LinkedIn operations: multi-brand
-              setup, AI-assisted draft creation, queue visibility, engagement handling, and a lightweight lead pipeline.
-            </p>
-            <p>
-              It stays intentionally narrower than a broad social suite, which lets the experience feel sharper, more premium, and more
-              operationally trustworthy.
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200/80 bg-white/95">
-          <CardHeader>
-            <h2 className="text-2xl font-semibold text-slate-950">What the platform is strongest at</h2>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            {platformRows.map(([title, body], index) => (
-              <div key={title} className="rounded-2xl border border-slate-200 px-4 py-4">
-                <div className="text-sm font-semibold text-slate-950">{index + 1}. {title}</div>
-                <div className="mt-1 leading-6">{body}</div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </section>
-
       <section id="pricing" className="space-y-5">
         <div className="max-w-3xl">
-          <h2 className="text-3xl font-semibold text-slate-950">Pricing for focused teams that need a premium workflow, not a bloated suite</h2>
+          <h2 className="text-3xl font-semibold text-slate-950">
+            Pricing for focused teams that need a premium workflow, not a bloated suite
+          </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The commercial posture is
-            simple: charge for workflow control, multi-brand operations, and operational confidence.
+            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The
+            commercial posture is simple: charge for workflow control, multi-brand operations, and operational confidence.
           </p>
         </div>
+
         <div className="grid gap-5 lg:grid-cols-3">
-          {PLAN_ORDER.map((key) => {
-            const plan = PLAN_CATALOG[key];
+          {pricing.map((plan, index) => {
+            const featured = index === 1;
             return (
               <Card
-                key={plan.key}
-                className={plan.featured ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]' : 'border-slate-200/80 bg-white/95'}
+                key={plan.name}
+                className={
+                  featured
+                    ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
+                    : 'border-slate-200/80 bg-white/95'
+                }
               >
                 <CardHeader>
-                  <div className={plan.featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>{plan.eyebrow}</div>
-                  <div className="mt-2 text-3xl font-semibold">{plan.name}</div>
-                  <div className={plan.featured ? 'mt-2 text-2xl font-semibold text-white' : 'mt-2 text-2xl font-semibold text-slate-950'}>{plan.priceLabel}</div>
+                  <div className={featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
+                    {plan.name}
+                  </div>
+                  <div className="mt-2 text-3xl font-semibold">{plan.price}</div>
                 </CardHeader>
                 <CardContent>
-                  <p className={plan.featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>{plan.summary}</p>
-                  <div className="mt-5 space-y-2">
-                    {plan.bullets.map((item) => (
-                      <div key={item} className={plan.featured ? 'rounded-2xl border border-white/10 px-3 py-2 text-sm text-slate-200' : 'rounded-2xl border border-slate-200 px-3 py-2 text-sm text-slate-700'}>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
+                  <p className={featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
+                    {plan.body}
+                  </p>
                   <div className="mt-6">
-                    {plan.ctaHref.startsWith('mailto:') ? (
-                      <a href={plan.ctaHref} className={plan.featured ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950' : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'}>
-                        {plan.ctaLabel}
-                      </a>
-                    ) : (
-                      <a href={plan.ctaHref} className={plan.featured ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950' : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'}>
-                        {plan.ctaLabel}
-                      </a>
-                    )}
+                    <a
+                      href={plan.ctaHref}
+                      className={
+                        featured
+                          ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
+                          : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
+                      }
+                    >
+                      {plan.ctaLabel}
+                    </a>
                   </div>
                 </CardContent>
               </Card>
@@ -135,7 +120,8 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start in the app, configure your workspace, add your brands, connect LinkedIn, and move from drafts to approvals to scheduled publishing in one place.
+              Start in the app, configure your workspace, add your brands, connect LinkedIn, and move from drafts to
+              approvals to scheduled publishing in one place.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

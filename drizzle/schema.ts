@@ -1,6 +1,6 @@
 import { boolean, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 
-export const planEnum = pgEnum("plan", ["starter", "growth", "scale"]);
+export const planEnum = pgEnum("plan", ["core", "growth", "scale"]);
 export const roleEnum = pgEnum("workspace_role", ["owner", "admin", "editor", "approver", "viewer"]);
 export const integrationEnum = pgEnum("integration_provider", ["linkedin", "x", "facebook", "instagram", "threads", "youtube", "tiktok"]);
 export const postStatusEnum = pgEnum("post_status", ["draft", "in_review", "approved", "scheduled", "publishing", "published", "failed"]);
@@ -14,9 +14,13 @@ export const workspaces = pgTable("workspaces", {
   name: varchar("name", { length: 120 }).notNull(),
   slug: varchar("slug", { length: 120 }).notNull().unique(),
   clerkOrganizationId: varchar("clerk_organization_id", { length: 128 }),
-  plan: planEnum("plan").notNull().default("starter"),
+  plan: planEnum("plan").notNull().default("core"),
   stripeCustomerId: varchar("stripe_customer_id", { length: 128 }),
   stripeSubscriptionId: varchar("stripe_subscription_id", { length: 128 }),
+  stripePriceId: varchar("stripe_price_id", { length: 128 }),
+  stripeSubscriptionStatus: varchar("stripe_subscription_status", { length: 64 }),
+  stripeCurrentPeriodEnd: timestamp("stripe_current_period_end", { withTimezone: true }),
+  stripeCancelAtPeriodEnd: boolean("stripe_cancel_at_period_end").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -204,7 +208,8 @@ export const deliveryLogs = pgTable("delivery_logs", {
 export const usageEvents = pgTable("usage_events", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
-  metric: varchar("metric", { length: 64 }).notNull(),
+  metricKey: varchar("metric_key", { length: 64 }).notNull(),
+  periodKey: varchar("period_key", { length: 16 }).notNull(),
   quantity: integer("quantity").notNull().default(1),
   referenceId: varchar("reference_id", { length: 255 }),
   metadata: jsonb("metadata").$type<Record<string, unknown>>(),
