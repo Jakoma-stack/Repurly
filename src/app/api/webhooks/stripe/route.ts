@@ -8,14 +8,21 @@ import { workspaces } from '../../../../../drizzle/schema';
 
 export const runtime = 'nodejs';
 
+type WorkspacePlan = 'core' | 'growth' | 'scale';
+
+type WorkspaceBillingUpdate = Partial<typeof workspaces.$inferInsert> & {
+  updatedAt: Date;
+};
+
 function getSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
   return subscription.items.data[0]?.price?.id ?? null;
 }
 
-function getSubscriptionPeriodEnd(subscription: Stripe.Subscription) {
+function getSubscriptionPeriodEnd(subscription: Stripe.Subscription): Date | null {
   const periodEnd = subscription.items.data[0]?.current_period_end;
   return periodEnd ? new Date(periodEnd * 1000) : null;
 }
+
 async function updateWorkspaceBillingState(input: {
   workspaceId?: string | null;
   stripeCustomerId?: string | null;
@@ -24,7 +31,7 @@ async function updateWorkspaceBillingState(input: {
   stripeSubscriptionStatus?: string | null;
   stripeCurrentPeriodEnd?: Date | null;
   stripeCancelAtPeriodEnd?: boolean;
-  plan?: 'core' | 'growth' | 'scale';
+  plan?: WorkspacePlan;
   clearSubscription?: boolean;
 }) {
   let workspaceId = input.workspaceId ?? null;
@@ -43,7 +50,7 @@ async function updateWorkspaceBillingState(input: {
     return;
   }
 
-  const updatePayload: Record<string, unknown> = {
+  const updatePayload: WorkspaceBillingUpdate = {
     updatedAt: new Date(),
   };
 
@@ -60,7 +67,7 @@ async function updateWorkspaceBillingState(input: {
 
 async function syncSubscription(subscription: Stripe.Subscription, explicitWorkspaceId?: string | null) {
   const stripePriceId = getSubscriptionPriceId(subscription);
-const resolvedPlan = stripePriceId ? getPlanFromPriceId(stripePriceId) : undefined;
+  const resolvedPlan: WorkspacePlan | undefined = getPlanFromPriceId(stripePriceId) ?? undefined;
 
   await updateWorkspaceBillingState({
     workspaceId: explicitWorkspaceId ?? subscription.metadata.workspaceId,
@@ -97,7 +104,9 @@ export async function POST(request: NextRequest) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const checkoutSession = event.data.object as Stripe.Checkout.Session;
-      const subscriptionId = typeof checkoutSession.subscription === 'string' ? checkoutSession.subscription : checkoutSession.subscription?.id;
+      const subscriptionId = typeof checkoutSession.subscription === 'string'
+        ? checkoutSession.subscription
+        : checkoutSession.subscription?.id;
 
       if (subscriptionId) {
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
