@@ -27,6 +27,18 @@ export type WorkspaceSession = {
   availableWorkspaces: Array<{ id: string; name: string; slug: string; role: string }>;
 };
 
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  return { value: String(error) };
+}
+
 export async function listAccessibleWorkspaces(userId: string): Promise<AccessibleWorkspace[]> {
   const rows = await db
     .select({
@@ -84,6 +96,49 @@ async function createWorkspaceMembership(workspaceId: string, userId: string) {
   }
 }
 
+async function findWorkspaceBySlug(workspaceSlug: string) {
+  const rows = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      slug: workspaces.slug,
+      clerkOrganizationId: workspaces.clerkOrganizationId,
+    })
+    .from(workspaces)
+    .where(eq(workspaces.slug, workspaceSlug))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+async function findWorkspaceByOrgId(orgId: string | null) {
+  if (!orgId) {
+    return null;
+  }
+
+  const rows = await db
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      slug: workspaces.slug,
+      clerkOrganizationId: workspaces.clerkOrganizationId,
+    })
+    .from(workspaces)
+    .where(eq(workspaces.clerkOrganizationId, orgId))
+    .limit(1);
+
+  return rows[0] ?? null;
+}
+
+async function repairWorkspaceAccess(args: {
+  userId: string;
+  workspaceId: string;
+}) {
+  await createWorkspaceMembership(args.workspaceId, args.userId);
+  const repaired = await listAccessibleWorkspaces(args.userId);
+  return repaired[0] ?? null;
+}
+
 async function createStarterWorkspaceForUser(args: {
   userId: string;
   orgId: string | null;
@@ -96,13 +151,24 @@ async function createStarterWorkspaceForUser(args: {
     return existing[0];
   }
 
+  const orgWorkspace = await findWorkspaceByOrgId(orgId);
+  if (orgWorkspace) {
+    const repaired = await repairWorkspaceAccess({ userId, workspaceId: orgWorkspace.id });
+    if (repaired) {
+      return repaired;
+    }
+  }
+
   const workspaceName = buildWorkspaceName(user);
   const baseSlug = slugify(workspaceName.replace(/'s workspace$/i, ''));
   const userSuffix = userId.replace(/[^a-zA-Z0-9]/g, '').toLowerCase().slice(-6) || 'owner';
+  const randomSuffix = Math.random().toString(36).slice(2, 8);
+  const timestampSuffix = Date.now().toString(36);
   const slugCandidates = [
     buildWorkspaceSlug(baseSlug, userSuffix),
-    buildWorkspaceSlug(baseSlug, Date.now().toString(36)),
-    buildWorkspaceSlug(baseSlug, Math.random().toString(36).slice(2, 8)),
+    buildWorkspaceSlug(baseSlug, timestampSuffix),
+    buildWorkspaceSlug(baseSlug, randomSuffix),
+    buildWorkspaceSlug(baseSlug, `${userSuffix}${randomSuffix}`),
   ];
 
   for (const workspaceSlug of slugCandidates) {
@@ -141,7 +207,7 @@ async function createStarterWorkspaceForUser(args: {
         orgId,
         workspaceName,
         workspaceSlug,
-        error,
+        error: serializeError(error),
       });
 
       const raced = await listAccessibleWorkspaces(userId);
@@ -149,30 +215,27 @@ async function createStarterWorkspaceForUser(args: {
         return raced[0];
       }
 
-      const existingWorkspace = await db
-        .select({
-          id: workspaces.id,
-          name: workspaces.name,
-          slug: workspaces.slug,
-          clerkOrganizationId: workspaces.clerkOrganizationId,
-        })
-        .from(workspaces)
-        .where(eq(workspaces.slug, workspaceSlug))
-        .limit(1);
+      const existingOrgWorkspace = await findWorkspaceByOrgId(orgId);
+      if (existingOrgWorkspace) {
+        const repaired = await repairWorkspaceAccess({ userId, workspaceId: existingOrgWorkspace.id });
+        if (repaired) {
+          return repaired;
+        }
+      }
 
-      if (existingWorkspace[0]) {
+      const existingWorkspace = await findWorkspaceBySlug(workspaceSlug);
+      if (existingWorkspace) {
         try {
-          await createWorkspaceMembership(existingWorkspace[0].id, userId);
-          const repaired = await listAccessibleWorkspaces(userId);
-          if (repaired.length) {
-            return repaired[0];
+          const repaired = await repairWorkspaceAccess({ userId, workspaceId: existingWorkspace.id });
+          if (repaired) {
+            return repaired;
           }
         } catch (repairError) {
           console.error('Workspace bootstrap repair failed', {
             userId,
-            workspaceId: existingWorkspace[0].id,
+            workspaceId: existingWorkspace.id,
             workspaceSlug,
-            repairError,
+            error: serializeError(repairError),
           });
         }
       }
