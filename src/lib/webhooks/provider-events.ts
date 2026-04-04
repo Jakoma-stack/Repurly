@@ -1,4 +1,4 @@
-import { eq, or } from 'drizzle-orm';
+import { eq, or, type SQLWrapper} from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { alertEvents, auditEvents, deliveryLogs, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 import { sendOpsAlert } from '@/lib/alerts/service';
@@ -43,7 +43,7 @@ async function lookupByCorrelation(correlationId?: string, containerId?: string,
     containerId ? eq(publishJobs.providerContainerId, containerId) : undefined,
     uploadId ? eq(postTargets.providerUploadId, uploadId) : undefined,
     uploadId ? eq(publishJobs.providerUploadId, uploadId) : undefined,
-  ].filter(Boolean) as any[];
+  ].filter(Boolean) as SQLWrapper[];
 
   if (!conditions.length) return undefined;
 
