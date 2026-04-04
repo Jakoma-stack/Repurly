@@ -85,7 +85,7 @@ async function main() {
       .values({
         name: workspaceName,
         slug: workspaceSlug,
-        plan: 'starter',
+        plan: 'core,
       })
       .returning({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug });
 
