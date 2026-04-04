@@ -6,7 +6,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
 });
 
 export const plans = {
-  core: process.env.STRIPE_PRICE_CORE ?? process.env.STRIPE_PRICE_STARTER,
+  core: process.env.STRIPE_PRICE_CORE ?? process.env.STRIPE_PRICE_CORE,
   growth: process.env.STRIPE_PRICE_GROWTH,
   scale: process.env.STRIPE_PRICE_SCALE,
 } as const;
