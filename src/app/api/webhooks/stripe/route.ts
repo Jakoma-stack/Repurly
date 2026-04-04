@@ -9,7 +9,7 @@ import { workspaces } from '../../../../../drizzle/schema';
 export const runtime = 'nodejs';
 
 function getSubscriptionPriceId(subscription: Stripe.Subscription) {
-  return subscription.items.data[0]?.price?.id ?? null;
+  return subscription.items.data[0]?.current_period_start ?? null;
 }
 
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription) {
