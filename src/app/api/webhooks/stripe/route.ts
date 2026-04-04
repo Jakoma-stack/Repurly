@@ -8,14 +8,13 @@ import { workspaces } from '../../../../../drizzle/schema';
 
 export const runtime = 'nodejs';
 
-function getSubscriptionPriceId(subscription: Stripe.Subscription) {
-  return subscription.items.data[0]?.current_period_start ?? null;
+function getSubscriptionPriceId(subscription: Stripe.Subscription): string | null {
+  return subscription.items.data[0]?.price?.id ?? null;
 }
 
 function getSubscriptionPeriodEnd(subscription: Stripe.Subscription) {
   const periodEnd = subscription.items.data[0]?.current_period_end;
-  if (!periodEnd) return null;
-  return new Date(periodEnd * 1000);
+  return periodEnd ? new Date(periodEnd * 1000) : null;
 }
 async function updateWorkspaceBillingState(input: {
   workspaceId?: string | null;
@@ -61,7 +60,7 @@ async function updateWorkspaceBillingState(input: {
 
 async function syncSubscription(subscription: Stripe.Subscription, explicitWorkspaceId?: string | null) {
   const stripePriceId = getSubscriptionPriceId(subscription);
-  const resolvedPlan = getPlanFromPriceId(stripePriceId ?? undefined) ?? undefined;
+const resolvedPlan = stripePriceId ? getPlanFromPriceId(stripePriceId) : undefined;
 
   await updateWorkspaceBillingState({
     workspaceId: explicitWorkspaceId ?? subscription.metadata.workspaceId,
