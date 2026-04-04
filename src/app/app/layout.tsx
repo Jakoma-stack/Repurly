@@ -1,10 +1,13 @@
-import { AppShell } from "@/components/layout/app-shell";
-import { requireWorkspaceSession } from "@/lib/auth/workspace";
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { AppShell } from '@/components/layout/app-shell';
+import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
 
 export default async function ProductLayout({ children }: { children: React.ReactNode }) {
   const session = await requireWorkspaceSession();
 
-  if (session.workspaceId === "__local_setup__") {
+  if (session.workspaceId === '__local_setup__') {
     return (
       <AppShell session={session}>
         <div className="mx-auto max-w-3xl p-6">
@@ -18,8 +21,7 @@ export default async function ProductLayout({ children }: { children: React.Reac
             <div className="mt-6 space-y-3 text-sm">
               <p><strong>Next step:</strong> seed or create a workspace + membership for your Clerk user.</p>
               <p>Helpful commands to try from the project root:</p>
-              <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-xs">{`npm run seed
-# or create the workspace/user membership in your DB manually`}</pre>
+              <pre className="overflow-x-auto rounded-lg border bg-muted p-4 text-xs">{`npm run seed\n# or create the workspace/user membership in your DB manually`}</pre>
               <p className="text-muted-foreground">
                 After the workspace exists, refresh <code>/app</code>.
               </p>
@@ -28,6 +30,15 @@ export default async function ProductLayout({ children }: { children: React.Reac
         </div>
       </AppShell>
     );
+  }
+
+  const requestHeaders = await headers();
+  const pathname = requestHeaders.get('x-pathname') ?? '/app';
+  const billing = await getWorkspaceBillingAccessState(session.workspaceId);
+  const isBillingRoute = pathname.startsWith('/app/billing');
+
+  if (billing && !billing.hasPaidAccess && !isBillingRoute) {
+    redirect('/app/billing?billing=payment-required');
   }
 
   return <AppShell session={session}>{children}</AppShell>;
