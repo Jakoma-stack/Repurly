@@ -42,7 +42,11 @@ async function createCheckoutSession(request: NextRequest, plan: SelfServePlanKe
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
+<<<<<<< HEAD
  	allow_promotion_codes: true,
+=======
+       allow_promotion_codes: true,
+>>>>>>> 3f419162b363aff82a1b1403e43c4118cbb13eb1
       success_url: `${baseUrl}/app/billing?checkout=success`,
       cancel_url: `${baseUrl}/app/billing?checkout=cancelled&plan=${plan}`,
       metadata: {
