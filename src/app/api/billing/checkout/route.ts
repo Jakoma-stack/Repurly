@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
 import { plans, stripe } from '@/lib/billing/stripe';
@@ -6,22 +7,22 @@ import { plans, stripe } from '@/lib/billing/stripe';
 export const runtime = 'nodejs';
 
 const BILLING_ROLES = new Set(['owner', 'admin']);
-type SelfServePlan = 'core' | 'growth';
+type SelfServePlanKey = 'core' | 'growth';
 
 type CheckoutSessionResult =
   | { error: 'checkout-unavailable'; url: null }
   | { error: 'forbidden'; url: null }
   | { error: null; url: string };
 
-function normalizePlan(input: unknown): SelfServePlan {
-  return input === 'core' ? 'core' : 'growth';
+function normalizePlan(input: unknown): SelfServePlanKey {
+  return input === 'growth' ? 'growth' : 'core';
 }
 
 function getBaseUrl(request: NextRequest) {
   return process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
 }
 
-async function createCheckoutSession(request: NextRequest, plan: SelfServePlan): Promise<CheckoutSessionResult> {
+async function createCheckoutSession(request: NextRequest, plan: SelfServePlanKey): Promise<CheckoutSessionResult> {
   const workspaceSession = await requireWorkspaceSession();
 
   if (!BILLING_ROLES.has(workspaceSession.role)) {

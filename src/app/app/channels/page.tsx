@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { PlatformGrid } from '@/components/channels/platform-grid';
 import { ReconnectNudges } from '@/components/channels/reconnect-nudges';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getWorkspaceSetupState } from '@/lib/onboarding/setup';
 import { setDefaultLinkedInTarget } from '@/server/actions/channels';
 import { getLinkedInTargets } from '@/server/queries/workflow';
@@ -29,6 +30,7 @@ function targetTone(isDefault: boolean) {
 
 export default async function ChannelsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const setup = await getWorkspaceSetupState(session.workspaceId);
   const targets = await getLinkedInTargets(session.workspaceId);
   const params = (await searchParams) ?? {};

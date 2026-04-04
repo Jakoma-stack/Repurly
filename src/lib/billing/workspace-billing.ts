@@ -1,4 +1,6 @@
 import { eq } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
+
 import { stripe } from '@/lib/billing/stripe';
 import { db } from '@/lib/db/client';
 import { workspaces } from '../../../drizzle/schema';
@@ -55,10 +57,23 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
+  const hasPaidAccess = hasPaidWorkspaceAccess(workspace);
+
   return {
     ...workspace,
-    hasPaidAccess: hasPaidWorkspaceAccess(workspace),
+    hasPaidAccess,
+    paymentRequired: !hasPaidAccess,
   };
+}
+
+export async function requirePaidWorkspaceAccess(workspaceId: string) {
+  const billingState = await getWorkspaceBillingAccessState(workspaceId);
+
+  if (!billingState?.hasPaidAccess) {
+    redirect('/app/billing?billing=payment-required');
+  }
+
+  return billingState;
 }
 
 export async function getOrCreateStripeCustomer(workspaceId: string) {

@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 
 export default async function SettingsPage() {
+  const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const workspaceSession = await requireWorkspaceSession();
   const canManageBilling = workspaceSession.role === 'owner' || workspaceSession.role === 'admin';
 

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { archiveBrand, restoreBrand, saveBrand } from '@/server/actions/brands';
 import { getBrandForEditing, getWorkspaceBrands } from '@/server/queries/brands';
 
@@ -11,6 +12,7 @@ function firstParam(value: string | string[] | undefined) {
 
 export default async function BrandsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const params = await searchParams;
   const brandId = firstParam(params.brandId);
   const ok = firstParam(params.ok);

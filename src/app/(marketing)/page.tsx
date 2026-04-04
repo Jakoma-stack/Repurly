@@ -26,14 +26,14 @@ const pricing = [
     name: 'Core',
     price: 'From £297/mo',
     body: 'For focused LinkedIn workflows with a tighter team, clear limits, and reliable publishing fundamentals.',
-    ctaLabel: 'Choose Core',
+    ctaLabel: 'Start with Core',
     ctaHref: '/sign-up?plan=core',
   },
   {
     name: 'Growth',
     price: 'From £697/mo',
     body: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial controls.',
-    ctaLabel: 'Choose Growth',
+    ctaLabel: 'Start with Growth',
     ctaHref: '/sign-up?plan=growth',
   },
   {
@@ -66,11 +66,11 @@ export default function HomePage() {
       <section id="pricing" className="space-y-5">
         <div className="max-w-3xl">
           <h2 className="text-3xl font-semibold text-slate-950">
-            Choose a paid plan before entering the workflow
+            Pricing for focused teams that need a premium workflow, not a bloated suite
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is sold as a premium workflow product. New workspaces must start on Core or Growth before they can use
-            composer, calendar, approvals, and queue operations.
+            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The
+            commercial posture is simple: charge for workflow control, multi-brand operations, and operational confidence.
           </p>
         </div>
 
@@ -120,12 +120,12 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Pick Core or Growth, create your account, and finish checkout before entering the workflow.
+              Create your account, choose Core or Growth, complete checkout, and then unlock the workspace workflow.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/sign-up?plan=growth" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Choose a plan
+            <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
+              Start with Core
             </Link>
             <Link href="/sign-in" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Sign in

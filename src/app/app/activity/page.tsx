@@ -1,12 +1,16 @@
 import { ActivityFeed } from '@/components/activity/activity-feed';
 import { ActivityOverview } from '@/components/activity/activity-overview';
 import { getPublishActivity } from '@/server/queries/publish-activity';
+import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 
 export default async function ActivityPage({
   searchParams,
 }: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const params = (await searchParams) ?? {};
   const status = typeof params.status === 'string' ? params.status : 'all';
   const provider = typeof params.provider === 'string' ? params.provider : 'all';

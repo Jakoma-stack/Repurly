@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getPublishingQueue } from '@/server/queries/workflow';
 
 export default async function CalendarPage() {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const queue = await getPublishingQueue(session.workspaceId);
 
   return (

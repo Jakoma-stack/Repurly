@@ -1,10 +1,12 @@
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { saveNotificationPreference } from '@/server/actions/notifications';
 import { getNotificationPreferences } from '@/server/queries/notification-preferences';
 
 export default async function NotificationSettingsPage() {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const preferences = await getNotificationPreferences(session.workspaceId);
 
   return (

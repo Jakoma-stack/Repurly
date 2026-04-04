@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { generateEngagementReply, markReplySent, saveEngagementComment } from '@/server/actions/engagement';
 import { getEngagementSnapshot } from '@/server/queries/engagement';
 
@@ -25,6 +26,7 @@ function MetricCard({ href, label, value }: { href: string; label: string; value
 
 export default async function EngagementPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const params = await searchParams;
   const ok = firstParam(params.ok);
   const data = await getEngagementSnapshot(session.workspaceId, null);

@@ -2,12 +2,14 @@ import Link from 'next/link';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getReconnectNudges } from '@/lib/usage/metering';
 import { ReliabilityOverview } from '@/components/reliability/reliability-overview';
 import { WebhookStatus } from '@/components/reliability/webhook-status';
 
 export default async function ReliabilityPage() {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const reconnectAlerts = await getReconnectNudges(session.workspaceId);
 
   return (

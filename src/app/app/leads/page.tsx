@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { updateLeadStage } from '@/server/actions/engagement';
 import { getEngagementSnapshot } from '@/server/queries/engagement';
 
@@ -27,6 +28,7 @@ function MetricCard({ href, label, value }: { href: string; label: string; value
 
 export default async function LeadsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const params = await searchParams;
   const stage = firstParam(params.stage);
   const ok = firstParam(params.ok);

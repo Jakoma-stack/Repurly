@@ -14,9 +14,15 @@ import {
   Users,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
+
 import type { WorkspaceSession } from '@/lib/auth/workspace';
 
-const nav = [
+type BillingAccessState = {
+  hasPaidAccess: boolean;
+  plan: 'core' | 'growth' | 'scale';
+} | null;
+
+const fullNav = [
   { href: '/app', label: 'Overview', icon: LayoutDashboard },
   { href: '/app/content', label: 'Composer', icon: PencilLine },
   { href: '/app/brands', label: 'Brands', icon: BriefcaseBusiness },
@@ -31,7 +37,20 @@ const nav = [
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
-export function AppShell({ children, session }: { children: React.ReactNode; session: WorkspaceSession }) {
+const unpaidNav = [{ href: '/app/billing', label: 'Billing', icon: CreditCard }];
+
+export function AppShell({
+  children,
+  session,
+  billingAccess,
+}: {
+  children: React.ReactNode;
+  session: WorkspaceSession;
+  billingAccess?: BillingAccessState;
+}) {
+  const paid = billingAccess?.hasPaidAccess ?? true;
+  const nav = paid ? fullNav : unpaidNav;
+
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef2ff,transparent_28%),linear-gradient(to_bottom,#f8fafc,#f5f7fb)] text-slate-900">
       <div className="mx-auto flex max-w-[1440px] gap-6 px-4 py-6 lg:px-8">
@@ -51,6 +70,12 @@ export function AppShell({ children, session }: { children: React.ReactNode; ses
             <div className="mt-2 text-lg font-semibold">{session.workspaceName}</div>
             <div className="mt-1 text-sm text-white/55">{session.role} • {session.workspaceSlug}</div>
           </div>
+
+          {!paid ? (
+            <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
+              Payment is required before this workspace can use the product. Core or Growth unlocks access.
+            </div>
+          ) : null}
 
           <nav className="space-y-1.5">
             {nav.map((item) => {
@@ -77,7 +102,10 @@ export function AppShell({ children, session }: { children: React.ReactNode; ses
               </div>
               <div>
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950">{session.workspaceName}</h1>
-                <p className="text-sm text-muted-foreground">{session.role} • {session.availableWorkspaces.length} workspace access</p>
+                <p className="text-sm text-muted-foreground">
+                  {session.role} • {session.availableWorkspaces.length} workspace access
+                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? billingAccess.plan : 'payment required'}` : ''}
+                </p>
               </div>
             </div>
             <UserButton afterSignOutUrl="/" />

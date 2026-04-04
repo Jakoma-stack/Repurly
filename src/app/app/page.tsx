@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getWorkspaceSetupState } from '@/lib/onboarding/setup';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -26,6 +27,7 @@ function statusClasses(status: 'complete' | 'current' | 'blocked') {
 
 export default async function AppHomePage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await requireWorkspaceSession();
+  await requirePaidWorkspaceAccess(session.workspaceId);
   const setup = await getWorkspaceSetupState(session.workspaceId);
   const params = (await searchParams) ?? {};
   const linkedInState = firstParam(params.linkedin);
