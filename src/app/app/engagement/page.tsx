@@ -9,6 +9,20 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function MetricCard({ href, label, value }: { href: string; label: string; value: number }) {
+  return (
+    <a href={href} className="block transition hover:-translate-y-0.5">
+      <Card>
+        <CardHeader><div className="text-sm text-muted-foreground">{label}</div></CardHeader>
+        <CardContent>
+          <div className="text-3xl font-semibold">{value}</div>
+          <div className="mt-2 text-xs text-muted-foreground">Open related queue</div>
+        </CardContent>
+      </Card>
+    </a>
+  );
+}
+
 export default async function EngagementPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
   const params = await searchParams;
@@ -19,10 +33,10 @@ export default async function EngagementPage({ searchParams }: { searchParams: S
     <div className="space-y-6">
       {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Engagement workflow updated.</div> : null}
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Comments captured</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.commentsTotal}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Pending replies</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.pendingReplies}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Hot leads</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.hotLeads}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Qualified</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.qualifiedLeads}</div></CardContent></Card>
+        <MetricCard href="#engagement-queue" label="Comments captured" value={data.metrics.commentsTotal} />
+        <MetricCard href="#engagement-queue" label="Pending replies" value={data.metrics.pendingReplies} />
+        <MetricCard href="/app/leads?stage=qualified" label="Hot leads" value={data.metrics.hotLeads} />
+        <MetricCard href="/app/leads?stage=qualified" label="Qualified" value={data.metrics.qualifiedLeads} />
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -52,7 +66,7 @@ export default async function EngagementPage({ searchParams }: { searchParams: S
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="engagement-queue" className="scroll-mt-24">
           <CardHeader>
             <h2 className="text-xl font-semibold">Engagement queue</h2>
             <p className="text-sm text-muted-foreground">Score intent, generate replies, and move the best signals into the lead workflow.</p>

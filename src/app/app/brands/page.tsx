@@ -30,8 +30,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
         <CardHeader>
           <h2 className="text-xl font-semibold">Multi-brand workspace setup</h2>
           <p className="text-sm text-muted-foreground">
-            This brings the multiple-brand workspace model from the older AI build into the current Repurly interface.
-            It stays narrow: brand voice, LinkedIn context, and AI drafting inputs.
+            One workspace can hold multiple brands or clients, each with its own tone, CTA, and LinkedIn context. The dashboard, queue, notifications, and reliability views stay shared at workspace level so operators can manage everything from one place.
           </p>
         </CardHeader>
       </Card>

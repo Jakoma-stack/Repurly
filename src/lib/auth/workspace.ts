@@ -2,6 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
+
 import { db } from '@/lib/db/client';
 import { workspaceMemberships, workspaces } from '../../../drizzle/schema';
 
@@ -91,34 +92,42 @@ async function createStarterWorkspaceForUser(args: {
     workspaceSlug = `${baseSlug}-${Date.now().toString(36)}`.slice(0, 120);
   }
 
-  const created = await db.transaction(async (tx) => {
-    const [workspace] = await tx
-      .insert(workspaces)
-      .values({
-        name: workspaceName,
-        slug: workspaceSlug,
-        clerkOrganizationId: orgId,
-      })
-      .returning({
-        id: workspaces.id,
-        name: workspaces.name,
-        slug: workspaces.slug,
-        clerkOrganizationId: workspaces.clerkOrganizationId,
+  try {
+    const created = await db.transaction(async (tx) => {
+      const [workspace] = await tx
+        .insert(workspaces)
+        .values({
+          name: workspaceName,
+          slug: workspaceSlug,
+          clerkOrganizationId: orgId,
+        })
+        .returning({
+          id: workspaces.id,
+          name: workspaces.name,
+          slug: workspaces.slug,
+          clerkOrganizationId: workspaces.clerkOrganizationId,
+        });
+
+      await tx.insert(workspaceMemberships).values({
+        workspaceId: workspace.id,
+        clerkUserId: userId,
+        role: 'owner',
       });
 
-    await tx.insert(workspaceMemberships).values({
-      workspaceId: workspace.id,
-      clerkUserId: userId,
-      role: 'owner',
+      return workspace;
     });
 
-    return workspace;
-  });
-
-  return {
-    ...created,
-    role: 'owner',
-  };
+    return {
+      ...created,
+      role: 'owner',
+    };
+  } catch {
+    const raced = await listAccessibleWorkspaces(userId);
+    if (raced.length) {
+      return raced[0];
+    }
+    throw new Error('Workspace setup failed');
+  }
 }
 
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {

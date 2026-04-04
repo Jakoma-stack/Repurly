@@ -1,9 +1,9 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
@@ -21,6 +21,22 @@ type SavedCampaign = {
   count: number;
   savedAt: string;
 };
+
+function buildContentPath(
+  params: Record<string, string | undefined>,
+  hash?: 'campaign-planner' | 'generated-drafts' | 'composer' | 'target-selection' | 'recent-drafts',
+) {
+  const search = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value) {
+      search.set(key, value);
+    }
+  }
+
+  const query = search.toString();
+  return `/app/content${query ? `?${query}` : ''}${hash ? `#${hash}` : ''}`;
+}
 
 async function getDefaultBrandId(workspaceId: string) {
   const row = await db.select({ id: brands.id }).from(brands).where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active'))).limit(1);
@@ -209,14 +225,14 @@ async function refreshWorkflowPages() {
 
 export async function saveCampaign(formData: FormData) {
   const saved = await persistSavedCampaign(formData);
-  if (!saved) redirect('/app/content?error=invalid' as Route);
-  redirect('/app/content?ok=campaign-saved' as Route);
+  if (!saved) redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
+  redirect(buildContentPath({ ok: 'campaign-saved' }, 'campaign-planner') as Route);
 }
 
 export async function clearSavedCampaign() {
   const cookieStore = await cookies();
   cookieStore.delete(SAVED_CAMPAIGN_COOKIE);
-  redirect('/app/content?ok=campaign-cleared' as Route);
+  redirect(buildContentPath({ ok: 'campaign-cleared' }, 'campaign-planner') as Route);
 }
 
 export async function clearRecentDrafts(formData: FormData) {
@@ -224,32 +240,38 @@ export async function clearRecentDrafts(formData: FormData) {
   const brandId = requiredString(formData, 'brandId');
   const currentPostId = requiredString(formData, 'postId');
 
-  if (!workspaceId) redirect('/app/content?error=invalid' as Route);
+  if (!workspaceId) redirect(buildContentPath({ error: 'invalid' }, 'recent-drafts') as Route);
 
   const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
   if (brandId) filters.push(eq(posts.brandId, brandId));
   if (currentPostId) filters.push(ne(posts.id, currentPostId));
 
-  await db.delete(posts).where(and(...filters));
+  const deleted = await db.delete(posts).where(and(...filters)).returning({ id: posts.id });
+
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=drafts-cleared${currentPostId ? `&postId=${currentPostId}` : ''}` as Route);
+
+  if (!deleted.length) {
+    redirect(buildContentPath({ ok: 'no-drafts', postId: currentPostId || undefined }, 'recent-drafts') as Route);
+  }
+
+  redirect(buildContentPath({ ok: 'drafts-cleared', postId: currentPostId || undefined }, 'recent-drafts') as Route);
 }
 
 export async function saveDraft(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'draft');
-  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
+  if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 
   await attachTarget(post.id, post.workspaceId, formData);
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=draft&postId=${post.id}` as Route);
+  redirect(buildContentPath({ ok: 'draft', postId: post.id }, 'target-selection') as Route);
 }
 
 export async function requestApproval(formData: FormData) {
   const { error, post } = await createOrUpdateBasePost(formData, 'in_review');
-  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
+  if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
+  if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
 
   const existingApproval = await db
     .select({ id: approvalRequests.id })
@@ -267,26 +289,27 @@ export async function requestApproval(formData: FormData) {
   }
 
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=approval&postId=${post.id}` as Route);
+  redirect(buildContentPath({ ok: 'approval', postId: post.id }, 'target-selection') as Route);
 }
 
 export async function schedulePost(formData: FormData) {
   const scheduledFor = requiredString(formData, 'scheduledFor');
+  const postId = requiredString(formData, 'postId');
+
   if (!scheduledFor) {
-    const postId = requiredString(formData, 'postId');
-    redirect(`/app/content?error=missing-schedule${postId ? `&postId=${postId}` : ''}` as Route);
+    redirect(buildContentPath({ error: 'missing-schedule', postId: postId || undefined }, 'composer') as Route);
   }
 
   const { error, post } = await createOrUpdateBasePost(formData, 'scheduled');
-  if (error || !post) redirect(`/app/content?error=${error ?? 'invalid'}` as Route);
+  if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) redirect(`/app/content?error=missing-target&postId=${post.id}` as Route);
+  if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
 
   await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
 
   await refreshWorkflowPages();
-  redirect(`/app/content?ok=scheduled&postId=${post.id}` as Route);
+  redirect(buildContentPath({ ok: 'scheduled', postId: post.id }, 'target-selection') as Route);
 }
 
 export async function generateAiDrafts(formData: FormData) {
@@ -298,47 +321,56 @@ export async function generateAiDrafts(formData: FormData) {
   const commercialGoal = requiredString(formData, 'commercialGoal');
   const postFormat = requiredString(formData, 'postFormat');
 
-  if (!workspaceId || !authorId || !brandId || !brief) redirect('/app/content?error=invalid' as Route);
+  if (!workspaceId || !authorId || !brandId || !brief) {
+    redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
+  }
 
   const brand = await getBrand(workspaceId, brandId);
-  if (!brand) redirect('/app/content?error=missing-brand' as Route);
+  if (!brand) {
+    redirect(buildContentPath({ error: 'missing-brand' }, 'campaign-planner') as Route);
+  }
 
   await persistSavedCampaign(formData);
 
-  const drafts = await generateContentDrafts({
-    brandName: brand.name,
-    brandTone: brand.defaultTone,
-    audience: brand.audience,
-    primaryCta: brand.primaryCta,
-    secondaryCta: brand.secondaryCta,
-    hashtags: brand.hashtags ?? [],
-    brief,
-    count,
-    commercialGoal,
-    postFormat,
-  });
+  try {
+    const drafts = await generateContentDrafts({
+      brandName: brand.name,
+      brandTone: brand.defaultTone,
+      audience: brand.audience,
+      primaryCta: brand.primaryCta,
+      secondaryCta: brand.secondaryCta,
+      hashtags: brand.hashtags ?? [],
+      brief,
+      count,
+      commercialGoal,
+      postFormat,
+    });
 
-  const inserted = await db.insert(posts).values(
-    drafts.map((draft, index) => ({
-      workspaceId,
-      brandId,
-      authorId,
-      title: draft.title,
-      body: draft.body,
-      status: 'draft' as const,
-      postType: (postFormat || 'text') as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-      metadata: {
-        source: 'ai-generated',
-        brief,
-        titleHint: draft.titleHint,
-        callToAction: draft.callToAction,
-        hashtags: draft.hashtags,
-        draftNumber: index + 1,
-      },
-    })),
-  ).returning({ id: posts.id });
+    const inserted = await db.insert(posts).values(
+      drafts.map((draft, index) => ({
+        workspaceId,
+        brandId,
+        authorId,
+        title: draft.title,
+        body: draft.body,
+        status: 'draft' as const,
+        postType: (postFormat || 'text') as 'text' | 'image' | 'multi_image' | 'video' | 'link',
+        metadata: {
+          source: 'ai-generated',
+          brief,
+          titleHint: draft.titleHint,
+          callToAction: draft.callToAction,
+          hashtags: draft.hashtags,
+          draftNumber: index + 1,
+        },
+      })),
+    ).returning({ id: posts.id });
 
-  await refreshWorkflowPages();
-  const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
-  redirect(`/app/content?ok=generated&postId=${inserted[0]?.id ?? ''}${generatedIds ? `&generatedIds=${generatedIds}` : ''}` as Route);
+    await refreshWorkflowPages();
+
+    const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
+    redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
+  } catch {
+    redirect(buildContentPath({ error: 'generate-failed' }, 'campaign-planner') as Route);
+  }
 }

@@ -1,17 +1,148 @@
 import Link from 'next/link';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ArrowRight, CheckCircle2, CircleAlert } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { PlatformGrid } from '@/components/channels/platform-grid';
 import { ReconnectNudges } from '@/components/channels/reconnect-nudges';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getWorkspaceSetupState } from '@/lib/onboarding/setup';
+import { setDefaultLinkedInTarget } from '@/server/actions/channels';
+import { getLinkedInTargets } from '@/server/queries/workflow';
 
-export default async function ChannelsPage() {
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function Banner({ kind, children }: { kind: 'success' | 'error'; children: React.ReactNode }) {
+  const styles = kind === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900';
+  return <div className={`rounded-2xl border px-4 py-3 text-sm ${styles}`}>{children}</div>;
+}
+
+function targetTone(isDefault: boolean) {
+  return isDefault
+    ? 'border-emerald-200 bg-emerald-50 shadow-sm'
+    : 'border-border bg-white';
+}
+
+export default async function ChannelsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await requireWorkspaceSession();
   const setup = await getWorkspaceSetupState(session.workspaceId);
+  const targets = await getLinkedInTargets(session.workspaceId);
+  const params = (await searchParams) ?? {};
+  const linkedInState = firstParam(params.linkedin);
+  const setupState = firstParam(params.setup);
+  const error = firstParam(params.error);
+  const currentDefaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
+  const showLinkedInOnboarding = linkedInState === 'connected' || setupState === 'review-target' || setupState === 'target-confirmed';
 
   return (
     <div className="space-y-6">
+      {setupState === 'target-confirmed' ? (
+        <Banner kind="success">Default LinkedIn target confirmed. The workspace can now move into drafting, approval, and scheduling with the right destination selected.</Banner>
+      ) : null}
+      {error === 'missing-workspace' ? <Banner kind="error">Repurly could not tell which workspace should reconnect LinkedIn. Reopen the connection from this screen so the active workspace is passed through correctly.</Banner> : null}
+      {error === 'linkedin-missing-oauth' ? <Banner kind="error">LinkedIn returned without the expected OAuth details. Start the connection again from this workspace so Repurly can finish setup safely.</Banner> : null}
+      {error === 'linkedin-connect-failed' ? <Banner kind="error">LinkedIn authentication completed, but Repurly could not finish syncing the workspace targets. Retry the connection from this screen.</Banner> : null}
+      {error === 'invalid-target' ? <Banner kind="error">Repurly could not confirm that LinkedIn target for this workspace. Pick a visible target below and try again.</Banner> : null}
+
+      {showLinkedInOnboarding ? (
+        <Card id="linkedin-onboarding" className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium uppercase tracking-wide text-emerald-800">
+                  <CheckCircle2 className="size-4" />
+                  LinkedIn connected
+                </div>
+                <h2 className="text-2xl font-semibold">Finish the post-connect setup in Channels</h2>
+                <p className="text-sm text-slate-600">
+                  Keep the flow workspace-aware: review the discovered LinkedIn destinations, confirm the default posting target, then continue into composer.
+                </p>
+              </div>
+              <div className="grid min-w-[220px] gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm">
+                  <div className="font-medium text-slate-950">Targets synced</div>
+                  <div className="mt-1 text-slate-600">{targets.length}</div>
+                </div>
+                <div className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm">
+                  <div className="font-medium text-slate-950">Current default</div>
+                  <div className="mt-1 text-slate-600">{currentDefaultTarget?.displayName ?? 'Needs confirmation'}</div>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
+                <div className="font-medium text-slate-950">1. Review discovered destinations</div>
+                <div className="mt-1 text-slate-600">Make sure the profile or company page shown here matches the real workspace that should publish first.</div>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
+                <div className="font-medium text-slate-950">2. Confirm the default target</div>
+                <div className="mt-1 text-slate-600">Pick the destination that should receive drafts by default so the composer does not quietly post to the wrong place.</div>
+              </div>
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
+                <div className="font-medium text-slate-950">3. Continue into composer</div>
+                <div className="mt-1 text-slate-600">Once the target is right, move into drafting, approvals, scheduling, and queue review without leaving the LinkedIn-first path.</div>
+              </div>
+            </div>
+
+            {targets.length ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                  <CircleAlert className="size-4 text-amber-600" />
+                  Confirm the LinkedIn destination that should be the workspace default.
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {targets.map((target) => (
+                    <div key={target.id} className={`rounded-3xl border p-4 ${targetTone(target.isDefault)}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="font-medium text-slate-950">{target.displayName}</div>
+                          <div className="mt-1 text-sm text-slate-600">{target.handle || 'LinkedIn target'} · {target.targetType}</div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          <span className="rounded-full border border-border bg-white px-2.5 py-1 uppercase tracking-wide text-slate-500">{target.targetType}</span>
+                          {target.isDefault ? <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 font-medium uppercase tracking-wide text-emerald-800">Default</span> : null}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <form action={setDefaultLinkedInTarget}>
+                          <input type="hidden" name="workspaceId" value={session.workspaceId} />
+                          <input type="hidden" name="platformAccountId" value={target.id} />
+                          <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
+                            {target.isDefault ? 'Keep as default' : 'Make default target'}
+                          </button>
+                        </form>
+                        {!target.isDefault ? (
+                          <form action={setDefaultLinkedInTarget}>
+                            <input type="hidden" name="workspaceId" value={session.workspaceId} />
+                            <input type="hidden" name="platformAccountId" value={target.id} />
+                            <input type="hidden" name="continueTo" value="composer" />
+                            <button className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                              Make default and continue
+                            </button>
+                          </form>
+                        ) : (
+                          <Link href="/app/content#target-selection"><Button variant="outline">Continue to composer</Button></Link>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-sm text-slate-600">
+                LinkedIn connected, but no publishable destinations were synced yet. Open the connection again after confirming the account has the right profile or company-page permissions.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">LinkedIn-first setup</h2>
@@ -31,16 +162,14 @@ export default async function ChannelsPage() {
             </div>
             <div className="rounded-2xl border border-border p-4 text-sm">
               <div className="font-medium text-slate-950">Default target</div>
-              <div className="mt-1 text-muted-foreground">{setup.hasDefaultLinkedInTarget ? 'Confirmed' : 'Needs confirmation'}</div>
+              <div className="mt-1 text-muted-foreground">{currentDefaultTarget?.displayName ?? 'Needs confirmation'}</div>
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
             {!setup.linkedInConnected ? (
               <Link href={`/api/linkedin/connect?workspaceId=${session.workspaceId}`}><Button>Connect LinkedIn</Button></Link>
-            ) : !setup.hasDefaultLinkedInTarget ? (
-              <Link href="/app/settings?provider=linkedin"><Button>Review LinkedIn target</Button></Link>
             ) : (
-              <Link href="/app/content"><Button>Continue to composer</Button></Link>
+              <Link href={showLinkedInOnboarding ? '/app/channels#linkedin-onboarding' : '/app/content#target-selection'}><Button>{showLinkedInOnboarding ? 'Review post-connect setup' : 'Continue to composer'}</Button></Link>
             )}
             <Link href="/app/reliability"><Button variant="outline">Open reliability</Button></Link>
           </div>
@@ -69,6 +198,13 @@ export default async function ChannelsPage() {
       </Card>
 
       <ReconnectNudges workspaceId={session.workspaceId} />
+
+      <div className="rounded-3xl border border-dashed border-border bg-slate-50 p-5 text-sm text-slate-600">
+        Need to add more channels later? Keep them behind the LinkedIn wedge for now. The next best move is cleaner workflow completion, not broader channel count.
+        <Link href="/app/content" className="ml-2 inline-flex items-center gap-1 font-medium text-primary">
+          Open composer <ArrowRight className="size-4" />
+        </Link>
+      </div>
     </div>
   );
 }

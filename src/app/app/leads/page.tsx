@@ -11,6 +11,20 @@ function firstParam(value: string | string[] | undefined) {
 
 const stages = ['new', 'contacted', 'qualified', 'nurture', 'closed'] as const;
 
+function MetricCard({ href, label, value }: { href: string; label: string; value: number }) {
+  return (
+    <a href={href} className="block transition hover:-translate-y-0.5">
+      <Card>
+        <CardHeader><div className="text-sm text-muted-foreground">{label}</div></CardHeader>
+        <CardContent>
+          <div className="text-3xl font-semibold">{value}</div>
+          <div className="mt-2 text-xs text-muted-foreground">Filter this pipeline view</div>
+        </CardContent>
+      </Card>
+    </a>
+  );
+}
+
 export default async function LeadsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
   const params = await searchParams;
@@ -22,9 +36,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Search
     <div className="space-y-6">
       {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Lead updated.</div> : null}
       <section className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Hot leads</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.hotLeads}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Pending replies</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.pendingReplies}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Qualified</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.qualifiedLeads}</div></CardContent></Card>
+        <MetricCard href="/app/leads?stage=qualified" label="Hot leads" value={data.metrics.hotLeads} />
+        <MetricCard href="/app/engagement#engagement-queue" label="Pending replies" value={data.metrics.pendingReplies} />
+        <MetricCard href="/app/leads?stage=qualified" label="Qualified" value={data.metrics.qualifiedLeads} />
       </section>
 
       <Card>

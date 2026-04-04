@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { AlertTriangle, CheckCircle2, Clock3, RefreshCcw, TimerReset } from 'lucide-react';
 
-import { retryPublishJob, requeuePostTarget } from '@/server/actions/publish-activity';
+import { deletePostFromActivity, retryPublishJob, requeuePostTarget } from '@/server/actions/publish-activity';
 import type { ActivityFilters, ActivityStatus, Provider, PublishActivityItem } from '@/server/queries/publish-activity';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
@@ -170,6 +170,15 @@ export function ActivityFeed({
                       <a href={item.actionHref} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700">
                         {item.actionLabel}
                       </a>
+                    ) : null}
+                    {(item.status === 'scheduled' || item.status === 'failed') && item.postId ? (
+                      <form action={deletePostFromActivity}>
+                        <input type="hidden" name="postId" value={item.postId} />
+                        {item.publishJobId ? <input type="hidden" name="publishJobId" value={item.publishJobId} /> : null}
+                        <button className="rounded-2xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-50">
+                          Delete post
+                        </button>
+                      </form>
                     ) : null}
                     {item.externalLabel ? <span className="text-xs font-medium text-primary">{item.externalLabel}</span> : null}
                   </div>

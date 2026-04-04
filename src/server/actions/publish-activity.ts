@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { postTargets, publishJobs } from '../../../drizzle/schema';
+import { postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 async function safeRevalidate(publishJobId?: string) {
   revalidatePath('/app/activity');
@@ -71,5 +71,19 @@ export async function requeuePostTarget(formData: FormData) {
       .where(eq(publishJobs.id, publishJobId));
   }
 
+  await safeRevalidate(publishJobId || undefined);
+}
+
+
+export async function deletePostFromActivity(formData: FormData) {
+  const postId = String(formData.get('postId') || '');
+  const publishJobId = String(formData.get('publishJobId') || '');
+
+  if (!postId || !process.env.DATABASE_URL) {
+    await safeRevalidate(publishJobId || undefined);
+    return;
+  }
+
+  await db.delete(posts).where(eq(posts.id, postId));
   await safeRevalidate(publishJobId || undefined);
 }

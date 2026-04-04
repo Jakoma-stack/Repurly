@@ -1,4 +1,5 @@
 import { and, count, eq, gte, lt, sql } from 'drizzle-orm';
+
 import { db } from '@/lib/db/client';
 import { integrations, platformAccounts, usageEvents, workspaces, workspaceMemberships } from '../../../drizzle/schema';
 import type { PlatformKey } from '@/lib/platforms/types';
@@ -35,35 +36,35 @@ export async function recordUsageEvent(input: {
 }
 
 export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageSnapshot> {
+  if (!workspaceId || !process.env.DATABASE_URL) {
+    return {
+      plan: 'starter',
+      membersUsed: 0,
+      postsUsedThisMonth: 0,
+      storageUsedGb: 0,
+      channelsConnected: 0,
+    };
+  }
+
   const { start, end } = getPeriodBounds();
-  const [{ plan } = { plan: 'growth' as const }] = workspaceId
-    ? await db.select({ plan: workspaces.plan }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1)
-    : [{ plan: 'growth' as const }];
+  const [{ plan } = { plan: 'starter' as const }] = await db.select({ plan: workspaces.plan }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
 
-  const [membersRow] = workspaceId
-    ? await db.select({ total: count() }).from(workspaceMemberships).where(eq(workspaceMemberships.workspaceId, workspaceId))
-    : [{ total: 7 } as { total: number }];
+  const [membersRow] = await db.select({ total: count() }).from(workspaceMemberships).where(eq(workspaceMemberships.workspaceId, workspaceId));
 
-  const [postsRow] = workspaceId
-    ? await db
-        .select({ total: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
-        .from(usageEvents)
-        .where(and(eq(usageEvents.workspaceId, workspaceId), eq(usageEvents.metric, 'published_post'), gte(usageEvents.createdAt, start), lt(usageEvents.createdAt, end)))
-    : [{ total: 684 }];
+  const [postsRow] = await db
+    .select({ total: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
+    .from(usageEvents)
+    .where(and(eq(usageEvents.workspaceId, workspaceId), eq(usageEvents.metric, 'published_post'), gte(usageEvents.createdAt, start), lt(usageEvents.createdAt, end)));
 
-  const [storageRow] = workspaceId
-    ? await db
-        .select({ totalBytes: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
-        .from(usageEvents)
-        .where(and(eq(usageEvents.workspaceId, workspaceId), eq(usageEvents.metric, 'storage_bytes'), gte(usageEvents.createdAt, start), lt(usageEvents.createdAt, end)))
-    : [{ totalBytes: 43 * 1024 * 1024 * 1024 }];
+  const [storageRow] = await db
+    .select({ totalBytes: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
+    .from(usageEvents)
+    .where(and(eq(usageEvents.workspaceId, workspaceId), eq(usageEvents.metric, 'storage_bytes'), gte(usageEvents.createdAt, start), lt(usageEvents.createdAt, end)));
 
-  const [channelsRow] = workspaceId
-    ? await db.select({ total: count() }).from(platformAccounts).where(eq(platformAccounts.workspaceId, workspaceId))
-    : [{ total: 6 }];
+  const [channelsRow] = await db.select({ total: count() }).from(platformAccounts).where(eq(platformAccounts.workspaceId, workspaceId));
 
   return {
-    plan: (plan as UsageSnapshot['plan']) ?? 'growth',
+    plan: (plan as UsageSnapshot['plan']) ?? 'starter',
     membersUsed: Number(membersRow?.total ?? 0),
     postsUsedThisMonth: Number(postsRow?.total ?? 0),
     storageUsedGb: Math.max(0, Math.round(Number(storageRow?.totalBytes ?? 0) / (1024 * 1024 * 1024))),
@@ -71,26 +72,14 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
   };
 }
 
+function buildReconnectHref(provider: PlatformKey, workspaceId?: string) {
+  const query = workspaceId ? `?workspaceId=${encodeURIComponent(workspaceId)}` : '';
+  return `/api/${provider}/connect${query}`;
+}
+
 export async function getReconnectNudges(workspaceId?: string) {
-  if (!workspaceId) {
-    return [
-      {
-        provider: 'linkedin' as PlatformKey,
-        label: 'LinkedIn reconnect due soon',
-        severity: 'warning' as const,
-        description: 'Refresh token expires in 6 days. Ask the workspace owner to reconnect before scheduled posts are affected.',
-        actionLabel: 'Reconnect LinkedIn',
-        href: '/api/linkedin/connect',
-      },
-      {
-        provider: 'instagram' as PlatformKey,
-        label: 'Instagram page token needs attention',
-        severity: 'critical' as const,
-        description: 'A Business account lost publish rights after a page-role change. Publishing is paused until reconnection.',
-        actionLabel: 'Reconnect Instagram',
-        href: '/api/instagram/connect',
-      },
-    ];
+  if (!workspaceId || !process.env.DATABASE_URL) {
+    return [];
   }
 
   const rows = await db
@@ -112,7 +101,7 @@ export async function getReconnectNudges(workspaceId?: string) {
           ? `Repurly no longer has a valid ${provider} refresh window. Reconnect now to resume publishing.`
           : `${provider} authorization expires on ${row.expiresAt?.toLocaleDateString()}. Reconnect early to avoid missed scheduled posts.`,
         actionLabel: `Reconnect ${provider[0].toUpperCase()}${provider.slice(1)}`,
-        href: `/api/${provider}/connect`,
+        href: buildReconnectHref(provider, workspaceId),
       };
     });
 }

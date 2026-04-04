@@ -1,7 +1,8 @@
-import { and, desc, eq, isNull, lte, or } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
+
 import { db } from '@/lib/db/client';
-import { alertEvents, deliveryLogs, integrations, notificationDeliveries } from '../../../drizzle/schema';
 import { getReconnectNudges } from '@/lib/usage/metering';
+import { alertEvents, deliveryLogs, integrations, notificationDeliveries } from '../../../drizzle/schema';
 
 export type WorkspaceNotification = {
   id: string;
@@ -20,46 +21,14 @@ export type WorkspaceNotification = {
 
 export async function getWorkspaceNotifications(workspaceId?: string): Promise<WorkspaceNotification[]> {
   if (!workspaceId || !process.env.DATABASE_URL) {
-    return [
-      {
-        id: 'demo-1',
-        title: 'LinkedIn reconnect due soon',
-        body: 'Reconnect within 6 days to avoid missed scheduled publishes.',
-        severity: 'warning',
-        source: 'integrations',
-        createdAt: new Date().toISOString(),
-        actionableLabel: 'Reconnect LinkedIn',
-        actionableHref: '/api/linkedin/connect',
-        channel: 'in_app',
-        channelStatus: 'sent',
-      },
-      {
-        id: 'demo-2',
-        title: 'Instagram delivery callback mapped',
-        body: 'Repurly correlated the provider callback using the stored container ID and updated the publish record automatically.',
-        severity: 'info',
-        source: 'delivery_logs',
-        createdAt: new Date().toISOString(),
-        actionableLabel: 'Open activity',
-        actionableHref: '/app/activity',
-        correlationId: 'ig-container-demo',
-        deliveryState: 'published',
-        channel: 'email',
-        channelStatus: 'sent',
-      },
-    ];
+    return [];
   }
 
   const [alerts, nudges, unhealthyIntegrations, recentDeliveryLogs, notificationRows] = await Promise.all([
     db
       .select()
       .from(alertEvents)
-      .where(
-        and(
-          eq(alertEvents.workspaceId, workspaceId),
-          isNull(alertEvents.acknowledgedAt),
-        ),
-      )
+      .where(and(eq(alertEvents.workspaceId, workspaceId), isNull(alertEvents.acknowledgedAt)))
       .orderBy(desc(alertEvents.createdAt))
       .limit(20)
       .catch(() => []),
@@ -85,7 +54,11 @@ export async function getWorkspaceNotifications(workspaceId?: string): Promise<W
       .catch(() => []),
   ]);
 
-  const deliveryByLog = new Map(notificationRows.filter((row) => row.deliveryLogId).map((row) => [row.deliveryLogId as string, row]));
+  const deliveryByLog = new Map<string, { channel?: string | null; status?: string | null }>(
+    notificationRows
+      .filter((row) => row.deliveryLogId)
+      .map((row) => [row.deliveryLogId as string, { channel: row.channel, status: row.status }]),
+  );
 
   const fromAlerts = alerts.map((item) => ({
     id: item.id,

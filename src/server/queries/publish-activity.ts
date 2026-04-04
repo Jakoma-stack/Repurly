@@ -43,97 +43,11 @@ export interface PublishActivityData {
   items: PublishActivityItem[];
   availableProviders: Array<'all' | Provider>;
   availableStatuses: Array<'all' | ActivityStatus>;
-  dataSource: 'database' | 'preview';
+  dataSource: 'database' | 'unavailable';
 }
 
 const statusOptions: Array<'all' | ActivityStatus> = ['all', 'published', 'processing', 'retrying', 'failed', 'scheduled'];
 const providerOptions: Array<'all' | Provider> = ['all', 'linkedin', 'facebook', 'instagram', 'x'];
-
-const snapshotItems: PublishActivityItem[] = [
-  {
-    id: 'act_1',
-    publishJobId: 'job_demo_1',
-    postTargetId: 'target_demo_1',
-    title: 'April demand-gen recap',
-    provider: 'linkedin',
-    targetLabel: 'Repurly Founder Profile',
-    status: 'published',
-    postType: 'text',
-    startedAt: new Date(Date.now() - 1000 * 60 * 38).toISOString(),
-    completedAt: new Date(Date.now() - 1000 * 60 * 34).toISOString(),
-    attempts: 1,
-    summary: 'Published successfully',
-    userMessage: 'Live on LinkedIn and tracked as successful in the workflow log.',
-    externalLabel: 'View on LinkedIn',
-  },
-  {
-    id: 'act_2',
-    publishJobId: 'job_demo_2',
-    postTargetId: 'target_demo_2',
-    title: 'Executive proof post',
-    provider: 'linkedin',
-    targetLabel: 'Default company page',
-    status: 'processing',
-    postType: 'multi_image',
-    startedAt: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-    attempts: 1,
-    summary: 'Waiting on LinkedIn confirmation',
-    userMessage: 'LinkedIn accepted the post and Repurly is waiting for the provider confirmation to mark it fully live.',
-    actionLabel: 'Open job detail',
-    actionHref: '/app/activity/job_demo_2',
-  },
-  {
-    id: 'act_3',
-    publishJobId: 'job_demo_3',
-    postTargetId: 'target_demo_3',
-    title: 'Hiring signal clip',
-    provider: 'linkedin',
-    targetLabel: 'Default company page',
-    status: 'retrying',
-    postType: 'video',
-    startedAt: new Date(Date.now() - 1000 * 60 * 55).toISOString(),
-    nextRetryAt: new Date(Date.now() + 1000 * 60 * 3).toISOString(),
-    attempts: 2,
-    summary: 'Retry scheduled',
-    userMessage: 'LinkedIn has not confirmed the last attempt yet. Repurly queued another publish attempt automatically.',
-    actionLabel: 'Open job detail',
-    actionHref: '/app/activity/job_demo_3',
-  },
-  {
-    id: 'act_4',
-    publishJobId: 'job_demo_4',
-    postTargetId: 'target_demo_4',
-    title: 'Quarterly offer thread',
-    provider: 'linkedin',
-    targetLabel: '@repurlyhq',
-    status: 'failed',
-    postType: 'text',
-    startedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    attempts: 3,
-    summary: 'Publishing stopped after provider rejection',
-    userMessage: 'LinkedIn rejected the publish request because the workspace token no longer has a valid posting scope. Reconnect LinkedIn and retry the post.',
-    actionLabel: 'Reconnect LinkedIn',
-    actionHref: '/app/settings?provider=linkedin',
-    actionType: 'retry',
-  },
-  {
-    id: 'act_5',
-    publishJobId: 'job_demo_5',
-    postTargetId: 'target_demo_5',
-    postId: 'post_demo_5',
-    title: 'Client expansion update',
-    provider: 'linkedin',
-    targetLabel: 'Repurly',
-    status: 'scheduled',
-    postType: 'link',
-    startedAt: new Date(Date.now() + 1000 * 60 * 140).toISOString(),
-    attempts: 0,
-    summary: 'Ready for scheduled publish',
-    userMessage: 'Queued for the next publish window. The linked page connection is healthy.',
-    actionLabel: 'Edit post',
-    actionHref: '/app/content?postId=post_demo_5',
-  },
-];
 
 function computeRelative(item: PublishActivityItem): PublishActivityItem {
   return {
@@ -241,7 +155,7 @@ function applyFilters(items: PublishActivityItem[], filters: ActivityFilters) {
 function buildResponse(
   items: PublishActivityItem[],
   filters: ActivityFilters,
-  dataSource: 'database' | 'preview',
+  dataSource: 'database' | 'unavailable',
 ): PublishActivityData {
   const filtered = applyFilters(items.map(computeRelative), filters);
   const successful = items.filter((item) => item.status === 'published').length;
@@ -282,7 +196,7 @@ export async function getPublishActivity(filters: Partial<ActivityFilters> = {})
   };
 
   if (!process.env.DATABASE_URL) {
-    return buildResponse(snapshotItems, resolvedFilters, 'preview');
+    return buildResponse([], resolvedFilters, 'unavailable');
   }
 
   try {
@@ -369,6 +283,6 @@ export async function getPublishActivity(filters: Partial<ActivityFilters> = {})
 
     return buildResponse(items, resolvedFilters, 'database');
   } catch {
-    return buildResponse(snapshotItems, resolvedFilters, 'preview');
+    return buildResponse([], resolvedFilters, 'unavailable');
   }
 }

@@ -88,7 +88,13 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
   };
 }
 
-export async function getRecentPosts(workspaceId: string) {
+export async function getRecentDrafts(workspaceId: string, brandId?: string | null) {
+  const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
+
+  if (brandId) {
+    filters.push(eq(posts.brandId, brandId));
+  }
+
   return db
     .select({
       id: posts.id,
@@ -99,7 +105,7 @@ export async function getRecentPosts(workspaceId: string) {
     })
     .from(posts)
     .innerJoin(brands, eq(brands.id, posts.brandId))
-    .where(eq(posts.workspaceId, workspaceId))
+    .where(and(...filters))
     .orderBy(desc(posts.updatedAt))
     .limit(8);
 }

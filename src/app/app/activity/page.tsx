@@ -18,6 +18,8 @@ export default async function ActivityPage({
     q,
   });
 
+  const modeLabel = data.dataSource === 'database' ? 'live database' : 'data unavailable';
+
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -28,9 +30,14 @@ export default async function ActivityPage({
           </p>
         </div>
         <div className="text-xs text-muted-foreground">
-          Mode: <span className="font-medium text-slate-700">{data.dataSource}</span>
+          Mode: <span className="font-medium text-slate-700">{modeLabel}</span>
         </div>
       </section>
+      {data.dataSource === 'unavailable' ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          Live publish history is unavailable in this environment. Repurly will show real queue and delivery data here once database-backed activity is enabled.
+        </div>
+      ) : null}
       <ActivityOverview highlights={data.highlights} />
       <ActivityFeed
         items={data.items}
