@@ -68,7 +68,7 @@ async function main() {
     process.exit(1);
   }
 
-  let integration = await db
+ const integration = await db
     .select({
       id: integrations.id,
     })
