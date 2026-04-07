@@ -1,58 +1,82 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { plans, stripe } from '@/lib/billing/stripe';
+import { getCheckoutPriceId, isStripeConfigured, plans, stripe } from '@/lib/billing/stripe';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
 
+export const runtime = 'nodejs';
+
 type PlanKey = keyof typeof plans;
+type SelfServePlan = Extract<PlanKey, 'core' | 'growth'>;
+type CheckoutError = 'checkout-not-configured' | 'checkout-unavailable' | 'forbidden' | 'invalid-plan' | 'checkout-error';
 
 type CheckoutSessionResult =
-  | { error: 'checkout-unavailable'; url: null }
-  | { error: 'forbidden'; url: null }
-  | { error: 'invalid-plan'; url: null }
-  | { error: null; url: string };
+  | { error: CheckoutError; plan: SelfServePlan; url: null }
+  | { error: null; plan: SelfServePlan; url: string };
 
-function isSelfServePlan(plan: string): plan is Extract<PlanKey, 'core' | 'growth'> {
-  return plan === 'core' || plan === 'growth';
+const BILLING_ROLES = new Set(['owner', 'admin']);
+
+function normalizePlan(input: unknown): SelfServePlan | null {
+  return input === 'core' || input === 'growth' ? input : null;
 }
 
-function normalizePlan(input: unknown): Extract<PlanKey, 'core' | 'growth'> {
-  if (typeof input === 'string' && isSelfServePlan(input)) {
-    return input;
+function getOrigin(request: NextRequest) {
+  return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, '');
+}
+
+async function readPlanFromRequest(request: NextRequest): Promise<SelfServePlan | null> {
+  const queryPlan = normalizePlan(request.nextUrl.searchParams.get('plan'));
+  if (queryPlan) {
+    return queryPlan;
   }
-  return 'core';
+
+  const contentType = request.headers.get('content-type') ?? '';
+
+  if (contentType.includes('application/json')) {
+    const body = (await request.json().catch(() => ({}))) as { plan?: unknown };
+    return normalizePlan(body.plan);
+  }
+
+  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+    const formData = await request.formData().catch(() => null);
+    return normalizePlan(formData?.get('plan'));
+  }
+
+  return null;
 }
 
 async function createCheckoutSession(
   request: NextRequest,
-  plan: Extract<PlanKey, 'core' | 'growth'>,
+  plan: SelfServePlan,
 ): Promise<CheckoutSessionResult> {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    return { error: 'checkout-unavailable', url: null };
+  if (!isStripeConfigured()) {
+    return { error: 'checkout-not-configured', plan, url: null };
   }
 
-  const price = plans[plan];
+  const price = getCheckoutPriceId(plan);
   if (!price) {
-    return { error: 'checkout-unavailable', url: null };
+    return { error: 'checkout-unavailable', plan, url: null };
   }
 
   const session = await requireWorkspaceSession();
 
-  if (!['owner', 'admin'].includes(session.role)) {
-    return { error: 'forbidden', url: null };
+  if (!BILLING_ROLES.has(session.role)) {
+    return { error: 'forbidden', plan, url: null };
   }
 
   try {
     const customerId = await getOrCreateStripeCustomer(session.workspaceId);
+    if (!customerId) {
+      return { error: 'checkout-error', plan, url: null };
+    }
 
-    const origin = process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin;
-
+    const origin = getOrigin(request);
     const checkout = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price, quantity: 1 }],
       allow_promotion_codes: true,
       success_url: `${origin}/app/billing?checkout=success`,
-      cancel_url: `${origin}/app/billing?checkout=cancelled`,
+      cancel_url: `${origin}/app/billing?checkout=cancelled&plan=${plan}`,
       metadata: {
         workspaceId: session.workspaceId,
         plan,
@@ -66,42 +90,72 @@ async function createCheckoutSession(
     });
 
     if (!checkout.url) {
-      return { error: 'checkout-unavailable', url: null };
+      return { error: 'checkout-error', plan, url: null };
     }
 
-    return { error: null, url: checkout.url };
+    return { error: null, plan, url: checkout.url };
   } catch {
-    return { error: 'checkout-unavailable', url: null };
+    return { error: 'checkout-error', plan, url: null };
   }
+}
+
+function buildBillingRedirect(request: NextRequest, billingState: CheckoutError, plan: SelfServePlan | null) {
+  const redirectUrl = new URL('/app/billing', request.url);
+  redirectUrl.searchParams.set('billing', billingState);
+
+  if (plan) {
+    redirectUrl.searchParams.set('plan', plan);
+  }
+
+  return NextResponse.redirect(redirectUrl);
 }
 
 export async function GET(request: NextRequest) {
   const plan = normalizePlan(request.nextUrl.searchParams.get('plan'));
-  const result = await createCheckoutSession(request, plan);
-
-  if (result.error === 'forbidden') {
-    return NextResponse.redirect(new URL('/app/billing?billing=forbidden', request.url));
+  if (!plan) {
+    return buildBillingRedirect(request, 'invalid-plan', null);
   }
 
+  const result = await createCheckoutSession(request, plan);
+
   if (result.error || !result.url) {
-    return NextResponse.redirect(new URL('/app/billing?billing=checkout-unavailable', request.url));
+    return buildBillingRedirect(request, result.error, result.plan);
   }
 
   return NextResponse.redirect(result.url);
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as { plan?: string };
-  const plan = normalizePlan(body.plan);
+  const plan = await readPlanFromRequest(request);
+  if (!plan) {
+    if (request.headers.get('content-type')?.includes('application/json')) {
+      return NextResponse.json({ error: 'Invalid plan', code: 'invalid-plan' }, { status: 400 });
+    }
+
+    return buildBillingRedirect(request, 'invalid-plan', null);
+  }
+
   const result = await createCheckoutSession(request, plan);
 
-  if (result.error === 'forbidden') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  if (request.headers.get('content-type')?.includes('application/json')) {
+    if (result.error === 'forbidden') {
+      return NextResponse.json({ error: 'Forbidden', code: result.error }, { status: 403 });
+    }
+
+    if (result.error === 'checkout-not-configured' || result.error === 'checkout-unavailable') {
+      return NextResponse.json({ error: 'Checkout unavailable', code: result.error }, { status: 503 });
+    }
+
+    if (result.error || !result.url) {
+      return NextResponse.json({ error: 'Checkout error', code: result.error ?? 'checkout-error' }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: result.url });
   }
 
   if (result.error || !result.url) {
-    return NextResponse.json({ error: 'Checkout unavailable' }, { status: 400 });
+    return buildBillingRedirect(request, result.error, result.plan);
   }
 
-  return NextResponse.json({ url: result.url });
+  return NextResponse.redirect(result.url);
 }

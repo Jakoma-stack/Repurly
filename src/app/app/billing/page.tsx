@@ -8,6 +8,8 @@ import { getBillingSnapshot } from '@/server/queries/billing';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
+type SelfServePlan = 'core' | 'growth';
+
 type PlanCard = {
   key: 'core' | 'growth' | 'scale';
   name: string;
@@ -15,7 +17,8 @@ type PlanCard = {
   summary: string;
   bullets: string[];
   ctaLabel: string;
-  ctaHref: string;
+  checkoutPlan?: SelfServePlan;
+  ctaHref?: string;
 };
 
 const PLAN_CARDS: PlanCard[] = [
@@ -26,7 +29,7 @@ const PLAN_CARDS: PlanCard[] = [
     summary: 'For focused LinkedIn workflows with a smaller team, tighter limits, and reliable publishing fundamentals.',
     bullets: ['3 workspace members', '120 posts per month', '3 connected channels'],
     ctaLabel: 'Activate Core',
-    ctaHref: '/api/billing/checkout?plan=core',
+    checkoutPlan: 'core',
   },
   {
     key: 'growth',
@@ -35,7 +38,7 @@ const PLAN_CARDS: PlanCard[] = [
     summary: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial control.',
     bullets: ['10 workspace members', '1000 posts per month', 'Approval flows included'],
     ctaLabel: 'Activate Growth',
-    ctaHref: '/api/billing/checkout?plan=growth',
+    checkoutPlan: 'growth',
   },
   {
     key: 'scale',
@@ -52,7 +55,7 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function normalizeSelectedPlan(value: string | undefined): 'core' | 'growth' | null {
+function normalizeSelectedPlan(value: string | undefined): SelfServePlan | null {
   if (value === 'core' || value === 'growth') {
     return value;
   }
@@ -69,6 +72,17 @@ function Banner({ kind, children }: { kind: 'success' | 'error' | 'warning'; chi
         : 'border-rose-200 bg-rose-50 text-rose-900';
 
   return <div className={`rounded-2xl border px-4 py-3 text-sm ${styles}`}>{children}</div>;
+}
+
+function CheckoutButton({ plan, label, className }: { plan: SelfServePlan; label: string; className: string }) {
+  return (
+    <form action="/api/billing/checkout" method="POST">
+      <input type="hidden" name="plan" value={plan} />
+      <button type="submit" className={className}>
+        {label}
+      </button>
+    </form>
+  );
 }
 
 export default async function BillingPage({ searchParams }: { searchParams?: SearchParams }) {
@@ -100,8 +114,17 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
       {billingState === 'portal-unavailable' && (
         <Banner kind="error">Billing portal is not available until Stripe is configured and a workspace customer exists.</Banner>
       )}
+      {billingState === 'checkout-not-configured' && (
+        <Banner kind="error">Stripe is not configured for this environment yet. Add the Stripe secret key and live price IDs before taking payment.</Banner>
+      )}
       {billingState === 'checkout-unavailable' && (
-        <Banner kind="error">Checkout is not available until Stripe price IDs are configured for this environment.</Banner>
+        <Banner kind="error">Checkout is not available for the selected plan right now. Confirm the Stripe price ID for this environment and try again.</Banner>
+      )}
+      {billingState === 'checkout-error' && (
+        <Banner kind="error">Stripe could not start checkout right now. Try again, and if it persists, check Stripe configuration and workspace billing records.</Banner>
+      )}
+      {billingState === 'invalid-plan' && (
+        <Banner kind="error">That plan cannot be purchased through self-serve checkout. Use Core or Growth, or contact sales for Scale.</Banner>
       )}
       {billingState === 'forbidden' && <Banner kind="error">Only workspace owners and admins can change billing.</Banner>}
 
@@ -133,6 +156,9 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
           const isCurrentPlan = hasPaidAccess && snapshot.plan === plan.key;
           const isHighlighted = !hasPaidAccess && selectedPlan === plan.key;
           const emphasized = isCurrentPlan || isHighlighted;
+          const buttonClass = emphasized
+            ? 'rounded-2xl border border-white/20 bg-white px-4 py-2 text-sm font-medium text-slate-950'
+            : 'rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700';
 
           return (
             <Card key={plan.key} className={emphasized ? 'border-slate-950 bg-slate-950 text-white' : undefined}>
@@ -160,12 +186,13 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
                   {isCurrentPlan ? (
                     <span className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950">Current paid plan</span>
                   ) : canManageBilling ? (
-                    <a
-                      href={plan.ctaHref}
-                      className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700"
-                    >
-                      {plan.ctaLabel}
-                    </a>
+                    plan.checkoutPlan ? (
+                      <CheckoutButton plan={plan.checkoutPlan} label={plan.ctaLabel} className={buttonClass} />
+                    ) : (
+                      <a href={plan.ctaHref} className={buttonClass}>
+                        {plan.ctaLabel}
+                      </a>
+                    )
                   ) : (
                     <span className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-500">
                       Billing managed by owner/admin
@@ -203,18 +230,24 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
                   <a href="/api/billing/portal" className="block font-medium text-primary">
                     Open billing portal
                   </a>
-                  <a href="/api/billing/checkout?plan=growth" className="block font-medium text-primary">
-                    Upgrade to Growth
-                  </a>
+                  <CheckoutButton
+                    plan="growth"
+                    label="Upgrade to Growth"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  />
                 </>
               ) : (
                 <>
-                  <a href="/api/billing/checkout?plan=core" className="block font-medium text-primary">
-                    Activate Core
-                  </a>
-                  <a href="/api/billing/checkout?plan=growth" className="block font-medium text-primary">
-                    Activate Growth
-                  </a>
+                  <CheckoutButton
+                    plan="core"
+                    label="Activate Core"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  />
+                  <CheckoutButton
+                    plan="growth"
+                    label="Activate Growth"
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                  />
                 </>
               )
             ) : (

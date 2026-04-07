@@ -1,17 +1,28 @@
 import Stripe from 'stripe';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? '', {
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY?.trim();
+
+export const stripe = new Stripe(stripeSecretKey || 'sk_test_placeholder', {
   apiVersion: '2025-08-27.basil',
   typescript: true,
 });
 
 export const plans = {
-  core: process.env.STRIPE_PRICE_CORE,
-  growth: process.env.STRIPE_PRICE_GROWTH,
-  scale: process.env.STRIPE_PRICE_SCALE,
+  core: process.env.STRIPE_PRICE_CORE?.trim(),
+  growth: process.env.STRIPE_PRICE_GROWTH?.trim(),
+  scale: process.env.STRIPE_PRICE_SCALE?.trim(),
 } as const;
 
 export type StripePlanKey = keyof typeof plans;
+export type StripeSelfServePlanKey = Extract<StripePlanKey, 'core' | 'growth'>;
+
+export function isStripeConfigured() {
+  return Boolean(stripeSecretKey);
+}
+
+export function getCheckoutPriceId(plan: StripeSelfServePlanKey): string | null {
+  return plans[plan] ?? null;
+}
 
 export function getPlanFromPriceId(priceId: string | null | undefined): StripePlanKey | null {
   if (!priceId) return null;
