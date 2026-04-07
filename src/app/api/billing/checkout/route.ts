@@ -110,7 +110,7 @@ function buildBillingRedirect(
   billingState: CheckoutError,
   plan: SelfServePlan | null,
 ) {
-  const redirectUrl = new URL('/app/billing', request.url);
+  const redirectUrl = new URL('/app/billing', getOrigin(request));
   redirectUrl.searchParams.set('billing', billingState);
 
   if (plan) {
@@ -141,7 +141,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const plan = await readPlanFromRequest(request);
-
   if (!plan) {
     if (request.headers.get('content-type')?.includes('application/json')) {
       return NextResponse.json({ error: 'Invalid plan', code: 'invalid-plan' }, { status: 400 });
@@ -162,15 +161,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error) {
-      return NextResponse.json({ error: 'Checkout error', code: result.error }, { status: 500 });
-    }
+  return buildBillingRedirect(request, result.error, result.plan);
+}
 
-    if (!result.url) {
-      return NextResponse.json({ error: 'Checkout error', code: 'checkout-error' }, { status: 500 });
-    }
+if (!result.url) {
+  return buildBillingRedirect(request, null, result.plan);
+}
 
-    return NextResponse.json({ url: result.url });
-  }
+return NextResponse.redirect(result.url);
 
   if (result.error) {
     return buildBillingRedirect(request, result.error, result.plan);
