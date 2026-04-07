@@ -7,7 +7,12 @@ export const runtime = 'nodejs';
 
 type PlanKey = keyof typeof plans;
 type SelfServePlan = Extract<PlanKey, 'core' | 'growth'>;
-type CheckoutError = 'checkout-not-configured' | 'checkout-unavailable' | 'forbidden' | 'invalid-plan' | 'checkout-error';
+type CheckoutError =
+  | 'checkout-not-configured'
+  | 'checkout-unavailable'
+  | 'forbidden'
+  | 'invalid-plan'
+  | 'checkout-error';
 
 type CheckoutSessionResult =
   | { error: CheckoutError; plan: SelfServePlan; url: null }
@@ -25,9 +30,7 @@ function getOrigin(request: NextRequest) {
 
 async function readPlanFromRequest(request: NextRequest): Promise<SelfServePlan | null> {
   const queryPlan = normalizePlan(request.nextUrl.searchParams.get('plan'));
-  if (queryPlan) {
-    return queryPlan;
-  }
+  if (queryPlan) return queryPlan;
 
   const contentType = request.headers.get('content-type') ?? '';
 
@@ -36,7 +39,10 @@ async function readPlanFromRequest(request: NextRequest): Promise<SelfServePlan 
     return normalizePlan(body.plan);
   }
 
-  if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+  if (
+    contentType.includes('application/x-www-form-urlencoded') ||
+    contentType.includes('multipart/form-data')
+  ) {
     const formData = await request.formData().catch(() => null);
     return normalizePlan(formData?.get('plan'));
   }
@@ -99,7 +105,11 @@ async function createCheckoutSession(
   }
 }
 
-function buildBillingRedirect(request: NextRequest, billingState: CheckoutError, plan: SelfServePlan | null) {
+function buildBillingRedirect(
+  request: NextRequest,
+  billingState: CheckoutError,
+  plan: SelfServePlan | null,
+) {
   const redirectUrl = new URL('/app/billing', request.url);
   redirectUrl.searchParams.set('billing', billingState);
 
@@ -118,8 +128,12 @@ export async function GET(request: NextRequest) {
 
   const result = await createCheckoutSession(request, plan);
 
-  if (result.error || !result.url) {
+  if (result.error) {
     return buildBillingRedirect(request, result.error, result.plan);
+  }
+
+  if (!result.url) {
+    return buildBillingRedirect(request, 'checkout-error', result.plan);
   }
 
   return NextResponse.redirect(result.url);
@@ -146,15 +160,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Checkout unavailable', code: result.error }, { status: 503 });
     }
 
-    if (result.error || !result.url) {
-      return NextResponse.json({ error: 'Checkout error', code: result.error ?? 'checkout-error' }, { status: 500 });
-    }
+    if (result.error) {
+  return buildBillingRedirect(request, result.error, result.plan);
+}
 
-    return NextResponse.json({ url: result.url });
+if (!result.url) {
+  return buildBillingRedirect(
+    request,
+    {
+      code: "unknown_checkout_error",
+      message: "Checkout session could not be created.",
+    },
+    result.plan
+  );
+}
+
+return NextResponse.redirect(result.url);
   }
 
-  if (result.error || !result.url) {
+  if (result.error) {
     return buildBillingRedirect(request, result.error, result.plan);
+  }
+
+  if (!result.url) {
+    return buildBillingRedirect(request, 'checkout-error', result.plan);
   }
 
   return NextResponse.redirect(result.url);
