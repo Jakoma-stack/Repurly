@@ -141,6 +141,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const plan = await readPlanFromRequest(request);
+
   if (!plan) {
     if (request.headers.get('content-type')?.includes('application/json')) {
       return NextResponse.json({ error: 'Invalid plan', code: 'invalid-plan' }, { status: 400 });
@@ -161,21 +162,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error) {
-  return buildBillingRedirect(request, result.error, result.plan);
-}
+      return NextResponse.json({ error: 'Checkout error', code: result.error }, { status: 500 });
+    }
 
-if (!result.url) {
-  return buildBillingRedirect(
-    request,
-    {
-      code: "unknown_checkout_error",
-      message: "Checkout session could not be created.",
-    },
-    result.plan
-  );
-}
+    if (!result.url) {
+      return NextResponse.json({ error: 'Checkout error', code: 'checkout-error' }, { status: 500 });
+    }
 
-return NextResponse.redirect(result.url);
+    return NextResponse.json({ url: result.url });
   }
 
   if (result.error) {
