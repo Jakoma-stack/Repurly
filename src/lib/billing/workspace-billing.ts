@@ -17,18 +17,6 @@ export type WorkspaceBillingRecord = {
 
 const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-function serializeError(error: unknown) {
-  if (error instanceof Error) {
-    return {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    };
-  }
-
-  return { value: String(error) };
-}
-
 export function hasPaidWorkspaceAccess(
   record: Pick<WorkspaceBillingRecord, 'stripeSubscriptionId' | 'stripeSubscriptionStatus'>,
 ) {
@@ -88,50 +76,89 @@ export async function requirePaidWorkspaceAccess(workspaceId: string) {
   return billingState;
 }
 
+async function persistStripeCustomerId(workspaceId: string, stripeCustomerId: string) {
+  await db
+    .update(workspaces)
+    .set({
+      stripeCustomerId,
+      updatedAt: new Date(),
+    })
+    .where(eq(workspaces.id, workspaceId));
+}
+
+async function createStripeCustomer(workspace: Pick<WorkspaceBillingRecord, 'id' | 'name' | 'slug'>) {
+  const customer = await stripe.customers.create({
+    name: workspace.name,
+    metadata: {
+      workspaceId: workspace.id,
+      workspaceSlug: workspace.slug,
+    },
+  });
+
+  await persistStripeCustomerId(workspace.id, customer.id);
+  return customer.id;
+}
+
+function isMissingCustomerError(error: unknown) {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const stripeError = error as {
+    type?: string;
+    rawType?: string;
+    code?: string;
+    param?: string;
+    statusCode?: number;
+  };
+
+  return (
+    (stripeError.type === 'StripeInvalidRequestError' || stripeError.rawType === 'invalid_request_error') &&
+    stripeError.code === 'resource_missing' &&
+    stripeError.param === 'customer' &&
+    stripeError.statusCode === 400
+  );
+}
+
 export async function getOrCreateStripeCustomer(workspaceId: string) {
   const workspace = await getWorkspaceBillingRecord(workspaceId);
 
   if (!workspace) {
-    console.error('[billing.customer] Workspace not found', { workspaceId });
     throw new Error('Workspace not found');
   }
 
   if (workspace.stripeCustomerId) {
-    console.error('[billing.customer] Using existing Stripe customer', {
-      workspaceId: workspace.id,
-      stripeCustomerId: workspace.stripeCustomerId,
-    });
-    return workspace.stripeCustomerId;
+    try {
+      const existingCustomer = await stripe.customers.retrieve(workspace.stripeCustomerId);
+
+      if ('deleted' in existingCustomer && existingCustomer.deleted) {
+        throw new Error(`Stripe customer ${workspace.stripeCustomerId} is deleted`);
+      }
+
+      return workspace.stripeCustomerId;
+    } catch (error) {
+      if (!isMissingCustomerError(error)) {
+        console.error('[billing.customer] Failed to retrieve existing Stripe customer', {
+          workspaceId: workspace.id,
+          stripeCustomerId: workspace.stripeCustomerId,
+          error,
+        });
+        throw error;
+      }
+
+      console.error('[billing.customer] Stored Stripe customer missing in current Stripe account; recreating', {
+        workspaceId: workspace.id,
+        stripeCustomerId: workspace.stripeCustomerId,
+      });
+    }
   }
 
   try {
-    const customer = await stripe.customers.create({
-      name: workspace.name,
-      metadata: {
-        workspaceId: workspace.id,
-        workspaceSlug: workspace.slug,
-      },
-    });
-
-    await db
-      .update(workspaces)
-      .set({
-        stripeCustomerId: customer.id,
-        updatedAt: new Date(),
-      })
-      .where(eq(workspaces.id, workspace.id));
-
-    console.error('[billing.customer] Created Stripe customer', {
-      workspaceId: workspace.id,
-      stripeCustomerId: customer.id,
-    });
-
-    return customer.id;
+    return await createStripeCustomer(workspace);
   } catch (error) {
     console.error('[billing.customer] Failed to create Stripe customer', {
       workspaceId: workspace.id,
-      workspaceSlug: workspace.slug,
-      error: serializeError(error),
+      error,
     });
     throw error;
   }
