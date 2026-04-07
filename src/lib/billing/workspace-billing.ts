@@ -17,6 +17,18 @@ export type WorkspaceBillingRecord = {
 
 const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
+function serializeError(error: unknown) {
+  if (error instanceof Error) {
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+  }
+
+  return { value: String(error) };
+}
+
 export function hasPaidWorkspaceAccess(
   record: Pick<WorkspaceBillingRecord, 'stripeSubscriptionId' | 'stripeSubscriptionStatus'>,
 ) {
@@ -80,28 +92,47 @@ export async function getOrCreateStripeCustomer(workspaceId: string) {
   const workspace = await getWorkspaceBillingRecord(workspaceId);
 
   if (!workspace) {
+    console.error('[billing.customer] Workspace not found', { workspaceId });
     throw new Error('Workspace not found');
   }
 
   if (workspace.stripeCustomerId) {
+    console.error('[billing.customer] Using existing Stripe customer', {
+      workspaceId: workspace.id,
+      stripeCustomerId: workspace.stripeCustomerId,
+    });
     return workspace.stripeCustomerId;
   }
 
-  const customer = await stripe.customers.create({
-    name: workspace.name,
-    metadata: {
+  try {
+    const customer = await stripe.customers.create({
+      name: workspace.name,
+      metadata: {
+        workspaceId: workspace.id,
+        workspaceSlug: workspace.slug,
+      },
+    });
+
+    await db
+      .update(workspaces)
+      .set({
+        stripeCustomerId: customer.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(workspaces.id, workspace.id));
+
+    console.error('[billing.customer] Created Stripe customer', {
+      workspaceId: workspace.id,
+      stripeCustomerId: customer.id,
+    });
+
+    return customer.id;
+  } catch (error) {
+    console.error('[billing.customer] Failed to create Stripe customer', {
       workspaceId: workspace.id,
       workspaceSlug: workspace.slug,
-    },
-  });
-
-  await db
-    .update(workspaces)
-    .set({
-      stripeCustomerId: customer.id,
-      updatedAt: new Date(),
-    })
-    .where(eq(workspaces.id, workspace.id));
-
-  return customer.id;
+      error: serializeError(error),
+    });
+    throw error;
+  }
 }

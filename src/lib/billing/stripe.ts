@@ -21,7 +21,17 @@ export function isStripeConfigured() {
 }
 
 export function getCheckoutPriceId(plan: StripeSelfServePlanKey): string | null {
-  return plans[plan] ?? null;
+  const priceId = plans[plan] ?? null;
+
+  if (!priceId) {
+    console.error('[billing.stripe] Missing price id for self-serve plan', {
+      plan,
+      hasCore: Boolean(plans.core),
+      hasGrowth: Boolean(plans.growth),
+    });
+  }
+
+  return priceId;
 }
 
 export function getPlanFromPriceId(priceId: string | null | undefined): StripePlanKey | null {

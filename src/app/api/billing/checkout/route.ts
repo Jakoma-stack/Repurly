@@ -55,27 +55,43 @@ async function createCheckoutSession(
   plan: SelfServePlan,
 ): Promise<CheckoutSessionResult> {
   if (!isStripeConfigured()) {
+    console.error('[billing.checkout] Stripe is not configured');
     return { error: 'checkout-not-configured', plan, url: null };
   }
 
   const price = getCheckoutPriceId(plan);
   if (!price) {
+    console.error('[billing.checkout] Missing checkout price for plan', { plan });
     return { error: 'checkout-unavailable', plan, url: null };
   }
 
   const session = await requireWorkspaceSession();
 
   if (!BILLING_ROLES.has(session.role)) {
+    console.error('[billing.checkout] User does not have billing role', {
+      workspaceId: session.workspaceId,
+      role: session.role,
+    });
     return { error: 'forbidden', plan, url: null };
   }
 
   try {
     const customerId = await getOrCreateStripeCustomer(session.workspaceId);
     if (!customerId) {
+      console.error('[billing.checkout] Could not get or create Stripe customer', {
+        workspaceId: session.workspaceId,
+      });
       return { error: 'checkout-error', plan, url: null };
     }
 
     const origin = getOrigin(request);
+    console.error('[billing.checkout] creating session', {
+      workspaceId: session.workspaceId,
+      plan,
+      price,
+      origin,
+    });
+
     const checkout = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -96,11 +112,20 @@ async function createCheckoutSession(
     });
 
     if (!checkout.url) {
+      console.error('[billing.checkout] Stripe returned checkout session without url', {
+        workspaceId: session.workspaceId,
+        plan,
+        checkoutId: checkout.id,
+      });
       return { error: 'checkout-error', plan, url: null };
     }
 
     return { error: null, plan, url: checkout.url };
-  } catch {
+  } catch (error) {
+    console.error('[billing.checkout] Stripe checkout session creation failed', {
+      plan,
+      error,
+    });
     return { error: 'checkout-error', plan, url: null };
   }
 }
@@ -116,6 +141,14 @@ function buildBillingRedirect(
   if (plan) {
     redirectUrl.searchParams.set('plan', plan);
   }
+
+  console.error('[billing.redirect]', {
+    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
+    requestUrl: request.url,
+    redirectTo: redirectUrl.toString(),
+    billingState,
+    plan,
+  });
 
   return NextResponse.redirect(redirectUrl);
 }
@@ -140,9 +173,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const isJsonRequest = request.headers.get('content-type')?.includes('application/json') ?? false;
   const plan = await readPlanFromRequest(request);
+
   if (!plan) {
-    if (request.headers.get('content-type')?.includes('application/json')) {
+    if (isJsonRequest) {
       return NextResponse.json({ error: 'Invalid plan', code: 'invalid-plan' }, { status: 400 });
     }
 
@@ -151,7 +186,7 @@ export async function POST(request: NextRequest) {
 
   const result = await createCheckoutSession(request, plan);
 
-  if (request.headers.get('content-type')?.includes('application/json')) {
+  if (isJsonRequest) {
     if (result.error === 'forbidden') {
       return NextResponse.json({ error: 'Forbidden', code: result.error }, { status: 403 });
     }
@@ -161,14 +196,15 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error) {
-  return buildBillingRedirect(request, result.error, result.plan);
-}
+      return NextResponse.json({ error: 'Checkout error', code: result.error }, { status: 500 });
+    }
 
-if (!result.url) {
-  return buildBillingRedirect(request, null, result.plan);
-}
+    if (!result.url) {
+      return NextResponse.json({ error: 'Checkout error', code: 'checkout-error' }, { status: 500 });
+    }
 
-return NextResponse.redirect(result.url);
+    return NextResponse.json({ url: result.url });
+  }
 
   if (result.error) {
     return buildBillingRedirect(request, result.error, result.plan);
