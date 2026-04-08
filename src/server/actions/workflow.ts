@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { inngest } from '@/lib/inngest/client';
 import { buildFallbackContentDrafts, generateContentDrafts, type ContentDraft, type GenerateContentDraftsArgs } from '@/lib/ai/content';
 import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
@@ -23,6 +24,32 @@ type SavedCampaign = {
   preferredTimeOfDay: string;
   savedAt: string;
 };
+
+const IMMEDIATE_PUBLISH_WINDOW_MS = 60 * 1000;
+
+function parseScheduledFor(formData: FormData) {
+  const rawValue = requiredString(formData, 'scheduledFor');
+  if (!rawValue) return null;
+
+  const timezoneOffsetMinutes = Number(requiredString(formData, 'timezoneOffsetMinutes') || '0');
+  const match = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+
+  if (match) {
+    const [, year, month, day, hour, minute] = match;
+    const utcTimestamp = Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+    ) + timezoneOffsetMinutes * 60 * 1000;
+
+    return new Date(utcTimestamp);
+  }
+
+  const fallback = new Date(rawValue);
+  return Number.isNaN(fallback.getTime()) ? null : fallback;
+}
 
 function buildContentPath(
   params: Record<string, string | undefined>,
@@ -125,7 +152,6 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
   const postId = requiredString(formData, 'postId');
   const title = requiredString(formData, 'title');
   const body = requiredString(formData, 'body');
-  const scheduledForRaw = requiredString(formData, 'scheduledFor');
   const postType = requiredString(formData, 'postType') || 'text';
   const brief = requiredString(formData, 'brief');
 
@@ -133,7 +159,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
     return { error: 'invalid' as const, post: null };
   }
 
-  const scheduledFor = scheduledForRaw ? new Date(scheduledForRaw) : null;
+  const scheduledFor = parseScheduledFor(formData);
   const brandId = await resolveBrandId(formData, workspaceId);
   if (!brandId) return { error: 'missing-brand' as const, post: null };
 
@@ -215,6 +241,37 @@ async function upsertQueuedPublishJob(postId: string, postTargetId: string, sche
 
   const inserted = await db.insert(publishJobs).values({ postId, postTargetId, status: 'queued', scheduledFor }).returning({ id: publishJobs.id });
   return inserted[0]?.id ?? null;
+}
+
+async function maybeDispatchScheduledPost(args: {
+  publishJobId: string | null;
+  postId: string;
+  postTargetId: string;
+  scheduledFor: Date | null;
+}) {
+  if (!args.publishJobId || !args.scheduledFor) return;
+
+  if (args.scheduledFor.getTime() > Date.now() + IMMEDIATE_PUBLISH_WINDOW_MS) {
+    return;
+  }
+
+  try {
+    await inngest.send({
+      name: 'repurly/post.publish.requested',
+      data: {
+        jobId: args.publishJobId,
+        postId: args.postId,
+        postTargetId: args.postTargetId,
+      },
+    });
+  } catch (error) {
+    console.error('schedulePost: immediate publish enqueue failed', {
+      postId: args.postId,
+      postTargetId: args.postTargetId,
+      publishJobId: args.publishJobId,
+      error,
+    });
+  }
 }
 
 function buildGeneratedDraftRows(args: {
@@ -341,7 +398,14 @@ export async function schedulePost(formData: FormData) {
   const target = await attachTarget(post.id, post.workspaceId, formData);
   if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
 
-  await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
+  const publishJobId = await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
+
+  await maybeDispatchScheduledPost({
+    publishJobId,
+    postId: post.id,
+    postTargetId: target.id,
+    scheduledFor: post.scheduledFor,
+  });
 
   await refreshWorkflowPages();
   redirect(buildContentPath({ ok: 'scheduled', postId: post.id }, 'target-selection') as Route);

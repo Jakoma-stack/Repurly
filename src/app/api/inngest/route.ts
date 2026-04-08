@@ -1,1 +1,5 @@
-export { GET, POST, PUT } from "@/lib/inngest/functions";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
+
+export { GET, POST, PUT } from '@/lib/inngest/functions';

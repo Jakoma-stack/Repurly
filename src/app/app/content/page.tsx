@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
   clearRecentDrafts,
@@ -365,6 +366,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
             <input type="hidden" name="workspaceId" value={session.workspaceId} />
             <input type="hidden" name="authorId" value={session.userId} />
             <input type="hidden" name="postId" value={postId ?? ''} />
+            <TimezoneOffsetField />
             <div className="space-y-4 rounded-3xl border border-border p-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>

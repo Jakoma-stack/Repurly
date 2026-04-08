@@ -1,4 +1,4 @@
-import { and, eq, lte, or } from "drizzle-orm";
+import { and, desc, eq, lte, or } from "drizzle-orm";
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
 import { db } from "@/lib/db/client";
@@ -30,7 +30,7 @@ function toDateValue(value: string | Date | null | undefined, fallback = new Dat
 
 export const publishDuePosts = inngest.createFunction(
   { id: "publish-due-posts", retries: 3 },
-  { cron: "*/5 * * * *" },
+  { cron: "* * * * *" },
   async ({ step }) => {
     const dueJobs = await step.run("load-due-jobs", async () => {
       return db
@@ -47,7 +47,7 @@ export const publishDuePosts = inngest.createFunction(
     for (const job of dueJobs) {
       await step.sendEvent("enqueue-single-publish", {
         name: "repurly/post.publish.requested",
-        data: { postId: job.postId, postTargetId: job.postTargetId },
+        data: { jobId: job.id, postId: job.postId, postTargetId: job.postTargetId },
       });
     }
 
@@ -64,7 +64,18 @@ export const publishSinglePost = inngest.createFunction(
       const [target] = event.data.postTargetId
         ? await db.select().from(postTargets).where(eq(postTargets.id, event.data.postTargetId)).limit(1)
         : [];
-      const [job] = await db.select().from(publishJobs).where(eq(publishJobs.postId, event.data.postId)).limit(1);
+      const [job] = event.data.jobId
+        ? await db.select().from(publishJobs).where(eq(publishJobs.id, event.data.jobId)).limit(1)
+        : await db
+            .select()
+            .from(publishJobs)
+            .where(
+              event.data.postTargetId
+                ? and(eq(publishJobs.postId, event.data.postId), eq(publishJobs.postTargetId, event.data.postTargetId))
+                : eq(publishJobs.postId, event.data.postId)
+            )
+            .orderBy(desc(publishJobs.scheduledFor))
+            .limit(1);
       return { post, target, job };
     });
 
