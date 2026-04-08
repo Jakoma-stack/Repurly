@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { LocalDateTimeInput } from '@/components/workflow/local-datetime-input';
 import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
@@ -417,7 +418,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
-                  <input name="scheduledFor" type="datetime-local" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.scheduledForInput ?? ''} />
+                  <LocalDateTimeInput
+                    name="scheduledFor"
+                    isoValue={editingPost?.scheduledForIso ?? ''}
+                    className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm"
+                  />
                   <p className="mt-2 text-xs text-muted-foreground">Queued posts only publish automatically when the background worker is live and reaching /api/inngest on schedule.</p>
                 </div>
               </div>

@@ -70,15 +70,11 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
     .orderBy(desc(approvalRequests.createdAt))
     .limit(1);
 
-  const scheduledForInput = post.scheduledFor
-    ? new Date(post.scheduledFor.getTime() - post.scheduledFor.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
-    : '';
-
   return {
     id: post.id,
     title: post.title ?? '',
     body: post.body ?? '',
-    scheduledForInput,
+    scheduledForIso: post.scheduledFor ? new Date(post.scheduledFor).toISOString() : '',
     targetId: targetRows[0]?.targetId ?? null,
     approvalOwner: approvalRows[0]?.approvalOwner ?? '',
     status: post.status,
@@ -165,7 +161,7 @@ export async function getPublishingQueue(workspaceId: string) {
   return rows.map((row) => ({
     id: row.id,
     postId: row.postId,
-    scheduledFor: row.scheduledFor ? new Date(row.scheduledFor).toLocaleString() : 'Not scheduled',
+    scheduledForIso: row.scheduledFor ? new Date(row.scheduledFor).toISOString() : null,
     title: row.title,
     brandName: row.brandName,
     targetLabel: row.targetDisplayName || row.targetHandle || 'LinkedIn target',

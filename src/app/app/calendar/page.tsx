@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { LocalDateTime } from '@/components/workflow/local-date-time';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getPublishingQueue } from '@/server/queries/workflow';
@@ -23,7 +24,7 @@ export default async function CalendarPage() {
             const content = (
               <div className="flex flex-col gap-3 rounded-2xl border border-border p-4 transition hover:border-primary/40 hover:bg-slate-50 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <div className="text-sm text-muted-foreground">{item.scheduledFor}</div>
+                  <div className="text-sm text-muted-foreground"><LocalDateTime value={item.scheduledForIso} /></div>
                   <div className="mt-1 font-medium text-slate-900">{item.title}</div>
                   <div className="mt-1 text-sm text-muted-foreground">{item.targetLabel} · {item.provider}</div>
                 </div>
