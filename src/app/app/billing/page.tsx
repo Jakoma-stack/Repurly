@@ -76,7 +76,7 @@ function Banner({ kind, children }: { kind: 'success' | 'error' | 'warning'; chi
 
 function CheckoutButton({ plan, label, className }: { plan: SelfServePlan; label: string; className: string }) {
   return (
-    <form action="/api/billing/checkout" method="POST">
+    <form action="/api/billing/checkout" method="GET">
       <input type="hidden" name="plan" value={plan} />
       <button type="submit" className={className}>
         {label}
