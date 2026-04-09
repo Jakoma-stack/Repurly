@@ -6,6 +6,8 @@ export type PublishPayload = {
   media?: Array<{ type: "image" | "video"; mediaUrn?: string; publicUrl?: string }>;
 };
 
+const LINKEDIN_PUBLISH_TIMEOUT_MS = Number(process.env.LINKEDIN_PUBLISH_TIMEOUT_MS ?? 25000);
+
 export async function publishLinkedInPost(accessToken: string, payload: PublishPayload) {
   const body: Record<string, unknown> = {
     author: payload.authorUrn,
@@ -39,20 +41,41 @@ export async function publishLinkedInPost(accessToken: string, payload: PublishP
     }
   }
 
-  const response = await fetch("https://api.linkedin.com/rest/posts", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      "LinkedIn-Version": "202503",
-      "X-Restli-Protocol-Version": "2.0.0",
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), LINKEDIN_PUBLISH_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.linkedin.com/rest/posts", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "LinkedIn-Version": "202503",
+        "X-Restli-Protocol-Version": "2.0.0",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } catch (error) {
+    clearTimeout(timeout);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      throw Object.assign(new Error(`LinkedIn publish timed out after ${LINKEDIN_PUBLISH_TIMEOUT_MS}ms`), { retryable: true });
+    }
+
+    throw Object.assign(
+      new Error(error instanceof Error ? error.message : "LinkedIn publish request failed"),
+      { retryable: true }
+    );
+  }
+
+  clearTimeout(timeout);
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`LinkedIn publish failed: ${response.status} ${text}`);
+    const text = await response.text().catch(() => "");
+    const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
+    throw Object.assign(new Error(`LinkedIn publish failed: ${response.status} ${text}`.trim()), { retryable });
   }
 
   return {
