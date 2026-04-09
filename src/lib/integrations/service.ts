@@ -17,6 +17,17 @@ export type IntegrationUpsertInput = {
   status?: string;
 };
 
+const ACCESS_TOKEN_REFRESH_WINDOW_MS = 1000 * 60 * 15;
+const refreshInflight = new Map<string, Promise<string>>();
+
+function buildRefreshKey(workspaceId: string, provider: PlatformKey) {
+  return `${workspaceId}:${provider}`;
+}
+
+function shouldRefreshAccessToken(expiresAt: Date | null | undefined) {
+  return expiresAt ? expiresAt.getTime() < Date.now() + ACCESS_TOKEN_REFRESH_WINDOW_MS : false;
+}
+
 export async function getIntegration(workspaceId: string, provider: PlatformKey) {
   const [integration] = await db
     .select()
@@ -80,11 +91,7 @@ export async function getValidAccessToken(
     throw new Error(`${provider} is not connected`);
   }
 
-  const shouldRefresh = integration.accessTokenExpiresAt
-    ? integration.accessTokenExpiresAt.getTime() < Date.now() + 1000 * 60 * 15
-    : false;
-
-  if (!shouldRefresh) {
+  if (!shouldRefreshAccessToken(integration.accessTokenExpiresAt)) {
     return decryptSecret(integration.encryptedAccessToken);
   }
 
@@ -92,24 +99,51 @@ export async function getValidAccessToken(
     return decryptSecret(integration.encryptedAccessToken);
   }
 
-  const refreshed = await refresh(decryptSecret(integration.encryptedRefreshToken));
-  await upsertIntegration({
-    workspaceId,
-    provider,
-    externalAccountId: integration.externalAccountId,
-    accessToken: refreshed.accessToken,
-    refreshToken: refreshed.refreshToken ?? decryptSecret(integration.encryptedRefreshToken),
-    accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
-    refreshTokenExpiresAt: refreshed.refreshTokenExpiresAt ?? integration.refreshTokenExpiresAt,
-    scopes: refreshed.scopes ?? (integration.scopes as string[] | undefined),
-    metadata: {
-      ...(integration.metadata as Record<string, unknown> | null),
-      ...(refreshed.metadata ?? {}),
-    },
-    status: "connected",
+  const refreshKey = buildRefreshKey(workspaceId, provider);
+  const inFlightRefresh = refreshInflight.get(refreshKey);
+  if (inFlightRefresh) {
+    return inFlightRefresh;
+  }
+
+  const refreshPromise = (async () => {
+    const latestIntegration = await getIntegration(workspaceId, provider);
+    if (!latestIntegration?.encryptedAccessToken) {
+      throw new Error(`${provider} is not connected`);
+    }
+
+    if (!shouldRefreshAccessToken(latestIntegration.accessTokenExpiresAt)) {
+      return decryptSecret(latestIntegration.encryptedAccessToken);
+    }
+
+    if (!latestIntegration.encryptedRefreshToken) {
+      return decryptSecret(latestIntegration.encryptedAccessToken);
+    }
+
+    const decryptedRefreshToken = decryptSecret(latestIntegration.encryptedRefreshToken);
+    const refreshed = await refresh(decryptedRefreshToken);
+    await upsertIntegration({
+      workspaceId,
+      provider,
+      externalAccountId: latestIntegration.externalAccountId,
+      accessToken: refreshed.accessToken,
+      refreshToken: refreshed.refreshToken ?? decryptedRefreshToken,
+      accessTokenExpiresAt: refreshed.accessTokenExpiresAt,
+      refreshTokenExpiresAt: refreshed.refreshTokenExpiresAt ?? latestIntegration.refreshTokenExpiresAt,
+      scopes: refreshed.scopes ?? (latestIntegration.scopes as string[] | undefined),
+      metadata: {
+        ...(latestIntegration.metadata as Record<string, unknown> | null),
+        ...(refreshed.metadata ?? {}),
+      },
+      status: "connected",
+    });
+
+    return refreshed.accessToken;
+  })().finally(() => {
+    refreshInflight.delete(refreshKey);
   });
 
-  return refreshed.accessToken;
+  refreshInflight.set(refreshKey, refreshPromise);
+  return refreshPromise;
 }
 
 export async function syncPlatformAccounts(

@@ -1,4 +1,4 @@
-import { and, desc, eq, lte, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
 import { db } from "@/lib/db/client";
@@ -20,6 +20,9 @@ const PROVIDER_RETRY_LIMITS: Record<string, number> = {
   youtube: 5,
   tiktok: 5,
 };
+
+const PUBLISH_DUE_BATCH_SIZE = Math.max(1, Number(process.env.PUBLISH_DUE_BATCH_SIZE ?? 25));
+const DISPATCH_THROTTLE_MS = Math.max(30_000, Number(process.env.PUBLISH_DISPATCH_THROTTLE_MS ?? 120_000));
 
 function toDateValue(value: string | Date | null | undefined, fallback = new Date()) {
   if (value instanceof Date) return value;
@@ -47,26 +50,64 @@ export const publishDuePosts = inngest.createFunction(
   { id: "publish-due-posts", retries: 3 },
   { cron: "* * * * *" },
   async ({ step }) => {
+    const now = new Date();
+    const dispatchCutoff = new Date(now.getTime() - DISPATCH_THROTTLE_MS);
+
     const dueJobs = await step.run("load-due-jobs", async () => {
       return db
-        .select()
+        .select({
+          id: publishJobs.id,
+          postId: publishJobs.postId,
+          postTargetId: publishJobs.postTargetId,
+          scheduledFor: publishJobs.scheduledFor,
+        })
         .from(publishJobs)
         .where(
           and(
             or(eq(publishJobs.status, "queued"), eq(publishJobs.status, "retry_scheduled")),
-            lte(publishJobs.scheduledFor, new Date())
+            lte(publishJobs.scheduledFor, now),
+            or(isNull(publishJobs.lastAttemptAt), lte(publishJobs.lastAttemptAt, dispatchCutoff))
           )
-        );
+        )
+        .orderBy(asc(publishJobs.scheduledFor))
+        .limit(PUBLISH_DUE_BATCH_SIZE);
     });
 
-    for (const job of dueJobs) {
+    if (!dueJobs.length) {
+      return { queued: 0, batchSize: PUBLISH_DUE_BATCH_SIZE };
+    }
+
+    const reservedJobs = await step.run("reserve-due-jobs", async () => {
+      const dueJobIds = dueJobs.map((job) => job.id);
+      const reserved = await db
+        .update(publishJobs)
+        .set({
+          lastAttemptAt: now,
+        })
+        .where(
+          and(
+            inArray(publishJobs.id, dueJobIds),
+            or(eq(publishJobs.status, "queued"), eq(publishJobs.status, "retry_scheduled")),
+            or(isNull(publishJobs.lastAttemptAt), lte(publishJobs.lastAttemptAt, dispatchCutoff))
+          )
+        )
+        .returning({
+          id: publishJobs.id,
+          postId: publishJobs.postId,
+          postTargetId: publishJobs.postTargetId,
+        });
+
+      return reserved;
+    });
+
+    for (const job of reservedJobs) {
       await step.sendEvent("enqueue-single-publish", {
         name: "repurly/post.publish.requested",
         data: { jobId: job.id, postId: job.postId, postTargetId: job.postTargetId },
       });
     }
 
-    return { queued: dueJobs.length };
+    return { queued: reservedJobs.length, batchSize: PUBLISH_DUE_BATCH_SIZE };
   }
 );
 
@@ -165,7 +206,7 @@ export const publishSinglePost = inngest.createFunction(
 
     const result = await step.run("publish-via-platform-adapter", async () => {
       try {
-        if (!authorUrnOrId) {
+        if (provider === "linkedin" && !authorUrnOrId) {
           throw Object.assign(new Error("Missing LinkedIn author URN for selected publish target"), { retryable: false });
         }
 

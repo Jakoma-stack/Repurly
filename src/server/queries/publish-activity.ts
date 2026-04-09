@@ -64,17 +64,18 @@ function computeRelative(item: PublishActivityItem): PublishActivityItem {
 
 function mapStatus(jobStatus: string, platformStatus: string): ActivityStatus {
   if (platformStatus === 'published' || jobStatus === 'completed') return 'published';
-  if (platformStatus === 'scheduled' || jobStatus === 'queued') return 'scheduled';
-  if (jobStatus === 'retrying') return 'retrying';
+  if (jobStatus === 'retrying' || jobStatus === 'retry_scheduled') return 'retrying';
   if (jobStatus === 'failed' || platformStatus === 'failed') return 'failed';
   if (
     platformStatus === 'processing' ||
     platformStatus === 'publishing' ||
     jobStatus === 'processing' ||
+    jobStatus === 'publishing' ||
     jobStatus === 'running'
   ) {
     return 'processing';
   }
+  if (platformStatus === 'scheduled' || platformStatus === 'queued' || jobStatus === 'queued') return 'scheduled';
   return 'scheduled';
 }
 
