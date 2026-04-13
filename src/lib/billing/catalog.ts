@@ -28,7 +28,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
       'Core scheduling and queue visibility',
     ],
     ctaLabel: 'Start Solo',
-    ctaHref: '/api/billing/checkout?plan=core',
+    ctaHref: '/api/billing/checkout?plan=solo',
   },
   growth: {
     key: 'growth',
@@ -39,13 +39,12 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
     summary: 'The commercial default for teams that need approvals, AI-assisted drafting, reporting, notifications, and stronger workflow control.',
     bullets: [
       'Multi-user workspace',
-      'Up to 3 brands',
       'Approvals and workflow controls',
       'Operational reporting and notifications',
       'Higher AI and publishing allowance',
     ],
     ctaLabel: 'Start Team',
-    ctaHref: '/api/billing/checkout?plan=growth',
+    ctaHref: '/api/billing/checkout?plan=team',
     featured: true,
   },
   scale: {
@@ -56,13 +55,13 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
     monthlyPriceGbp: 499,
     summary: 'For larger teams that need multi-brand operations, higher limits, onboarding support, and a more controlled commercial rollout.',
     bullets: [
-      'Up to 10 brands',
+      'Multi-brand workspaces',
       'Higher operational limits',
       'Priority support',
       'Commercial onboarding support',
     ],
     ctaLabel: 'Start Agency',
-    ctaHref: '/api/billing/checkout?plan=scale',
+    ctaHref: '/api/billing/checkout?plan=agency',
   },
 };
 

@@ -226,24 +226,31 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     getPostForEditing(session.workspaceId, postId ?? null),
   ]);
 
+  const requestedBrandId = firstParam(params.brandId);
   const selectedBrandId =
+    requestedBrandId ??
     editingPost?.brandId ??
-    savedCampaign?.brandId ??
     brandOptions.find((brand) => brand.status !== 'archived')?.id ??
     brandOptions[0]?.id ??
     '';
+
+  const selectedBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? null;
+  const activeSavedCampaign = savedCampaign?.brandId === selectedBrandId ? savedCampaign : null;
 
   const [recentDrafts, generatedBatch] = await Promise.all([
     getRecentDrafts(session.workspaceId, selectedBrandId || null),
     generatedIds.length ? getPostsByIds(session.workspaceId, generatedIds) : Promise.resolve([]),
   ]);
 
-  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows on LinkedIn.';
-  const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
-  const plannerCount = savedCampaign?.count ?? 3;
-  const plannerFormat = savedCampaign?.postFormat ?? 'text';
-  const plannerCadence = savedCampaign?.cadence ?? 'weekly';
-  const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
+  const defaultPlannerBrief = selectedBrand
+    ? `Write three LinkedIn posts for ${selectedBrand.name} aimed at ${selectedBrand.audience || 'the right B2B audience'}, using the tone "${selectedBrand.defaultTone || 'clear, sharp, commercially realistic'}". Keep the CTA aligned to ${selectedBrand.primaryCta || 'qualified commercial conversations'}. Do not mention other brands in this workspace.`
+    : 'Write three LinkedIn posts for the selected brand using only that brand’s tone, audience, and CTA. Do not mix in other workspace brands.';
+  const plannerBrief = activeSavedCampaign?.brief ?? defaultPlannerBrief;
+  const plannerGoal = activeSavedCampaign?.commercialGoal ?? (selectedBrand?.primaryCta || 'Drive qualified commercial conversations');
+  const plannerCount = activeSavedCampaign?.count ?? 3;
+  const plannerFormat = activeSavedCampaign?.postFormat ?? 'text';
+  const plannerCadence = activeSavedCampaign?.cadence ?? 'weekly';
+  const plannerPreferredTime = activeSavedCampaign?.preferredTimeOfDay ?? 'morning';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
@@ -270,7 +277,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Audience context is inherited from the selected brand, so you do not need a separate target-audience field for every post.</p>
+                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Repurly should use only the currently selected brand for AI drafting, CTA, tone, and audience context.</p>
+                {selectedBrand ? <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Generating for: {selectedBrand.name}</div> : null}
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>

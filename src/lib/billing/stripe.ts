@@ -28,7 +28,6 @@ export function getCheckoutPriceId(plan: StripeSelfServePlanKey): string | null 
       plan,
       hasCore: Boolean(plans.core),
       hasGrowth: Boolean(plans.growth),
-      hasScale: Boolean(plans.scale),
     });
   }
 

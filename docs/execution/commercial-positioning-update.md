@@ -7,7 +7,7 @@ Repurly is now presented externally as a **premium LinkedIn-first content operat
 ## What changed in the live product surfaces
 
 - marketing site moved from pilot language to premium SaaS language
-- pricing aligned around Solo / Team / Agency
+- pricing aligned around Core / Growth / Scale
 - app billing uses the same plan structure as marketing
 - AI drafting flow now supports saved campaigns, draft-batch review, and recent-draft cleanup
 - app shell and workspace copy were tightened to feel more premium and productized

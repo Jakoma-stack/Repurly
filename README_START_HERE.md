@@ -16,9 +16,9 @@ Not as:
 
 ## Current commercial shape
 
-- Solo — £59/mo (1 brand)
-- Team — £199/mo (up to 3 brands)
-- Agency — £499/mo (up to 10 brands, self-serve when Stripe scale pricing is configured)
+- Solo — £59/mo
+- Team — £199/mo
+- Agency — £499/mo
 - Pilot / onboarding — from £1,500 one-off
 
 ## Current strongest workflow

@@ -48,6 +48,7 @@ const PLAN_CARDS: PlanCard[] = [
     bullets: ['Up to 10 brands', 'Higher operational limits', 'Priority support'],
     ctaLabel: 'Activate Agency',
     checkoutPlan: 'scale',
+    ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
   },
 ];
 
@@ -56,7 +57,7 @@ function firstParam(value: string | string[] | undefined) {
 }
 
 function normalizeSelectedPlan(value: string | undefined): SelfServePlan | null {
-  if (value === 'core' || value === 'growth' || value === 'scale') {
+  if (value === 'core' || value === 'growth') {
     return value;
   }
 
@@ -124,7 +125,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <Banner kind="error">Stripe could not start checkout right now. Try again, and if it persists, check Stripe configuration and workspace billing records.</Banner>
       )}
       {billingState === 'invalid-plan' && (
-        <Banner kind="error">That plan cannot be purchased through self-serve checkout. Confirm the Stripe price IDs for this environment and try again.</Banner>
+        <Banner kind="error">That plan cannot be purchased through self-serve checkout. Use Solo or Team, or contact sales for Agency.</Banner>
       )}
       {billingState === 'forbidden' && <Banner kind="error">Only workspace owners and admins can change billing.</Banner>}
 
@@ -138,7 +139,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
             <p>
-              Repurly is intentionally sold as a paid workflow product, not a free scheduler. Choose the plan that fits your team and the rest of the app will unlock after Stripe confirms the subscription.
+              Repurly is intentionally sold as a paid workflow product, not a free scheduler. Choose the paid plan that fits your team and the rest of the app will unlock after Stripe confirms the subscription.
             </p>
             <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
               Need guided implementation? Offer a pilot or onboarding package from <span className="font-medium text-slate-950">£1,500</span>.

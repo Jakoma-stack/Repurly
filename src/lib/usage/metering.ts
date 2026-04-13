@@ -38,6 +38,10 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
     ? await db.select({ total: count() }).from(workspaceMemberships).where(eq(workspaceMemberships.workspaceId, workspaceId))
     : [{ total: 7 } as { total: number }];
 
+  const [brandsRow] = workspaceId
+    ? await db.select({ total: count() }).from(brands).where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active')))
+    : [{ total: 2 } as { total: number }];
+
   const [postsRow] = workspaceId
     ? await db
         .select({ total: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
@@ -55,10 +59,6 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
   const [channelsRow] = workspaceId
     ? await db.select({ total: count() }).from(platformAccounts).where(eq(platformAccounts.workspaceId, workspaceId))
     : [{ total: 6 }];
-
-  const [brandsRow] = workspaceId
-    ? await db.select({ total: count() }).from(brands).where(eq(brands.workspaceId, workspaceId))
-    : [{ total: 2 }];
 
   return {
     plan: (plan as UsageSnapshot['plan']) ?? 'growth',

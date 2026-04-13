@@ -312,6 +312,7 @@ function buildGeneratedDraftRows(args: {
       callToAction: draft.callToAction,
       hashtags: draft.hashtags,
       draftNumber: index + 1,
+      brandIsolation: true,
     },
   }));
 }

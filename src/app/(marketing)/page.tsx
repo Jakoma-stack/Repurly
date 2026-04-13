@@ -36,7 +36,7 @@ const pricing: Array<{
     body: 'For founder-led or solo workflows that need cleaner planning, scheduling, and AI drafting without team complexity.',
     bullets: ['1 workspace', '1 brand', 'Core drafting and scheduling', 'Starter AI allowance'],
     ctaLabel: 'Start Solo',
-    ctaHref: '/sign-up?plan=core',
+    ctaHref: '/sign-up?plan=solo',
   },
   {
     name: 'Team',
@@ -44,7 +44,7 @@ const pricing: Array<{
     body: 'For agencies and B2B teams that need approvals, queue visibility, reporting, engagement workflow, and stronger commercial control.',
     bullets: ['Multi-user workspace', 'Up to 3 brands', 'Approvals and team workflow', 'Reports and notifications', 'Higher AI and publishing allowance'],
     ctaLabel: 'Start Team',
-    ctaHref: '/sign-up?plan=growth',
+    ctaHref: '/sign-up?plan=team',
     featured: true,
   },
   {
@@ -53,7 +53,7 @@ const pricing: Array<{
     body: 'For multi-brand operators who want stronger workflow control, client visibility, and more capacity without enterprise overhead.',
     bullets: ['Up to 10 brands', 'Priority support', 'Higher usage limits', 'Commercial onboarding support'],
     ctaLabel: 'Start Agency',
-    ctaHref: '/sign-up?plan=scale',
+    ctaHref: '/sign-up?plan=agency',
   },
 ];
 
@@ -135,7 +135,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start with Solo, Team, or Agency, and use pilot onboarding if you want a guided commercial rollout.
+              Start with Solo or Team, or talk to Jakoma if you need a multi-brand pilot with stronger workflow support.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

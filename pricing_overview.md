@@ -1,31 +1,29 @@
 # Repurly pricing overview
 
 ## Positioning
-Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams that need approvals, scheduling, queue visibility, recovery, engagement workflow, reporting, and multi-brand control in one platform.
+Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams that need approvals, scheduling, queue visibility, recovery, engagement workflow, and multi-brand control in one platform.
 
 ## Recommended plans
 
 ### Solo — £59/mo
 - 1 workspace
-- 1 brand
+- 1 active brand
 - Starter AI drafting allowance
 - Core scheduling and queue visibility
 
 ### Team — £199/mo
 - Multi-user workspace
-- Up to 3 brands
+- Up to 3 active brands
 - Approvals and workflow controls
-- Operational reporting
-- Notifications
-- Engagement and lead workflow
+- Operational reporting and notifications
 - Higher AI and publishing allowance
 
 ### Agency — £499/mo
-- Up to 10 brands
+- Multi-user, multi-brand workspace
+- Up to 10 active brands
 - Higher publishing and AI limits
 - Priority support
 - Commercial onboarding support
-- Self-serve checkout when Stripe scale pricing is configured
 
 ### Pilot / onboarding — from £1,500 one-off
 - Guided setup
@@ -33,8 +31,7 @@ Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams 
 - Team onboarding
 - Governance and workflow tuning
 
-## Why this pricing works
-Repurly should be priced:
-- above lightweight scheduling tools
-- below heavyweight enterprise social suites
-- around the real value of premium workflow control and operator confidence
+## Notes
+- Friendly plan names are Solo, Team, and Agency.
+- Internal billing keys may still map to core, growth, and scale.
+- Self-serve checkout should accept both friendly names and internal aliases.

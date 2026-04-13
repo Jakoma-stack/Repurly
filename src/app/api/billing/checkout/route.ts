@@ -21,7 +21,10 @@ type CheckoutSessionResult =
 const BILLING_ROLES = new Set(['owner', 'admin']);
 
 function normalizePlan(input: unknown): SelfServePlan | null {
-  return input === 'core' || input === 'growth' || input === 'scale' ? input : null;
+  if (input === 'core' || input === 'solo') return 'core';
+  if (input === 'growth' || input === 'team') return 'growth';
+  if (input === 'scale' || input === 'agency') return 'scale';
+  return null;
 }
 
 function getOrigin(request: NextRequest) {

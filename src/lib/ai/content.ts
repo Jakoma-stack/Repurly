@@ -223,6 +223,8 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     `You are writing LinkedIn-first B2B posts for ${args.brandName}.`,
     'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
+    'Use only the selected brand context for tone, CTA, audience, positioning, and examples.',
+    'Never mention or blend in any other brand, product, workspace, or company unless the brief explicitly asks for it.',
     'Do not paste the brief verbatim into the post body.',
     'Never include internal labels like Tone:, Audience:, Format:, or Title Hint: inside the post body.',
     'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
