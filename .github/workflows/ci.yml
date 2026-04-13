@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - '**'
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      NEXT_PUBLIC_APP_URL: https://app.repurly.test
+      CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      RESEND_API_KEY: re_placeholder
+      EMAIL_FROM: Repurly <hello@example.com>
+      S3_REGION: us-east-1
+      S3_BUCKET: repurly-test
+      S3_ACCESS_KEY_ID: test-access-key
+      S3_SECRET_ACCESS_KEY: test-secret-key
+      LINKEDIN_CLIENT_ID: linkedin-client-id
+      LINKEDIN_CLIENT_SECRET: linkedin-client-secret
+      LINKEDIN_REDIRECT_URI: https://app.repurly.test/api/linkedin/callback
+      LINKEDIN_SCOPE: w_member_social r_organization_social
+      TOKEN_ENCRYPTION_SECRET: 0123456789abcdef0123456789abcdef
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js version from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

@@ -93,14 +93,6 @@ export default async function EngagementPage({ searchParams }: { searchParams: S
                   </form>
                 </div>
 
-                {comment.metadata ? (
-                  <div className="mt-3 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700"><div className="font-medium text-slate-900">AI qualification</div><div className="mt-1">{String((comment.metadata as { aiQualificationSummary?: string }).aiQualificationSummary ?? 'No AI qualification summary yet.')}</div></div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700"><div className="font-medium text-slate-900">Next best action</div><div className="mt-1">{String((comment.metadata as { aiNextBestAction?: string }).aiNextBestAction ?? 'Generate a reply to get a recommendation.')}</div></div>
-                    <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700"><div className="font-medium text-slate-900">Escalation</div><div className="mt-1">{String((comment.metadata as { aiEscalationRecommendation?: string }).aiEscalationRecommendation ?? 'No escalation recommendation yet.')}</div></div>
-                  </div>
-                ) : null}
-
                 {comment.replyOptions?.length ? (
                   <form action={markReplySent} className="mt-4 space-y-3 rounded-2xl border border-border p-4">
                     <input type="hidden" name="workspaceId" value={session.workspaceId} />

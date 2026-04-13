@@ -12,7 +12,6 @@ import {
   BriefcaseBusiness,
   MessageSquareQuote,
   Users,
-  BarChart3,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
@@ -33,7 +32,6 @@ const fullNav = [
   { href: '/app/channels', label: 'Channel setup', icon: PanelsTopLeft },
   { href: '/app/activity', label: 'Job detail', icon: History },
   { href: '/app/reliability', label: 'Reliability', icon: BellRing },
-  { href: '/app/reports', label: 'Reports', icon: BarChart3 },
   { href: '/app/notifications', label: 'Notifications', icon: BellRing },
   { href: '/app/billing', label: 'Billing', icon: CreditCard },
   { href: '/app/settings', label: 'Settings', icon: Settings },

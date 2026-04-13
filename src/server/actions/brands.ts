@@ -23,13 +23,6 @@ function parseHashtags(raw: string) {
     .filter(Boolean);
 }
 
-function parseCsv(raw: string) {
-  return raw
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 async function refreshBrandPages() {
   revalidatePath('/app');
   revalidatePath('/app/brands');
@@ -61,14 +54,6 @@ export async function saveBrand(formData: FormData) {
     hashtags: parseHashtags(requiredString(formData, 'hashtags')),
     linkedinProfileUrl: requiredString(formData, 'linkedinProfileUrl') || null,
     linkedinCompanyUrl: requiredString(formData, 'linkedinCompanyUrl') || null,
-    metadata: {
-      aiProfile: {
-        voiceNotes: requiredString(formData, 'voiceNotes') || null,
-        blockedTerms: parseCsv(requiredString(formData, 'blockedTerms')).join(', '),
-        proofPoints: requiredString(formData, 'proofPoints') || null,
-        complianceRules: parseCsv(requiredString(formData, 'complianceRules')).join(', '),
-      },
-    },
     updatedAt: new Date(),
   };
 

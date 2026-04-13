@@ -6,19 +6,6 @@ export type ContentDraft = {
   callToAction: string;
 };
 
-export type GeneratedScheduleSlot = {
-  draftNumber: number;
-  dayOffset: number;
-  label: string;
-};
-
-export type PerformanceInsight = {
-  contentPattern: string;
-  callToActionPattern: string;
-  averageBodyLength: number;
-  recentExamples: string[];
-};
-
 export type GenerateContentDraftsArgs = {
   brandName: string;
   brandTone?: string | null;
@@ -32,13 +19,6 @@ export type GenerateContentDraftsArgs = {
   cadence?: string | null;
   preferredTimeOfDay?: string | null;
   count?: number;
-  campaignWindowDays?: number;
-  sourceMaterial?: string | null;
-  voiceNotes?: string | null;
-  blockedTerms?: string[] | null;
-  targetPlatforms?: string[] | null;
-  performanceContext?: string[] | null;
-  complianceRules?: string[] | null;
 };
 
 const TITLE_MAX_LENGTH = 150;
@@ -85,20 +65,20 @@ function summarizeBrief(brief: string) {
   const summary = cleanSentence(firstSentence).replace(/^write\s+/i, '').replace(/^create\s+/i, '');
 
   if (!summary) {
-    return 'Use a narrow, reliable social workflow that gets good posts approved, published, and turned into pipeline without extra tool sprawl.';
+    return 'Use a narrow, reliable LinkedIn workflow that gets good posts approved and published without extra tool sprawl.';
   }
 
   return summary.length > 220 ? `${summary.slice(0, 217).trim()}...` : summary;
 }
 
 function fallbackTitle(args: GenerateContentDraftsArgs, index: number) {
-  return trimTo(`${args.brandName} campaign draft ${index + 1}`, TITLE_MAX_LENGTH);
+  return trimTo(`${args.brandName} LinkedIn draft ${index + 1}`, TITLE_MAX_LENGTH);
 }
 
 function stripMetaLines(body: string) {
   return body
     .split('\n')
-    .filter((line) => !/^(tone|audience|title hint|format|platform)\s*:/i.test(line.trim()))
+    .filter((line) => !/^(tone|audience|title hint|format)\s*:/i.test(line.trim()))
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -110,38 +90,51 @@ function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: G
     ...((draft?.hashtags ?? []).map((tag) => String(tag ?? '').replace(/^#/, '').trim()).filter(Boolean)),
   ]).slice(0, HASHTAG_LIMIT);
 
-  const callToAction = trimTo(draft?.callToAction?.trim() || args.primaryCta?.trim() || 'Book a demo.', CTA_MAX_LENGTH);
-  const title = trimTo(draft?.title?.trim() || fallbackTitle(args, index), TITLE_MAX_LENGTH);
-  const targetPlatforms = (args.targetPlatforms ?? []).filter(Boolean);
+  const callToAction = trimTo(
+    draft?.callToAction?.trim() || args.primaryCta?.trim() || 'Book a demo.',
+    CTA_MAX_LENGTH,
+  );
+
+  const title = trimTo(
+    draft?.title?.trim() || fallbackTitle(args, index),
+    TITLE_MAX_LENGTH,
+  );
+
   const titleHint = trimTo(
-    draft?.titleHint?.trim() || `${(args.commercialGoal || 'Drive qualified action').trim()} · ${(targetPlatforms.join('/') || 'LinkedIn').trim()} · ${(args.postFormat || 'text').trim()}`,
+    draft?.titleHint?.trim() || `${(args.commercialGoal || 'Drive qualified action').trim()} (${(args.postFormat || 'text').trim()})`,
     TITLE_HINT_MAX_LENGTH,
   );
 
   const rawBody = draft?.body?.trim();
   const body = trimTo(
-    stripMetaLines(
-      rawBody || [
-        'Most teams do not need more posts. They need a cleaner way to brief, approve, publish, and follow up on the right post without delay.',
-        '',
-        summarizeBrief(args.brief),
-        '',
-        callToAction,
-        '',
-        hashtags.map((tag) => `#${tag}`).join(' '),
-      ].filter(Boolean).join('\n'),
-    ),
+    stripMetaLines(rawBody || [
+      'Most teams do not need more posts. They need a cleaner way to brief, approve, and publish the right post without delay.',
+      '',
+      summarizeBrief(args.brief),
+      '',
+      callToAction,
+      '',
+      hashtags.map((tag) => `#${tag}`).join(' '),
+    ].filter(Boolean).join('\n')),
     BODY_MAX_LENGTH,
   );
 
-  return { title, body, hashtags, titleHint, callToAction };
+  return {
+    title,
+    body,
+    hashtags,
+    titleHint,
+    callToAction,
+  };
 }
 
 function readOutputText(payload: unknown) {
   if (!payload || typeof payload !== 'object') return null;
 
   const direct = (payload as { output_text?: unknown }).output_text;
-  if (typeof direct === 'string' && direct.trim()) return direct;
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct;
+  }
 
   const output = (payload as { output?: Array<{ content?: Array<{ text?: string; type?: string }> }> }).output;
   if (!Array.isArray(output)) return null;
@@ -156,116 +149,8 @@ function readOutputText(payload: unknown) {
   return text || null;
 }
 
-function summarizeSourceMaterial(sourceMaterial?: string | null) {
-  const source = (sourceMaterial ?? '').trim();
-  if (!source) return null;
-  return trimTo(cleanSentence(source.replace(/\n+/g, ' ')), 260);
-}
-
-export function buildSuggestedSchedule(args: GenerateContentDraftsArgs): GeneratedScheduleSlot[] {
-  const count = Math.max(1, Math.min(args.count ?? 3, 30));
-  const campaignWindowDays = Math.max(1, Math.min(args.campaignWindowDays ?? 30, 180));
-  const interval = count <= 1 ? 0 : Math.max(1, Math.floor(campaignWindowDays / Math.max(count - 1, 1)));
-
-  return Array.from({ length: count }, (_, index) => {
-    const dayOffset = Math.min(campaignWindowDays - 1, index * interval);
-    return { draftNumber: index + 1, dayOffset, label: dayOffset === 0 ? 'Day 1' : `Day ${dayOffset + 1}` };
-  });
-}
-
-
-function inferPreferredCta(performanceContext: string[]) {
-  const text = performanceContext.join(' ').toLowerCase();
-  if (text.includes('demo')) return 'demo-focused';
-  if (text.includes('call')) return 'call-focused';
-  if (text.includes('reply')) return 'reply-driven';
-  if (text.includes('download')) return 'download-led';
-  return 'soft-commercial';
-}
-
-function inferContentPattern(performanceContext: string[]) {
-  const joined = performanceContext.join(' ').toLowerCase();
-  if (joined.includes('how ') || joined.includes('how-to')) return 'educational';
-  if (joined.includes('mistake') || joined.includes('lesson')) return 'contrarian';
-  if (joined.includes('case study') || joined.includes('proof')) return 'proof-led';
-  return 'operational-insight';
-}
-
-export function derivePerformanceInsight(performanceContext?: string[] | null): PerformanceInsight {
-  const recentExamples = (performanceContext ?? []).filter(Boolean).slice(0, 5);
-  const averageBodyLength = recentExamples.length
-    ? Math.round(recentExamples.reduce((total, item) => total + item.length, 0) / recentExamples.length)
-    : 240;
-
-  return {
-    contentPattern: inferContentPattern(recentExamples),
-    callToActionPattern: inferPreferredCta(recentExamples),
-    averageBodyLength,
-    recentExamples,
-  };
-}
-
-function evaluatePerformanceFit(args: GenerateContentDraftsArgs, draft: ContentDraft) {
-  const insight = derivePerformanceInsight(args.performanceContext);
-  const body = draft.body.toLowerCase();
-  const title = draft.title.toLowerCase();
-  const reasons: string[] = [];
-  let score = 58;
-
-  if (insight.contentPattern === 'educational' && (title.includes('how') || body.includes('how '))) {
-    score += 8;
-    reasons.push('Matches recent educational pattern');
-  }
-  if (insight.contentPattern === 'contrarian' && (title.includes('mistake') || body.includes('miss'))) {
-    score += 8;
-    reasons.push('Matches recent contrarian pattern');
-  }
-  if (insight.contentPattern === 'proof-led' && (body.includes('proof') || body.includes('evidence') || body.includes('example'))) {
-    score += 8;
-    reasons.push('Matches recent proof-led pattern');
-  }
-
-  if (insight.callToActionPattern === 'demo-focused' && /demo|book/.test(body)) {
-    score += 6;
-    reasons.push('CTA aligns with recent commercial pattern');
-  } else if (insight.callToActionPattern === 'reply-driven' && /reply|comment|message/.test(body)) {
-    score += 6;
-    reasons.push('CTA aligns with recent engagement pattern');
-  }
-
-  const lengthDelta = Math.abs(draft.body.length - insight.averageBodyLength);
-  if (lengthDelta <= 120) {
-    score += 6;
-    reasons.push('Body length is close to recent winners');
-  } else if (lengthDelta > 260) {
-    score -= 8;
-    reasons.push('Body length is far from recent winners');
-  }
-
-  if (draft.hashtags.length <= 4) {
-    score += 2;
-  }
-
-  return { score: Math.max(0, Math.min(100, score)), reasons: reasons.slice(0, 4), insight };
-}
-
-function assessComplianceRisk(args: GenerateContentDraftsArgs, draft: ContentDraft) {
-  const text = `${draft.title}\n${draft.body}`.toLowerCase();
-  const blockedTerms = (args.blockedTerms ?? []).map((term) => term.toLowerCase());
-  const complianceRules = (args.complianceRules ?? []).map((rule) => rule.toLowerCase());
-  const riskyClaims = ['guarantee', 'guaranteed', 'best', 'always', 'never', 'instant', 'effortless'];
-
-  const violations = [
-    ...blockedTerms.filter((term) => term && text.includes(term)).map((term) => `Uses blocked term: ${term}`),
-    ...riskyClaims.filter((term) => text.includes(term)).map((term) => `Contains absolute claim: ${term}`),
-    ...complianceRules.filter((rule) => rule && text.includes(rule)).map((rule) => `Mentions restricted phrase: ${rule}`),
-  ];
-
-  return { level: violations.length >= 2 ? 'medium' : violations.length === 1 ? 'low' : 'none', notes: violations.slice(0, 4) };
-}
-
 function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
-  const count = Math.max(1, Math.min(args.count ?? 3, 30));
+  const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const hashtags = parseHashtags(args.hashtags);
   const cta = args.primaryCta?.trim() || 'Book a demo.';
   const audience = args.audience?.trim() || 'B2B marketing and operations teams';
@@ -274,10 +159,6 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
   const cadence = args.cadence?.trim() || 'weekly';
   const preferredTimeOfDay = args.preferredTimeOfDay?.trim() || 'morning';
   const briefSummary = summarizeBrief(args.brief);
-  const sourceSummary = summarizeSourceMaterial(args.sourceMaterial);
-  const platformLabel = (args.targetPlatforms ?? []).join(', ') || 'LinkedIn';
-  const performanceNudge = (args.performanceContext ?? []).slice(0, 2).join(' | ');
-  const schedule = buildSuggestedSchedule(args);
 
   const patterns = [
     {
@@ -300,7 +181,7 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
     },
     {
       title: `${args.brandName}: proof-driven post idea`,
-      opener: 'One of the fastest ways to improve content performance is to reduce workflow drag before you increase volume.',
+      opener: 'One of the fastest ways to improve LinkedIn performance is to reduce workflow drag before you increase volume.',
       middle: `Less time lost in approvals means more time refining the message. ${briefSummary}`,
       closer: 'Teams that treat publishing like an operational process usually outperform teams that treat it like ad hoc posting.',
     },
@@ -308,28 +189,23 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
 
   return Array.from({ length: count }, (_, index) => {
     const pattern = patterns[index % patterns.length];
-    const finalHashtags = unique(['contentops', 'demandgen', ...hashtags]).slice(0, HASHTAG_LIMIT);
-    const slot = schedule[index];
+    const finalHashtags = unique(['linkedin', 'b2bmarketing', ...hashtags]).slice(0, HASHTAG_LIMIT);
     return normalizeDraft({
       title: pattern.title,
-      titleHint: `${goal} · ${cadence} · ${preferredTimeOfDay} · ${platformLabel} · ${slot.label} (${format})`,
+      titleHint: `${goal} · ${cadence} · ${preferredTimeOfDay} (${format})`,
       callToAction: cta,
       hashtags: finalHashtags,
       body: [
         pattern.opener,
         '',
         pattern.middle,
-        sourceSummary ? `Repurpose angle: ${sourceSummary}` : '',
-        performanceNudge ? `What has worked recently: ${performanceNudge}` : '',
         '',
         pattern.closer,
-        '',
-        `Recommended timing: ${slot.label} of the ${Math.max(1, Math.min(args.campaignWindowDays ?? 30, 180))}-day campaign.`,
         '',
         cta,
         '',
         finalHashtags.map((tag) => `#${tag}`).join(' '),
-      ].filter(Boolean).join('\n'),
+      ].join('\n'),
     }, args, index);
   });
 }
@@ -338,53 +214,21 @@ export function buildFallbackContentDrafts(args: GenerateContentDraftsArgs): Con
   return buildFallbackDrafts(args);
 }
 
-export function buildAiReview(args: GenerateContentDraftsArgs, draft: ContentDraft, draftNumber: number) {
-  const schedule = buildSuggestedSchedule({ ...args, count: Math.max(draftNumber, args.count ?? draftNumber) })[draftNumber - 1];
-  const compliance = assessComplianceRisk(args, draft);
-  const performanceFit = evaluatePerformanceFit(args, draft);
-  const requiresHumanReview = compliance.level !== 'none' || performanceFit.score < 60;
-  const approvalRecommendation = compliance.level === 'medium'
-    ? 'Needs compliance edit before approval'
-    : requiresHumanReview
-      ? 'Human review recommended before scheduling'
-      : 'Ready for approval queue';
-
-  return {
-    suggestedDayOffset: schedule?.dayOffset ?? 0,
-    suggestedScheduleLabel: schedule?.label ?? 'Day 1',
-    complianceRisk: compliance.level,
-    complianceNotes: compliance.notes,
-    platformPlan: args.targetPlatforms ?? ['linkedin'],
-    performanceFitScore: performanceFit.score,
-    performanceFitReasons: performanceFit.reasons,
-    approvalRecommendation,
-    requiresHumanReview,
-    recentWinnerPattern: performanceFit.insight.contentPattern,
-    recentCtaPattern: performanceFit.insight.callToActionPattern,
-  };
-}
-
 async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<ContentDraft[] | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
 
-  const count = Math.max(1, Math.min(args.count ?? 3, 30));
-  const model = process.env.OPENAI_CONTENT_MODEL?.trim() || 'gpt-4.1-mini';
+  const count = Math.max(1, Math.min(args.count ?? 3, 6));
   const prompt = [
-    `You are writing social content for ${args.brandName}.`,
-    'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}.',
+    `You are writing LinkedIn-first B2B posts for ${args.brandName}.`,
+    'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
     'Do not paste the brief verbatim into the post body.',
-    'Never include internal labels like Tone:, Audience:, Format:, Title Hint:, or Platform: inside the post body.',
+    'Never include internal labels like Tone:, Audience:, Format:, or Title Hint: inside the post body.',
     'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
-    'Vary the hooks across the batch. Do not produce near-duplicates.',
-    'Plan the batch like a coherent campaign across the requested window in days.',
     `Brand: ${args.brandName}`,
     `Tone: ${args.brandTone ?? 'clear, sharp, commercially realistic'}`,
     `Audience: ${args.audience ?? 'B2B teams'}`,
-    `Voice notes: ${args.voiceNotes ?? ''}`,
-    `Blocked terms: ${(args.blockedTerms ?? []).join(', ')}`,
-    `Compliance rules: ${(args.complianceRules ?? []).join(', ')}`,
     `Primary CTA: ${args.primaryCta ?? ''}`,
     `Secondary CTA: ${args.secondaryCta ?? ''}`,
     `Hashtags: ${(args.hashtags ?? []).join(', ')}`,
@@ -392,13 +236,6 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     `Preferred format: ${args.postFormat ?? 'text'}`,
     `Planning cadence: ${args.cadence ?? 'weekly'}`,
     `Preferred time of day: ${args.preferredTimeOfDay ?? 'morning'}`,
-    `Campaign window in days: ${Math.max(1, Math.min(args.campaignWindowDays ?? 30, 180))}`,
-    `Target platforms: ${(args.targetPlatforms ?? ['linkedin']).join(', ')}`,
-    `Repurposing source material: ${args.sourceMaterial ?? ''}`,
-    `What has worked recently: ${(args.performanceContext ?? []).join(' | ')}`,
-    `Recent winner pattern: ${derivePerformanceInsight(args.performanceContext).contentPattern}`,
-    `Recent CTA pattern: ${derivePerformanceInsight(args.performanceContext).callToActionPattern}`,
-    `Approximate high-performing body length: ${derivePerformanceInsight(args.performanceContext).averageBodyLength}`,
     `Brief: ${args.brief}`,
     `Draft count: ${count}`,
   ].join('\n');
@@ -406,9 +243,12 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
   try {
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        model,
+        model: 'gpt-4.1-mini',
         input: prompt,
         text: {
           format: {

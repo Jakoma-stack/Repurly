@@ -33,21 +33,6 @@ export const workspaceMemberships = pgTable("workspace_memberships", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-
-
-export const workspaceInvites = pgTable("workspace_invites", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),
-  email: varchar("email", { length: 255 }).notNull(),
-  role: roleEnum("role").notNull().default("viewer"),
-  token: varchar("token", { length: 255 }).notNull().unique(),
-  invitedById: varchar("invited_by_id", { length: 128 }).notNull(),
-  status: varchar("status", { length: 24 }).notNull().default("pending"),
-  expiresAt: timestamp("expires_at", { withTimezone: true }),
-  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
-
 export const brands = pgTable("brands", {
   id: uuid("id").defaultRandom().primaryKey(),
   workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }).notNull(),

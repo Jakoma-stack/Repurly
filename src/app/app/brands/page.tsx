@@ -108,26 +108,6 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
                   <input name="linkedinCompanyUrl" defaultValue={editingBrand?.linkedinCompanyUrl ?? ''} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
               </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">AI voice notes</label>
-                  <textarea name="voiceNotes" defaultValue={String(((editingBrand?.metadata as { aiProfile?: { voiceNotes?: string } } | null)?.aiProfile?.voiceNotes) ?? '')} className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Calm, practical, premium, no hype, sound like an experienced operator." />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Blocked terms</label>
-                  <textarea name="blockedTerms" defaultValue={String(((editingBrand?.metadata as { aiProfile?: { blockedTerms?: string } } | null)?.aiProfile?.blockedTerms) ?? '')} className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="revolutionary, guaranteed, market-leading" />
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Proof points</label>
-                  <textarea name="proofPoints" defaultValue={String(((editingBrand?.metadata as { aiProfile?: { proofPoints?: string } } | null)?.aiProfile?.proofPoints) ?? '')} className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Examples, results, references, or differentiators the AI should prefer." />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Compliance rules</label>
-                  <textarea name="complianceRules" defaultValue={String(((editingBrand?.metadata as { aiProfile?: { complianceRules?: string } } | null)?.aiProfile?.complianceRules) ?? '')} className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="No guarantees, no ROI claims without evidence, no competitor naming" />
-                </div>
-              </div>
               <p className="text-xs text-muted-foreground">Brand records shape planning, copy, and reporting. They do not create separate LinkedIn containers or isolated auth on their own.</p>
               <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Save brand</button>
             </form>
