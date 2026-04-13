@@ -1,36 +1,38 @@
-# Repurly premium brand refresh bundle
+# Repurly premium brand refresh bundle v2
 
-This bundle is designed to be deployment-safe.
+This version fixes the route issue and removes homepage copy that sounded like internal notes.
+
+## What changed in v2
+- All sign-in and sign-up CTAs now point to the full live domain:
+  - https://app.repurly.org/sign-in
+  - https://app.repurly.org/sign-up
+- UTM parameters are included on the main CTA links.
+- Homepage copy now speaks directly to first-time visitors.
+- Internal wording like "this refresh" or "safe deployment" has been removed from the public page.
 
 ## Included
-- `index.html` – revised homepage
-- `brand.css` – styling for the revised homepage
-- `assets/repurly-logo.png` – supplied Repurly logo
-- `assets/jakoma-logo.jpg` – supplied Jakoma logo
-- `app-shell-brand-tokens.css` – optional app shell token layer
-- `DEPLOY.md` – this file
+- index.html
+- brand.css
+- assets/repurly-logo.png
+- assets/jakoma-logo.jpg
+- app-shell-brand-tokens.css
+- DEPLOY.md
 
-## Safe deployment path
+## Deploy
 1. Back up your current homepage files.
-2. Replace your current homepage `index.html` with this bundle's `index.html`.
-3. Add `brand.css` alongside it.
-4. Upload the `assets` folder alongside the homepage.
-5. Check:
-   - `/`
-   - `/sign-in`
-   - `/sign-up`
-   - mobile menu
-   - logo loading
-6. If your app framework uses a static public folder, place:
-   - `index.html`
-   - `brand.css`
-   - `assets/*`
-   into that public/static location.
+2. Replace the current homepage index.html with this bundle's index.html.
+3. Upload brand.css.
+4. Upload the assets folder.
+5. Test:
+   - https://app.repurly.org/
+   - https://app.repurly.org/sign-in
+   - https://app.repurly.org/sign-up
+6. Click every CTA on desktop and mobile.
 
-## Important
-- This refresh does **not** change app logic.
-- It does **not** touch authentication, workflow, queue, AI, or database behaviour.
-- It only refreshes the public-facing homepage and gives you optional design tokens for the app shell.
+## UTM pattern used
+utm_source=repurly-homepage
+utm_medium=<placement>
+utm_campaign=brand-refresh
+utm_content=<button-or-link>
 
-## Optional next step
-If you want the in-app surfaces to match this homepage more closely, use `app-shell-brand-tokens.css` to map the same colors and radii into your app shell in a controlled way.
+You can change those later if needed.

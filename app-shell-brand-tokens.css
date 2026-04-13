@@ -1,6 +1,5 @@
-/* Optional: app shell visual token layer only.
-   Apply carefully in staging first.
-   This is intentionally light-touch to reduce break risk. */
+/* Optional app shell visual token layer only.
+   Test in staging first. */
 
 :root {
   --app-bg: #07111f;
@@ -18,12 +17,3 @@
   --app-radius-md: 16px;
   --app-shadow: 0 18px 60px rgba(0,0,0,0.28);
 }
-
-/* Suggested mappings:
-body { background: var(--app-bg); color: var(--app-text); }
-.card, .panel { background: var(--app-panel); border: 1px solid var(--app-line); border-radius: var(--app-radius-lg); box-shadow: var(--app-shadow); }
-.muted, .subtle { color: var(--app-muted); }
-.button-primary { background: var(--app-brand); color: #06101d; }
-.button-secondary { background: var(--app-brand-soft); border: 1px solid var(--app-line); color: var(--app-text); }
-.badge-info { background: rgba(124,234,215,0.10); color: #dffbff; }
-*/
