@@ -18,6 +18,11 @@ export type GenerateContentDraftsArgs = {
   commercialGoal?: string | null;
   cadence?: string | null;
   preferredTimeOfDay?: string | null;
+  campaignType?: string | null;
+  audienceFocus?: string | null;
+  messageAngle?: string | null;
+  proofPoints?: string | null;
+  avoidTopics?: string | null;
   count?: number;
 };
 
@@ -37,6 +42,19 @@ function parseHashtags(input?: string[] | null) {
 
 function cleanSentence(value: string) {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function parseLines(input?: string | null) {
+  return unique(
+    String(input ?? '')
+      .split(/\n|•|-/)
+      .map((item) => cleanSentence(item))
+      .filter(Boolean),
+  );
+}
+
+function firstMeaningful(values: Array<string | null | undefined>) {
+  return values.map((value) => cleanSentence(String(value ?? ''))).find(Boolean) ?? '';
 }
 
 function trimTo(value: string, maxLength: number) {
@@ -223,8 +241,11 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     `You are writing LinkedIn-first B2B posts for ${args.brandName}.`,
     'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
     'Keep the tone commercially realistic and avoid hype.',
+    'Use the campaign brief and campaign fields as the primary source of truth.',
     'Use only the selected brand context for tone, CTA, audience, positioning, and examples.',
     'Never mention or blend in any other brand, product, workspace, or company unless the brief explicitly asks for it.',
+    'Do not drift into generic workflow messaging unless the campaign explicitly calls for workflow messaging.',
+    'Each draft must be a different angle within the same campaign, not the same post rewritten three times.',
     'Do not paste the brief verbatim into the post body.',
     'Never include internal labels like Tone:, Audience:, Format:, or Title Hint: inside the post body.',
     'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
@@ -238,6 +259,11 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     `Preferred format: ${args.postFormat ?? 'text'}`,
     `Planning cadence: ${args.cadence ?? 'weekly'}`,
     `Preferred time of day: ${args.preferredTimeOfDay ?? 'morning'}`,
+    `Campaign type: ${args.campaignType ?? ''}`,
+    `Audience focus: ${args.audienceFocus ?? ''}`,
+    `Message angle: ${args.messageAngle ?? ''}`,
+    `Proof points: ${args.proofPoints ?? ''}`,
+    `Avoid topics: ${args.avoidTopics ?? ''}`,
     `Brief: ${args.brief}`,
     `Draft count: ${count}`,
   ].join('\n');

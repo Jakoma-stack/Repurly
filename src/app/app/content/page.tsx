@@ -26,6 +26,11 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignType: string;
+  audienceFocus: string;
+  messageAngle: string;
+  proofPoints: string;
+  avoidTopics: string;
   savedAt: string;
 };
 
@@ -59,6 +64,11 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
       count: Number(parsed.count ?? 3),
       cadence: parsed.cadence ?? 'weekly',
       preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
+      campaignType: parsed.campaignType ?? 'thought-leadership',
+      audienceFocus: parsed.audienceFocus ?? '',
+      messageAngle: parsed.messageAngle ?? '',
+      proofPoints: parsed.proofPoints ?? '',
+      avoidTopics: parsed.avoidTopics ?? '',
       savedAt: parsed.savedAt ?? new Date(0).toISOString(),
     };
   } catch {
@@ -251,6 +261,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerFormat = activeSavedCampaign?.postFormat ?? 'text';
   const plannerCadence = activeSavedCampaign?.cadence ?? 'weekly';
   const plannerPreferredTime = activeSavedCampaign?.preferredTimeOfDay ?? 'morning';
+  const plannerCampaignType = activeSavedCampaign?.campaignType ?? 'thought-leadership';
+  const plannerAudienceFocus = activeSavedCampaign?.audienceFocus ?? (selectedBrand?.audience || '');
+  const plannerMessageAngle = activeSavedCampaign?.messageAngle ?? '';
+  const plannerProofPoints = activeSavedCampaign?.proofPoints ?? '';
+  const plannerAvoidTopics = activeSavedCampaign?.avoidTopics ?? 'Other workspace brands, generic workflow messaging unless this campaign explicitly needs it';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
@@ -277,12 +292,43 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Repurly should use only the currently selected brand for AI drafting, CTA, tone, and audience context.</p>
+                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Repurly should use only the currently selected brand and this campaign’s guardrails for AI drafting, CTA, tone, audience, and message angle.</p>
                 {selectedBrand ? <div className="mt-2 inline-flex rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-700">Generating for: {selectedBrand.name}</div> : null}
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>
                 <textarea name="brief" className="mt-2 min-h-[140px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBrief} required />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Campaign type</label>
+                  <select name="campaignType" defaultValue={plannerCampaignType} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="thought-leadership">Thought leadership</option>
+                    <option value="pain-point-series">Pain-point series</option>
+                    <option value="educational">Educational / explainer</option>
+                    <option value="proof-led">Proof-led / credibility</option>
+                    <option value="conversion">Conversion / proposal-driving</option>
+                    <option value="pov">Point of view</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Audience focus</label>
+                  <input name="audienceFocus" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerAudienceFocus} placeholder="CIOs, CTOs, DPOs, assurance leads..." />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-900">Message angle</label>
+                <textarea name="messageAngle" className="mt-2 min-h-[96px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerMessageAngle} placeholder="What exact angle should this batch push?" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Proof points or specifics</label>
+                  <textarea name="proofPoints" className="mt-2 min-h-[96px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerProofPoints} placeholder="Bullets, differentiators, examples, facts, or offers..." />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Avoid topics</label>
+                  <textarea name="avoidTopics" className="mt-2 min-h-[96px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerAvoidTopics} placeholder="What this batch must not drift into" />
+                </div>
               </div>
             </div>
             <div className="space-y-4 rounded-3xl border border-border p-5">
