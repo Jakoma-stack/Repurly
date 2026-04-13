@@ -1,0 +1,29 @@
+/* Optional: app shell visual token layer only.
+   Apply carefully in staging first.
+   This is intentionally light-touch to reduce break risk. */
+
+:root {
+  --app-bg: #07111f;
+  --app-bg-elevated: #0b1730;
+  --app-panel: #0d1a31;
+  --app-panel-soft: rgba(255,255,255,0.04);
+  --app-text: #f7f9fc;
+  --app-muted: #b8c5d8;
+  --app-line: rgba(255,255,255,0.10);
+  --app-brand: #3db2ea;
+  --app-brand-soft: rgba(61,178,234,0.14);
+  --app-accent: #7cead7;
+  --app-radius-xl: 28px;
+  --app-radius-lg: 22px;
+  --app-radius-md: 16px;
+  --app-shadow: 0 18px 60px rgba(0,0,0,0.28);
+}
+
+/* Suggested mappings:
+body { background: var(--app-bg); color: var(--app-text); }
+.card, .panel { background: var(--app-panel); border: 1px solid var(--app-line); border-radius: var(--app-radius-lg); box-shadow: var(--app-shadow); }
+.muted, .subtle { color: var(--app-muted); }
+.button-primary { background: var(--app-brand); color: #06101d; }
+.button-secondary { background: var(--app-brand-soft); border: 1px solid var(--app-line); color: var(--app-text); }
+.badge-info { background: rgba(124,234,215,0.10); color: #dffbff; }
+*/
