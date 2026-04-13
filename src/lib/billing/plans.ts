@@ -11,10 +11,10 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   core: {
-    workspaceMembers: 3,
+    workspaceMembers: 1,
     monthlyPosts: 120,
     storageGb: 10,
-    connectedChannels: 3,
+    connectedChannels: 2,
     approvalFlows: false,
     prioritySupport: false,
   },

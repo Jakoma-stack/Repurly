@@ -22,7 +22,7 @@ export default async function ReportsPage() {
       <Card>
         <CardHeader>
           <h2 className="text-2xl font-semibold">Operational reporting</h2>
-          <p className="text-sm text-muted-foreground">A practical reporting surface for drafts, approvals, queue health, delivery outcomes, and lead signals.</p>
+          <p className="text-sm text-muted-foreground">A practical reporting surface for drafts, approvals, queue health, delivery outcomes, channel estate, and lead signals.</p>
         </CardHeader>
       </Card>
 
@@ -31,6 +31,13 @@ export default async function ReportsPage() {
         <Metric label="Pending approvals" value={report.approvals.pending} />
         <Metric label="Queued jobs" value={report.publishing.queued} />
         <Metric label="Retrying jobs" value={report.publishing.retrying} />
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-4">
+        <Metric label="Connected integrations" value={report.estate.connectedIntegrations} />
+        <Metric label="Live publish targets" value={report.estate.liveTargets} />
+        <Metric label="LinkedIn company pages" value={report.estate.companyPages} />
+        <Metric label="Hot leads" value={report.engagement.hotLeads} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
@@ -48,6 +55,7 @@ export default async function ReportsPage() {
           <CardContent className="space-y-3 text-sm">
             <div>Completed jobs: <strong>{report.publishing.completed}</strong></div>
             <div>Failed jobs: <strong>{report.publishing.failed}</strong></div>
+            <div>Retrying jobs: <strong>{report.publishing.retrying}</strong></div>
           </CardContent>
         </Card>
         <Card>

@@ -24,30 +24,30 @@ type PlanCard = {
 const PLAN_CARDS: PlanCard[] = [
   {
     key: 'core',
-    name: 'Core',
-    priceLabel: '£149/mo',
-    summary: 'For focused LinkedIn workflows with a smaller team, tighter limits, and reliable publishing fundamentals.',
-    bullets: ['3 workspace members', '120 posts per month', '3 connected channels'],
-    ctaLabel: 'Activate Core',
+    name: 'Solo',
+    priceLabel: '£59/mo',
+    summary: 'For founder-led or solo workflows that need cleaner planning, scheduling, and AI drafting without team complexity.',
+    bullets: ['1 workspace', '1 brand', 'Core drafting and scheduling'],
+    ctaLabel: 'Activate Solo',
     checkoutPlan: 'core',
   },
   {
     key: 'growth',
-    name: 'Growth',
-    priceLabel: '£399/mo',
-    summary: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial control.',
-    bullets: ['10 workspace members', '1000 posts per month', 'Approval flows included'],
-    ctaLabel: 'Activate Growth',
+    name: 'Team',
+    priceLabel: '£199/mo',
+    summary: 'For agencies and B2B teams that need approvals, reporting, notifications, and stronger operational control.',
+    bullets: ['Multi-user workspace', 'Approvals and reporting', 'Higher AI and publishing allowance'],
+    ctaLabel: 'Activate Team',
     checkoutPlan: 'growth',
   },
   {
     key: 'scale',
-    name: 'Scale',
-    priceLabel: 'Custom',
-    summary: 'For larger rollouts that should be sold deliberately rather than opened as self-serve.',
-    bullets: ['Higher operational limits', 'Priority support', 'Commercial review before activation'],
-    ctaLabel: 'Talk to sales',
-    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Scale%20plan',
+    name: 'Agency',
+    priceLabel: '£499/mo',
+    summary: 'For larger multi-brand rollouts that need higher capacity, onboarding support, and a more deliberate commercial plan.',
+    bullets: ['Multi-brand workspaces', 'Higher operational limits', 'Priority support'],
+    ctaLabel: 'Talk to Jakoma',
+    ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
   },
 ];
 
@@ -106,7 +106,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
       )}
       {checkout === 'cancelled' && <Banner kind="error">Checkout was cancelled before payment completed.</Banner>}
       {billingState === 'payment-required' && (
-        <Banner kind="warning">Choose Core or Growth to activate this workspace. Repurly does not unlock the product before payment.</Banner>
+        <Banner kind="warning">Choose Solo or Team to activate this workspace. Repurly does not unlock the product before payment.</Banner>
       )}
       {billingState === 'no-customer' && (
         <Banner kind="error">No billing customer is attached to this workspace yet. Start with checkout first, then reopen the portal.</Banner>
@@ -124,7 +124,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <Banner kind="error">Stripe could not start checkout right now. Try again, and if it persists, check Stripe configuration and workspace billing records.</Banner>
       )}
       {billingState === 'invalid-plan' && (
-        <Banner kind="error">That plan cannot be purchased through self-serve checkout. Use Core or Growth, or contact sales for Scale.</Banner>
+        <Banner kind="error">That plan cannot be purchased through self-serve checkout. Use Solo or Team, or contact sales for Agency.</Banner>
       )}
       {billingState === 'forbidden' && <Banner kind="error">Only workspace owners and admins can change billing.</Banner>}
 
@@ -133,16 +133,19 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
           <CardHeader>
             <h2 className="text-2xl font-semibold">Activate your workspace before using Repurly</h2>
             <p className="text-sm text-slate-700">
-              Account creation is complete, but the product stays locked until this workspace is on Core or Growth.
+              Account creation is complete, but the product stays locked until this workspace is on Solo or Team.
             </p>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
             <p>
               Repurly is intentionally sold as a paid workflow product, not a free scheduler. Choose the paid plan that fits your team and the rest of the app will unlock after Stripe confirms the subscription.
             </p>
+            <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
+              Need guided implementation? Offer a pilot or onboarding package from <span className="font-medium text-slate-950">£1,500</span>.
+            </div>
             {selectedPlan ? (
               <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3">
-                Selected plan from sign-up: <span className="font-medium text-slate-950">{selectedPlan === 'core' ? 'Core' : 'Growth'}</span>
+                Selected plan from sign-up: <span className="font-medium text-slate-950">{selectedPlan === 'core' ? 'Solo' : 'Team'}</span>
               </div>
             ) : null}
           </CardContent>
@@ -232,7 +235,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
                   </a>
                   <CheckoutButton
                     plan="growth"
-                    label="Upgrade to Growth"
+                    label="Upgrade to Team"
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   />
                 </>
@@ -240,12 +243,12 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
                 <>
                   <CheckoutButton
                     plan="core"
-                    label="Activate Core"
+                    label="Activate Solo"
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   />
                   <CheckoutButton
                     plan="growth"
-                    label="Activate Growth"
+                    label="Activate Team"
                     className="font-medium text-primary underline-offset-4 hover:underline"
                   />
                 </>
@@ -255,8 +258,8 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
                 Billing can only be changed by a workspace owner or admin.
               </div>
             )}
-            <a href="mailto:support@repurly.org?subject=Repurly%20Scale%20plan" className="block font-medium text-primary">
-              Talk to sales about Scale
+            <a href="mailto:support@repurly.org?subject=Repurly%20Agency%20plan" className="block font-medium text-primary">
+              Talk to Jakoma about Agency or pilot onboarding
             </a>
           </CardContent>
         </Card>

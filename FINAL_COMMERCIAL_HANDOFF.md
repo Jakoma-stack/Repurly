@@ -1,19 +1,20 @@
-Final commercial hardening patch
+# Final commercial handoff
 
-Included in this package:
-- Working Settings admin surface with operator controls, support snapshot, invites, members, and direct navigation
-- Added workspaceInvites schema export and matching settings query/actions
-- Invite acceptance page
-- Better LinkedIn channels guidance for personal profile vs company page
-- Default-target fallback during scheduling so publishing uses the chosen default target when no explicit target is passed
-- LinkedIn connection now prefers a company page as the default target when an organization target is available
-- Reports nav shortcut in the app shell
-- Dashboard shortcut to Reports
+This package is the current commercial candidate for Repurly.
 
-Important staging checks:
-1. /app/settings loads
-2. create invite works
-3. pending invites appear
-4. /app/channels clearly shows company page targets
-5. company page can be set as default
-6. schedule/publish without manually choosing target uses the default target
+## What it includes
+- premium LinkedIn-first marketing site with consistent pricing
+- signed-in product shell with reports visible in navigation
+- settings surface with operator controls, support snapshot, invites, and workspace members
+- channels guidance for personal profile vs company page default targets
+- reporting, notifications, reliability, billing, engagement, and leads surfaces
+- advanced AI drafting and campaign support already present in the application
+- updated docs for deployment, pricing, product scope, and staging validation
+
+## What still depends on live provider state
+- company-page posting still depends on the connected LinkedIn account having the correct organization permissions
+- billing still depends on valid Stripe price IDs and checkout configuration
+- invite/admin features require the invite migration to be present in the target database
+
+## Deployment stance
+Deploy to staging first, run docs/staging-test-checklist.md, then promote to production only if the full workflow passes.

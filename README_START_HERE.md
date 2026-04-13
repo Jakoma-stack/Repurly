@@ -1,14 +1,8 @@
-# Repurly unified workspace
+# Repurly start here
 
-This folder is designed to work for **both GitHub and ChatGPT execution**.
+Use this repository as the current source of truth for the product.
 
-## How the pieces fit together
-
-- The **repo root** is the working codebase you can put in GitHub.
-- `docs/` contains strategy, execution, and decision materials.
-- `_chatgpt/` contains the kickoff files for starting a fresh chat or project and giving ChatGPT the right context fast.
-
-## Current external positioning
+## Current product positioning
 
 Repurly should currently be presented as:
 
@@ -20,47 +14,34 @@ Not as:
 - a broad all-network social suite
 - a mini-Sprout clone
 
-## Best way to use this folder
+## Current commercial shape
 
-### For GitHub
-Use the **repo root** as your repository. Commit:
-- application code
-- `docs/`
-- `.github/`
-- `.gitignore`
-- `.env.example`
+- Solo — £59/mo
+- Team — £199/mo
+- Agency — £499/mo
+- Pilot / onboarding — from £1,500 one-off
 
-Do not commit secrets or temporary local files.
+## Current strongest workflow
 
-### For a new ChatGPT project/chat
-Upload this whole folder as a zip, then ask ChatGPT to read:
-1. `_chatgpt/README_FIRST.md`
-2. `_chatgpt/PROJECT_CONTEXT_BRIEF.md`
-3. `_chatgpt/CHAT_KICKOFF_PROMPT.md`
-4. `docs/decision/Repurly_revised_launch_decision_memo.docx`
-5. `docs/decision/Repurly_revised_go_no_go_checklist.docx`
+1. Connect LinkedIn and confirm the default destination.
+2. Draft content with AI assistance.
+3. Route content through approval.
+4. Schedule into queue.
+5. Inspect reporting, job detail, and recovery.
+6. Manage engagement and lightweight lead follow-up.
 
-Then paste the kickoff prompt from `_chatgpt/CHAT_KICKOFF_PROMPT.md`.
+## Important product truths
 
-## Recommended operating stance
-- keep the workflow scope narrow and premium
-- prioritize workflow completion over more channels
-- treat LinkedIn as the hero channel
-- optimize for paid subscriptions, not feature breadth
-- treat the richer delivery-logs build as the architecture base
-- avoid drifting into a mini-Sprout strategy
+- LinkedIn is the hero channel.
+- Company-page vs personal-profile targeting must be confirmed in Channels before live posting.
+- Reports, notifications, reliability, settings, and billing should all be reachable through normal app navigation.
+- Team administration is part of the product story, not an afterthought.
 
-## Key folders
+## What to review before deploying
 
-- `_chatgpt/` — chat kickoff and context files
-- `docs/decision/` — latest decision memo and go/no-go checklist
-- `docs/project-management/` — board, gates, and execution scaffolding
-- `docs/build-decisions/` — build-level decision notes
-- `docs/archive-source/` — earlier memo and plan docs
-- `docs/` (existing app docs) — product and platform implementation notes
-
-## First actions
-1. Create a new GitHub repo from this folder.
-2. Review `docs/decision/` and `_chatgpt/PROJECT_CONTEXT_BRIEF.md`.
-3. Configure env vars and billing price IDs.
-4. Start execution against the current premium LinkedIn-first product story.
+- `pricing_overview.md`
+- `commercial_readiness.md`
+- `pilot-blockers.md`
+- `docs/current-product-scope.md`
+- `docs/staging-test-checklist.md`
+- `DEPLOY.md`

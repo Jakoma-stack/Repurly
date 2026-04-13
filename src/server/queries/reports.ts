@@ -1,10 +1,10 @@
 import { and, count, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { approvalRequests, engagementComments, leadPipeline, posts, publishJobs } from '../../../drizzle/schema';
+import { approvalRequests, engagementComments, integrations, leadPipeline, platformAccounts, posts, publishJobs } from '../../../drizzle/schema';
 
 export async function getOperationalReport(workspaceId: string) {
-  const [postSummary, publishSummary, approvalSummary, engagementSummary, recentFailures] = await Promise.all([
+  const [postSummary, publishSummary, approvalSummary, engagementSummary, integrationSummary, recentFailures] = await Promise.all([
     db.select({
       drafts: sql<number>`count(*) filter (where ${posts.status} = 'draft')`,
       inReview: sql<number>`count(*) filter (where ${posts.status} = 'in_review')`,
@@ -23,6 +23,11 @@ export async function getOperationalReport(workspaceId: string) {
       db.select({ comments: count() }).from(engagementComments).where(eq(engagementComments.workspaceId, workspaceId)),
       db.select({ hotLeads: count() }).from(leadPipeline).where(and(eq(leadPipeline.workspaceId, workspaceId), sql`${leadPipeline.intentScore} >= 70`)),
       db.select({ qualified: count() }).from(leadPipeline).where(and(eq(leadPipeline.workspaceId, workspaceId), eq(leadPipeline.stage, 'qualified'))),
+    ]),
+    Promise.all([
+      db.select({ connectedIntegrations: count() }).from(integrations).where(eq(integrations.workspaceId, workspaceId)),
+      db.select({ liveTargets: count() }).from(platformAccounts).where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.publishEnabled, true))),
+      db.select({ companyPages: count() }).from(platformAccounts).where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin'), eq(platformAccounts.targetType, 'organization'))),
     ]),
     db.select({ id: publishJobs.id, status: publishJobs.status, lastError: publishJobs.lastError, title: posts.title, scheduledFor: publishJobs.scheduledFor })
       .from(publishJobs)
@@ -51,6 +56,11 @@ export async function getOperationalReport(workspaceId: string) {
       comments: Number(engagementSummary[0][0]?.comments ?? 0),
       hotLeads: Number(engagementSummary[1][0]?.hotLeads ?? 0),
       qualified: Number(engagementSummary[2][0]?.qualified ?? 0),
+    },
+    estate: {
+      connectedIntegrations: Number(integrationSummary[0][0]?.connectedIntegrations ?? 0),
+      liveTargets: Number(integrationSummary[1][0]?.liveTargets ?? 0),
+      companyPages: Number(integrationSummary[2][0]?.companyPages ?? 0),
     },
     recentFailures,
   };

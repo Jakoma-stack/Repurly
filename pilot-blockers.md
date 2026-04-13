@@ -1,20 +1,30 @@
 # Pilot blockers
 
-## App access
-- [ ] homepage loads
-- [ ] app/dashboard loads
-- [ ] login/auth works
+These are the remaining conditions that must pass before treating the product as pilot-ready.
 
-## LinkedIn pilot workflow
-- [ ] create post works
-- [ ] choose LinkedIn target works
-- [ ] submit for approval works
-- [ ] approve/reject works
+## Access and navigation
+- [ ] homepage loads correctly
+- [ ] sign-in works
+- [ ] sign-up works
+- [ ] reports reachable through navigation
+- [ ] notifications reachable through navigation
+- [ ] settings reachable and stable
+
+## LinkedIn workflow
+- [ ] LinkedIn connect works
+- [ ] company-page vs personal-profile targets are visible
+- [ ] default target can be changed
+- [ ] posts can publish from the intended company page when permissions exist
 - [ ] schedule/publish works
 - [ ] activity/job detail works
 
+## Team administration
+- [ ] operator controls visible and actionable
+- [ ] support snapshot visible
+- [ ] invite flow visible from settings
+- [ ] invite acceptance works
+
 ## Trust-breakers
-- [ ] no demo data in main flow
-- [ ] no placeholder auth/connect buttons
-- [ ] no confusing dead pages
-- [ ] no extra-channel clutter in the launch path
+- [ ] no white screens
+- [ ] no 500 errors on core routes
+- [ ] no misleading pricing or commercial copy
