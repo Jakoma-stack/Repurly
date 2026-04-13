@@ -4,16 +4,16 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 const features = [
   [
-    'Approval and routing control',
-    'Move one LinkedIn post from draft to approval to scheduled publishing without losing target, timing, or accountability.',
+    'Approval-led execution',
+    'Move one post from draft to approval to scheduled publishing without losing target, timing, or accountability.',
   ],
   [
     'Multi-brand workspaces',
-    'Run separate brand voice, audience, CTA, and LinkedIn context inside one workspace without turning the product into a broad social suite.',
+    'Run separate brand voice, audience, CTA, and LinkedIn context inside one workspace without pretending to be a broad social suite.',
   ],
   [
-    'AI drafting that stays useful',
-    'Generate brand-aware LinkedIn drafts, review the batch, and tighten the best one inside the same workflow.',
+    'AI that stays useful',
+    'Generate brand-aware drafts, review the batch, and tighten the best one inside the same workflow.',
   ],
   [
     'Recovery operators can trust',
@@ -23,25 +23,29 @@ const features = [
 
 const pricing = [
   {
-    name: 'Core',
-    price: 'From £297/mo',
-    body: 'For focused LinkedIn workflows with a tighter team, clear limits, and reliable publishing fundamentals.',
-    ctaLabel: 'Start with Core',
+    name: 'Solo',
+    price: '£59/mo',
+    body: 'For founder-led or solo workflows that need cleaner planning, scheduling, and AI drafting without team complexity.',
+    bullets: ['1 workspace', '1 brand', 'Core drafting and scheduling', 'Starter AI allowance'],
+    ctaLabel: 'Start Solo',
     ctaHref: '/sign-up?plan=core',
   },
   {
-    name: 'Growth',
-    price: 'From £697/mo',
-    body: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial controls.',
-    ctaLabel: 'Start with Growth',
+    name: 'Team',
+    price: '£199/mo',
+    body: 'For agencies and B2B teams that need approvals, queue visibility, engagement workflow, and operational reporting.',
+    bullets: ['Multi-user workspace', 'Approvals and team workflow', 'Reports and notifications', 'Higher AI and publishing allowance'],
+    ctaLabel: 'Start Team',
     ctaHref: '/sign-up?plan=growth',
+    featured: true,
   },
   {
-    name: 'Scale',
-    price: 'Custom',
-    body: 'For higher-governance pilots and service-heavy accounts that should be sold deliberately rather than self-serve.',
-    ctaLabel: 'Talk to sales',
-    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Scale%20plan',
+    name: 'Agency',
+    price: '£499/mo',
+    body: 'For multi-brand operators who want stronger workflow control, client visibility, and more capacity without enterprise overhead.',
+    bullets: ['Multi-brand workspaces', 'Priority support', 'Higher usage limits', 'Commercial onboarding support'],
+    ctaLabel: 'Talk to Jakoma',
+    ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
   },
 ] as const;
 
@@ -69,49 +73,52 @@ export default function HomePage() {
             Pricing for focused teams that need a premium workflow, not a bloated suite
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The
-            commercial posture is simple: charge for workflow control, multi-brand operations, and operational confidence.
+            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The commercial posture is
+            simple: charge for workflow control, multi-brand operations, and operational confidence.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            For guided implementation, offer a one-off pilot or onboarding package from <strong>£1,500</strong>.
           </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-3">
-          {pricing.map((plan, index) => {
-            const featured = index === 1;
-            return (
-              <Card
-                key={plan.name}
-                className={
-                  featured
-                    ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
-                    : 'border-slate-200/80 bg-white/95'
-                }
-              >
-                <CardHeader>
-                  <div className={featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
-                    {plan.name}
-                  </div>
-                  <div className="mt-2 text-3xl font-semibold">{plan.price}</div>
-                </CardHeader>
-                <CardContent>
-                  <p className={featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
-                    {plan.body}
-                  </p>
-                  <div className="mt-6">
-                    <a
-                      href={plan.ctaHref}
-                      className={
-                        featured
-                          ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
-                          : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
-                      }
-                    >
-                      {plan.ctaLabel}
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {pricing.map((plan) => (
+            <Card
+              key={plan.name}
+              className={
+                plan.featured
+                  ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
+                  : 'border-slate-200/80 bg-white/95'
+              }
+            >
+              <CardHeader>
+                <div className={plan.featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
+                  {plan.name}
+                </div>
+                <div className="mt-2 text-3xl font-semibold">{plan.price}</div>
+              </CardHeader>
+              <CardContent>
+                <p className={plan.featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
+                  {plan.body}
+                </p>
+                <ul className={plan.featured ? 'mt-4 space-y-2 text-sm text-slate-200' : 'mt-4 space-y-2 text-sm text-slate-600'}>
+                  {plan.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
+                </ul>
+                <div className="mt-6">
+                  <a
+                    href={plan.ctaHref}
+                    className={
+                      plan.featured
+                        ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
+                        : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
+                    }
+                  >
+                    {plan.ctaLabel}
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -120,12 +127,12 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Create your account, choose Core or Growth, complete checkout, and then unlock the workspace workflow.
+              Start with Solo or Team, or talk to Jakoma if you need a multi-brand pilot with stronger workflow support.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Start with Core
+            <Link href="/sign-up?plan=growth" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
+              Start with Team
             </Link>
             <Link href="/sign-in" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Sign in

@@ -84,7 +84,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">2. Confirm the default target</div>
-                <div className="mt-1 text-slate-600">Pick the destination that should receive drafts by default so the composer does not quietly post to the wrong place.</div>
+                <div className="mt-1 text-slate-600">Pick whether the default destination should be your personal LinkedIn profile or a company page so drafts do not quietly post to the wrong place.</div>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">3. Continue into composer</div>
@@ -104,7 +104,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="font-medium text-slate-950">{target.displayName}</div>
-                          <div className="mt-1 text-sm text-slate-600">{target.handle || 'LinkedIn target'} · {target.targetType}</div>
+                          <div className="mt-1 text-sm text-slate-600">{target.handle || 'LinkedIn target'} · {target.targetType === 'organization' ? 'company page' : target.targetType}</div>
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs">
                           <span className="rounded-full border border-border bg-white px-2.5 py-1 uppercase tracking-wide text-slate-500">{target.targetType}</span>

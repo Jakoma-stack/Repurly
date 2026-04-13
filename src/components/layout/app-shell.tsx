@@ -33,6 +33,7 @@ const fullNav = [
   { href: '/app/activity', label: 'Job detail', icon: History },
   { href: '/app/reliability', label: 'Reliability', icon: BellRing },
   { href: '/app/notifications', label: 'Notifications', icon: BellRing },
+  { href: '/app/reports', label: 'Reports', icon: Building2 },
   { href: '/app/billing', label: 'Billing', icon: CreditCard },
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
