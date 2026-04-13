@@ -21,7 +21,15 @@ const features = [
   ],
 ] as const;
 
-const pricing = [
+const pricing: Array<{
+  name: string;
+  price: string;
+  body: string;
+  bullets: string[];
+  ctaLabel: string;
+  ctaHref: string;
+  featured?: boolean;
+}> = [
   {
     name: 'Solo',
     price: '£59/mo',
@@ -47,7 +55,7 @@ const pricing = [
     ctaLabel: 'Talk to Jakoma',
     ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
   },
-] as const;
+];
 
 export default function HomePage() {
   return (
