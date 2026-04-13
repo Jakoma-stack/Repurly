@@ -10,6 +10,7 @@ export function getProviderRetryGuidance(provider: string, status: string, paylo
   const lowerProvider = provider.toLowerCase();
   const message = String(payload?.userMessage ?? payload?.message ?? payload?.note ?? '');
   const containerStatus = String(payload?.containerStatus ?? payload?.status_code ?? payload?.providerStatus ?? '').toUpperCase();
+  const raw = `${message} ${containerStatus}`.toUpperCase();
 
   if (status === 'failed') {
     guidance.push({
@@ -17,6 +18,31 @@ export function getProviderRetryGuidance(provider: string, status: string, paylo
       body: message || `The ${lowerProvider} adapter returned a non-retryable failure. Review the raw payload and the connected account permissions before retrying.`,
       actionLabel: 'Open channel health',
       actionHref: '/app/channels',
+    });
+  }
+
+  if (lowerProvider === 'linkedin' && raw.includes('TOO_MANY_REQUESTS') && raw.includes('DAY LIMIT')) {
+    guidance.unshift({
+      title: 'LinkedIn daily publish limit reached',
+      body: 'LinkedIn is throttling this member for the day. Do not keep retrying every few minutes. Slow scheduling down and try again after the next quota window.',
+      actionLabel: 'Open calendar and queue',
+      actionHref: '/app/calendar',
+    });
+  }
+
+  if (raw.includes('EXPIRED') || raw.includes('INVALID TOKEN') || raw.includes('UNAUTHORIZED') || raw.includes('ACCESS TOKEN')) {
+    guidance.push({
+      title: 'Reconnect the channel before retrying',
+      body: 'This looks like an expired or invalid provider token. Reconnect the affected channel first, then retry the publish attempt.',
+      actionLabel: 'Open channels',
+      actionHref: '/app/channels',
+    });
+  }
+
+  if (raw.includes('RATE LIMIT') || raw.includes('TOO_MANY_REQUESTS')) {
+    guidance.push({
+      title: 'Slow down retries',
+      body: 'The provider is rate-limiting requests. Reduce the scheduling burst, wait longer between retries, and avoid replaying multiple jobs at once.',
     });
   }
 

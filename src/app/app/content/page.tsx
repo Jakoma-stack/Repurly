@@ -5,6 +5,7 @@ import { LocalDateTimeInput } from '@/components/workflow/local-datetime-input';
 import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
+  autoPlaceGeneratedDrafts,
   clearRecentDrafts,
   clearSavedCampaign,
   generateAiDrafts,
@@ -26,6 +27,11 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignWindowDays: number;
+  sourceMaterial: string;
+  voiceNotes: string;
+  blockedTerms: string;
+  targetPlatforms: string;
   savedAt: string;
 };
 
@@ -59,6 +65,11 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
       count: Number(parsed.count ?? 3),
       cadence: parsed.cadence ?? 'weekly',
       preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
+      campaignWindowDays: Number(parsed.campaignWindowDays ?? 30),
+      sourceMaterial: parsed.sourceMaterial ?? '',
+      voiceNotes: parsed.voiceNotes ?? '',
+      blockedTerms: parsed.blockedTerms ?? '',
+      targetPlatforms: parsed.targetPlatforms ?? 'linkedin',
       savedAt: parsed.savedAt ?? new Date(0).toISOString(),
     };
   } catch {
@@ -96,6 +107,14 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
       kind: 'success',
       title: 'Draft batch created',
       body: 'Review the generated ideas below, then open the strongest one in the composer.',
+    };
+  }
+
+  if (ok === 'auto-placed') {
+    return {
+      kind: 'success',
+      title: 'Draft batch auto-placed',
+      body: 'Repurly spaced the generated drafts into the calendar using the AI schedule offsets and queued them against the selected channel.',
     };
   }
 
@@ -244,6 +263,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerFormat = savedCampaign?.postFormat ?? 'text';
   const plannerCadence = savedCampaign?.cadence ?? 'weekly';
   const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
+  const plannerWindowDays = savedCampaign?.campaignWindowDays ?? 30;
+  const plannerSourceMaterial = savedCampaign?.sourceMaterial ?? '';
+  const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
+  const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
+  const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin, facebook';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
@@ -255,7 +279,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
         <CardHeader>
           <h2 className="text-xl font-semibold">AI campaign planner</h2>
           <p className="text-sm text-muted-foreground">
-            Save a reusable campaign brief, generate LinkedIn-first drafts, and keep the workflow grounded in real approval and scheduling control.
+            Save a reusable campaign brief, generate a 30-day campaign with brand memory and repurposing context, and keep the workflow grounded in real approval and scheduling control.
           </p>
         </CardHeader>
         <CardContent>
@@ -285,7 +309,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
                 <div>
                   <label className="text-sm font-medium text-slate-900">Draft count</label>
-                  <input name="count" type="number" min={1} max={6} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+                  <input name="count" type="number" min={1} max={30} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Campaign window (days)</label>
+                  <input name="campaignWindowDays" type="number" min={7} max={180} defaultValue={plannerWindowDays} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-900">Format</label>
@@ -319,6 +347,24 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="text-sm font-medium text-slate-900">Repurposing source material</label>
+                <textarea name="sourceMaterial" className="mt-2 min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerSourceMaterial} placeholder="Paste notes, transcript sections, a newsletter, webinar summary, or blog excerpt" />
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Extra voice notes</label>
+                  <textarea name="voiceNotes" className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerVoiceNotes} placeholder="Founder-led, commercially sharp, no hype" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Blocked terms</label>
+                  <textarea name="blockedTerms" className="mt-2 min-h-[100px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBlockedTerms} placeholder="guaranteed, revolutionary, game-changing" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-900">Target platforms</label>
+                <input name="targetPlatforms" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerTargetPlatforms} placeholder="linkedin, facebook, x, threads" />
+              </div>
               <div className="flex flex-wrap gap-3">
                 <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Generate AI drafts</button>
                 <button formAction={saveCampaign} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Save campaign for later</button>
@@ -336,7 +382,28 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
             <h2 className="text-xl font-semibold">Generated draft batch</h2>
             <p className="text-sm text-muted-foreground">Review each draft before opening it in the composer. This keeps the AI planner useful without hiding the batch behind a single editor view.</p>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-2">
+          <CardContent className="space-y-5">
+            <form action={autoPlaceGeneratedDrafts} className="grid gap-4 rounded-3xl border border-border p-5 xl:grid-cols-[1.1fr_0.9fr_auto]">
+              <input type="hidden" name="workspaceId" value={session.workspaceId} />
+              <input type="hidden" name="generatedIds" value={generatedIds.join(',')} />
+              <TimezoneOffsetField />
+              <div>
+                <label className="text-sm font-medium text-slate-900">Auto-place start date</label>
+                <LocalDateTimeInput name="scheduledFor" isoValue={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-900">Destination</label>
+                <select name="targetId" defaultValue={defaultTarget?.id ?? ''} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                  {targets.map((target) => (
+                    <option key={target.id} value={target.id}>{target.displayName} · {target.provider}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button className="rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white">Auto-place in calendar</button>
+              </div>
+            </form>
+            <div className="grid gap-4 lg:grid-cols-2">
             {generatedBatch.map((draft) => (
               <div key={draft.id} className="rounded-3xl border border-border p-5">
                 <div className="flex items-center justify-between gap-3">
@@ -351,8 +418,27 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <div className="mt-3 text-sm text-muted-foreground">{draft.brandName} · {draft.status}{draft.titleHint ? ` · ${draft.titleHint}` : ''}</div>
                 <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-700">{draft.excerpt}</p>
                 {draft.callToAction ? <div className="mt-4 text-sm font-medium text-primary">CTA: {draft.callToAction}</div> : null}
+                {(draft.metadata as any)?.aiReview ? (
+                  <div className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm">
+                    <div className="font-medium text-slate-900">AI review</div>
+                    <div className="mt-2 text-slate-700">
+                      Performance fit: {String((draft.metadata as any).aiReview.performanceFitScore ?? 'n/a')}/100 · Compliance: {String((draft.metadata as any).aiReview.complianceRisk ?? 'none')}
+                    </div>
+                    <div className="mt-1 text-slate-700">Suggested slot: {String((draft.metadata as any).aiReview.suggestedScheduleLabel ?? 'Day 1')}</div>
+                    <div className="mt-1 text-slate-700">Approval: {String((draft.metadata as any).aiReview.approvalRecommendation ?? 'Review before approval')}</div>
+                    {Array.isArray((draft.metadata as any).aiReview.performanceFitReasons) && (draft.metadata as any).aiReview.performanceFitReasons.length ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-slate-600">
+                        {(draft.metadata as any).aiReview.performanceFitReasons.map((reason: string) => <li key={reason}>{reason}</li>)}
+                      </ul>
+                    ) : null}
+                    {Array.isArray((draft.metadata as any).aiReview.complianceNotes) && (draft.metadata as any).aiReview.complianceNotes.length ? (
+                      <div className="mt-2 text-amber-700">Flags: {(draft.metadata as any).aiReview.complianceNotes.join(', ')}</div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ))}
+            </div>
           </CardContent>
         </Card>
       ) : null}

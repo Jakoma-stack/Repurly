@@ -22,6 +22,7 @@ export async function getEngagementSnapshot(workspaceId: string, activeStage?: s
       replyStatus: engagementComments.replyStatus,
       dmStatus: engagementComments.dmStatus,
       createdAt: engagementComments.createdAt,
+      metadata: engagementComments.metadata,
     })
     .from(engagementComments)
     .leftJoin(brands, eq(brands.id, engagementComments.brandId))
