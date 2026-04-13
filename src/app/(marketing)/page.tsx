@@ -42,7 +42,7 @@ const pricing: Array<{
     name: 'Team',
     price: '£199/mo',
     body: 'For agencies and B2B teams that need approvals, queue visibility, reporting, engagement workflow, and stronger commercial control.',
-    bullets: ['Multi-user workspace', 'Approvals and team workflow', 'Reports and notifications', 'Higher AI and publishing allowance'],
+    bullets: ['Multi-user workspace', 'Up to 3 brands', 'Approvals and team workflow', 'Reports and notifications', 'Higher AI and publishing allowance'],
     ctaLabel: 'Start Team',
     ctaHref: '/sign-up?plan=growth',
     featured: true,
@@ -51,9 +51,9 @@ const pricing: Array<{
     name: 'Agency',
     price: '£499/mo',
     body: 'For multi-brand operators who want stronger workflow control, client visibility, and more capacity without enterprise overhead.',
-    bullets: ['Multi-brand workspaces', 'Priority support', 'Higher usage limits', 'Commercial onboarding support'],
-    ctaLabel: 'Talk to Jakoma',
-    ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
+    bullets: ['Up to 10 brands', 'Priority support', 'Higher usage limits', 'Commercial onboarding support'],
+    ctaLabel: 'Start Agency',
+    ctaHref: '/sign-up?plan=scale',
   },
 ];
 
@@ -135,7 +135,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start with Solo or Team, or talk to Jakoma if you need a multi-brand pilot with stronger workflow support.
+              Start with Solo, Team, or Agency, and use pilot onboarding if you want a guided commercial rollout.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

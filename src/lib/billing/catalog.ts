@@ -39,6 +39,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
     summary: 'The commercial default for teams that need approvals, AI-assisted drafting, reporting, notifications, and stronger workflow control.',
     bullets: [
       'Multi-user workspace',
+      'Up to 3 brands',
       'Approvals and workflow controls',
       'Operational reporting and notifications',
       'Higher AI and publishing allowance',
@@ -55,13 +56,13 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
     monthlyPriceGbp: 499,
     summary: 'For larger teams that need multi-brand operations, higher limits, onboarding support, and a more controlled commercial rollout.',
     bullets: [
-      'Multi-brand workspaces',
+      'Up to 10 brands',
       'Higher operational limits',
       'Priority support',
       'Commercial onboarding support',
     ],
-    ctaLabel: 'Talk to Jakoma',
-    ctaHref: 'mailto:support@jakoma.org?subject=Repurly%20Agency%20plan',
+    ctaLabel: 'Start Agency',
+    ctaHref: '/api/billing/checkout?plan=scale',
   },
 };
 

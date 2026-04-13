@@ -13,6 +13,7 @@ Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams 
 
 ### Team — £199/mo
 - Multi-user workspace
+- Up to 3 brands
 - Approvals and workflow controls
 - Operational reporting
 - Notifications
@@ -20,10 +21,11 @@ Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams 
 - Higher AI and publishing allowance
 
 ### Agency — £499/mo
-- Multi-brand workspaces
+- Up to 10 brands
 - Higher publishing and AI limits
 - Priority support
 - Commercial onboarding support
+- Self-serve checkout when Stripe scale pricing is configured
 
 ### Pilot / onboarding — from £1,500 one-off
 - Guided setup

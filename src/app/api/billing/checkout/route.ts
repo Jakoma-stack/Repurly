@@ -6,7 +6,7 @@ import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
 export const runtime = 'nodejs';
 
 type PlanKey = keyof typeof plans;
-type SelfServePlan = Extract<PlanKey, 'core' | 'growth'>;
+type SelfServePlan = Extract<PlanKey, 'core' | 'growth' | 'scale'>;
 type CheckoutError =
   | 'checkout-not-configured'
   | 'checkout-unavailable'
@@ -21,7 +21,7 @@ type CheckoutSessionResult =
 const BILLING_ROLES = new Set(['owner', 'admin']);
 
 function normalizePlan(input: unknown): SelfServePlan | null {
-  return input === 'core' || input === 'growth' ? input : null;
+  return input === 'core' || input === 'growth' || input === 'scale' ? input : null;
 }
 
 function getOrigin(request: NextRequest) {

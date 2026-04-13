@@ -32,7 +32,7 @@ async function logAudit(workspaceId: string, actorId: string | null, eventType: 
       payload: payload ?? null,
     });
   } catch {
-    // do not fail admin actions if audit logging is unavailable
+    // Best-effort only. Admin actions should still complete.
   }
 }
 
@@ -42,15 +42,18 @@ export async function updateOperatorControl(formData: FormData) {
   const enabled = requiredString(formData, 'enabled') === 'true';
   const { userId } = await auth();
   if (!workspaceId || !key) redirect(settingsPath(undefined, 'invalid'));
+
+  let nextRoute: Route = settingsPath('operator-control-updated');
   try {
     await setWorkspaceOperatorFlag(workspaceId, key, enabled);
     await logAudit(workspaceId, userId ?? null, 'operator_control_updated', key, { enabled });
     revalidatePath('/app/settings');
     revalidatePath('/app');
-    redirect(settingsPath('operator-control-updated'));
   } catch {
-    redirect(settingsPath(undefined, 'operator-control-failed'));
+    nextRoute = settingsPath(undefined, 'operator-control-failed');
   }
+
+  redirect(nextRoute);
 }
 
 export async function createWorkspaceInvite(formData: FormData) {
@@ -59,6 +62,8 @@ export async function createWorkspaceInvite(formData: FormData) {
   const role = requiredString(formData, 'role') || 'viewer';
   const { userId } = await auth();
   if (!workspaceId || !email || !userId) redirect(settingsPath(undefined, 'invalid'));
+
+  let nextRoute: Route = settingsPath('invite-created');
   try {
     const token = crypto.randomUUID();
     await db.insert(workspaceInvites).values({
@@ -71,10 +76,11 @@ export async function createWorkspaceInvite(formData: FormData) {
     });
     await logAudit(workspaceId, userId, 'workspace_invite_created', token, { email, role });
     revalidatePath('/app/settings');
-    redirect(settingsPath('invite-created'));
   } catch {
-    redirect(settingsPath(undefined, 'invite-create-failed'));
+    nextRoute = settingsPath(undefined, 'invite-create-failed');
   }
+
+  redirect(nextRoute);
 }
 
 export async function revokeWorkspaceInvite(formData: FormData) {
@@ -82,14 +88,17 @@ export async function revokeWorkspaceInvite(formData: FormData) {
   const inviteId = requiredString(formData, 'inviteId');
   const { userId } = await auth();
   if (!workspaceId || !inviteId) redirect(settingsPath(undefined, 'invalid'));
+
+  let nextRoute: Route = settingsPath('invite-revoked');
   try {
     await db.update(workspaceInvites).set({ status: 'revoked' }).where(and(eq(workspaceInvites.workspaceId, workspaceId), eq(workspaceInvites.id, inviteId)));
     await logAudit(workspaceId, userId ?? null, 'workspace_invite_revoked', inviteId);
     revalidatePath('/app/settings');
-    redirect(settingsPath('invite-revoked'));
   } catch {
-    redirect(settingsPath(undefined, 'invite-revoke-failed'));
+    nextRoute = settingsPath(undefined, 'invite-revoke-failed');
   }
+
+  redirect(nextRoute);
 }
 
 export async function removeWorkspaceMember(formData: FormData) {
@@ -97,14 +106,17 @@ export async function removeWorkspaceMember(formData: FormData) {
   const membershipId = requiredString(formData, 'membershipId');
   const { userId } = await auth();
   if (!workspaceId || !membershipId) redirect(settingsPath(undefined, 'invalid'));
+
+  let nextRoute: Route = settingsPath('member-removed');
   try {
     await db.delete(workspaceMemberships).where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.id, membershipId)));
     await logAudit(workspaceId, userId ?? null, 'workspace_member_removed', membershipId);
     revalidatePath('/app/settings');
-    redirect(settingsPath('member-removed'));
   } catch {
-    redirect(settingsPath(undefined, 'member-remove-failed'));
+    nextRoute = settingsPath(undefined, 'member-remove-failed');
   }
+
+  redirect(nextRoute);
 }
 
 export async function acceptWorkspaceInvite(formData: FormData) {
@@ -114,12 +126,18 @@ export async function acceptWorkspaceInvite(formData: FormData) {
   if (!token || !user || !userId) redirect('/sign-in' as Route);
   const email = (user.primaryEmailAddress?.emailAddress ?? '').toLowerCase();
 
+  let inviteRows;
   try {
-    const inviteRows = await db.select().from(workspaceInvites).where(eq(workspaceInvites.token, token)).limit(1);
-    const invite = inviteRows[0];
-    if (!invite || invite.status !== 'pending') redirect('/app/settings?error=invite-missing' as Route);
-    if ((invite.email ?? '').toLowerCase() !== email) redirect('/app/settings?error=invite-email-mismatch' as Route);
+    inviteRows = await db.select().from(workspaceInvites).where(eq(workspaceInvites.token, token)).limit(1);
+  } catch {
+    redirect('/app/settings?error=invite-accept-failed' as Route);
+  }
 
+  const invite = inviteRows[0];
+  if (!invite || invite.status !== 'pending') redirect('/app/settings?error=invite-missing' as Route);
+  if ((invite.email ?? '').toLowerCase() !== email) redirect('/app/settings?error=invite-email-mismatch' as Route);
+
+  try {
     const existing = await db
       .select({ id: workspaceMemberships.id })
       .from(workspaceMemberships)
@@ -129,11 +147,13 @@ export async function acceptWorkspaceInvite(formData: FormData) {
     if (!existing[0]?.id) {
       await db.insert(workspaceMemberships).values({ workspaceId: invite.workspaceId, clerkUserId: userId, role: invite.role });
     }
+
     await db.update(workspaceInvites).set({ status: 'accepted', acceptedAt: new Date() }).where(eq(workspaceInvites.id, invite.id));
     await logAudit(invite.workspaceId, userId, 'workspace_invite_accepted', invite.id, { email });
     revalidatePath('/app/settings');
-    redirect('/app?ok=invite-accepted' as Route);
   } catch {
     redirect('/app/settings?error=invite-accept-failed' as Route);
   }
+
+  redirect('/app?ok=invite-accepted' as Route);
 }
