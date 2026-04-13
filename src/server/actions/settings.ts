@@ -96,9 +96,14 @@ export async function acceptWorkspaceInvite(formData: FormData) {
   const inviteRows = await db.select().from(workspaceInvites).where(eq(workspaceInvites.token, token)).limit(1);
   const invite = inviteRows[0];
   if (!invite || invite.status !== 'pending') redirect('/app/settings?error=invite-missing' as Route);
-  if ((invite.email ?? '').toLowerCase() != email) redirect('/app/settings?error=invite-email-mismatch' as Route);
+  if ((invite.email ?? '').toLowerCase() !== email) redirect('/app/settings?error=invite-email-mismatch' as Route);
 
-  const existing = await db.select({ id: workspaceMemberships.id }).from(workspaceMemberships).where(and(eq(workspaceMemberships.workspaceId, invite.workspaceId), eq(workspaceMemberships.clerkUserId, userId))).limit(1);
+  const existing = await db
+    .select({ id: workspaceMemberships.id })
+    .from(workspaceMemberships)
+    .where(and(eq(workspaceMemberships.workspaceId, invite.workspaceId), eq(workspaceMemberships.clerkUserId, userId)))
+    .limit(1);
+
   if (!existing[0]?.id) {
     await db.insert(workspaceMemberships).values({ workspaceId: invite.workspaceId, clerkUserId: userId, role: invite.role });
   }

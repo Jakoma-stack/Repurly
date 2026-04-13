@@ -1,3 +1,6 @@
+import { and, eq } from 'drizzle-orm';
+import { db } from '@/lib/db/client';
+import { platformAccounts } from '../../../drizzle/schema';
 import { exchangeLinkedInCode, fetchLinkedInMember, fetchOrganizationAccess, refreshLinkedInToken } from '@/lib/linkedin/client';
 import { getValidAccessToken, syncPlatformAccounts, upsertIntegration } from '@/lib/integrations/service';
 
@@ -64,6 +67,26 @@ export async function connectLinkedInWorkspace(workspaceId: string, code: string
     },
     ...organizationAccounts,
   ]);
+
+  if (organizationAccounts.length > 0) {
+    // Prefer a company page as the default when one is available.
+    const existingTargets = await db
+      .select({ id: platformAccounts.id, targetType: platformAccounts.targetType, handle: platformAccounts.handle })
+      .from(platformAccounts)
+      .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin')));
+
+    const orgTarget = existingTargets.find((target) => target.targetType === 'organization');
+    if (orgTarget?.id) {
+      await db
+        .update(platformAccounts)
+        .set({ isDefault: false, updatedAt: new Date() })
+        .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin')));
+      await db
+        .update(platformAccounts)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(eq(platformAccounts.id, orgTarget.id));
+    }
+  }
 
   return { member, organizations };
 }

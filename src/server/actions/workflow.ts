@@ -203,7 +203,18 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
 
 async function attachTarget(postId: string, workspaceId: string, formData: FormData) {
   const targetId = requiredString(formData, 'targetId');
-  const target = await getTargetForWorkspace(workspaceId, targetId);
+  let target = targetId ? await getTargetForWorkspace(workspaceId, targetId) : null;
+
+  if (!target) {
+    const defaultRows = await db
+      .select({ id: platformAccounts.id, provider: platformAccounts.provider, targetType: platformAccounts.targetType })
+      .from(platformAccounts)
+      .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.isDefault, true), eq(platformAccounts.publishEnabled, true)))
+      .limit(1);
+
+    target = defaultRows[0] ?? null;
+  }
+
   if (!target) return null;
 
   const existing = await db.select({ id: postTargets.id }).from(postTargets).where(eq(postTargets.postId, postId)).limit(1);

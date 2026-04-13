@@ -1,8 +1,8 @@
-import { and, count, desc, eq, sql } from 'drizzle-orm';
+import { and, count, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { getWorkspaceOperatorFlags } from '@/lib/ops/feature-flags';
-import { approvalRequests, featureFlags, integrations, platformAccounts, posts, publishJobs, workspaceInvites, workspaceMemberships } from '../../../drizzle/schema';
+import { approvalRequests, integrations, platformAccounts, posts, publishJobs, workspaceInvites, workspaceMemberships } from '../../../drizzle/schema';
 
 export async function getSettingsSnapshot(workspaceId: string) {
   const [flags, supportRows, members, invites] = await Promise.all([
