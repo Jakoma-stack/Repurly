@@ -69,10 +69,7 @@ export default async function AppHomePage({ searchParams }: { searchParams?: Sea
           <div className="flex flex-wrap gap-3">
             <Link href={setup.primaryCtaHref}><Button>{setup.primaryCtaLabel}</Button></Link>
             {setup.isReadyForComposer && (
-              <>
-                <Link href="/app/calendar"><Button variant="outline">Open calendar and queue</Button></Link>
-                <Link href="/app/reports"><Button variant="outline">Open reports</Button></Link>
-              </>
+              <Link href="/app/calendar"><Button variant="outline">Open calendar and queue</Button></Link>
             )}
           </div>
         </CardContent>

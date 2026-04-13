@@ -129,7 +129,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a href={`/app/brands?brandId=${brand.id}`} className="rounded-2xl border border-border px-3 py-2 text-sm">Edit</a>
-                    <a href={`/app/content?brandId=${brand.id}`} className="rounded-2xl border border-border px-3 py-2 text-sm">Open composer</a>
+                    <a href={`/app/content`} className="rounded-2xl border border-border px-3 py-2 text-sm">Open composer</a>
                     {brand.status === 'archived' ? (
                       <form action={restoreBrand}>
                         <input type="hidden" name="workspaceId" value={session.workspaceId} />

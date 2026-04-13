@@ -1,6 +1,6 @@
 import { and, count, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
-import { brands, integrations, platformAccounts, usageEvents, workspaces, workspaceMemberships } from '../../../drizzle/schema';
+import { integrations, platformAccounts, usageEvents, workspaces, workspaceMemberships } from '../../../drizzle/schema';
 import type { PlatformKey } from '@/lib/platforms/types';
 import type { UsageSnapshot } from '@/lib/billing/plans';
 
@@ -38,10 +38,6 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
     ? await db.select({ total: count() }).from(workspaceMemberships).where(eq(workspaceMemberships.workspaceId, workspaceId))
     : [{ total: 7 } as { total: number }];
 
-  const [brandsRow] = workspaceId
-    ? await db.select({ total: count() }).from(brands).where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active')))
-    : [{ total: 2 } as { total: number }];
-
   const [postsRow] = workspaceId
     ? await db
         .select({ total: sql<number>`coalesce(sum(${usageEvents.quantity}), 0)` })
@@ -63,7 +59,6 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
   return {
     plan: (plan as UsageSnapshot['plan']) ?? 'growth',
     membersUsed: Number(membersRow?.total ?? 0),
-    brandsUsed: Number(brandsRow?.total ?? 0),
     postsUsedThisMonth: Number(postsRow?.total ?? 0),
     storageUsedGb: Math.max(0, Math.round(Number(storageRow?.totalBytes ?? 0) / (1024 * 1024 * 1024))),
     channelsConnected: Number(channelsRow?.total ?? 0),

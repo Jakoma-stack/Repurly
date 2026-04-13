@@ -2,7 +2,6 @@ export type PlanKey = 'core' | 'growth' | 'scale';
 
 export type PlanLimits = {
   workspaceMembers: number;
-  brands: number;
   monthlyPosts: number;
   storageGb: number;
   connectedChannels: number;
@@ -12,17 +11,15 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   core: {
-    workspaceMembers: 1,
-    brands: 1,
+    workspaceMembers: 3,
     monthlyPosts: 120,
     storageGb: 10,
-    connectedChannels: 2,
+    connectedChannels: 3,
     approvalFlows: false,
     prioritySupport: false,
   },
   growth: {
     workspaceMembers: 10,
-    brands: 3,
     monthlyPosts: 1000,
     storageGb: 100,
     connectedChannels: 10,
@@ -31,7 +28,6 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   },
   scale: {
     workspaceMembers: 50,
-    brands: 10,
     monthlyPosts: 10000,
     storageGb: 500,
     connectedChannels: 30,
@@ -43,7 +39,6 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
 export type UsageSnapshot = {
   plan: PlanKey;
   membersUsed: number;
-  brandsUsed: number;
   postsUsedThisMonth: number;
   storageUsedGb: number;
   channelsConnected: number;
@@ -58,7 +53,6 @@ export function buildUsageRows(snapshot: UsageSnapshot) {
 
   return [
     { key: 'Workspace members', used: snapshot.membersUsed, limit: limits.workspaceMembers, unit: 'seats' },
-    { key: 'Brands', used: snapshot.brandsUsed, limit: limits.brands, unit: 'brands' },
     { key: 'Posts this month', used: snapshot.postsUsedThisMonth, limit: limits.monthlyPosts, unit: 'posts' },
     { key: 'Storage', used: snapshot.storageUsedGb, limit: limits.storageGb, unit: 'GB' },
     { key: 'Connected channels', used: snapshot.channelsConnected, limit: limits.connectedChannels, unit: 'channels' },

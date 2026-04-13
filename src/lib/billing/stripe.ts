@@ -14,7 +14,7 @@ export const plans = {
 } as const;
 
 export type StripePlanKey = keyof typeof plans;
-export type StripeSelfServePlanKey = Extract<StripePlanKey, 'core' | 'growth' | 'scale'>;
+export type StripeSelfServePlanKey = Extract<StripePlanKey, 'core' | 'growth'>;
 
 export function isStripeConfigured() {
   return Boolean(stripeSecretKey);

@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import {
   BellRing,
   CreditCard,
@@ -7,12 +6,12 @@ import {
   PencilLine,
   Send,
   Settings,
+  Sparkles,
   PanelsTopLeft,
   Building2,
   BriefcaseBusiness,
   MessageSquareQuote,
   Users,
-  BarChart3,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
@@ -34,7 +33,6 @@ const fullNav = [
   { href: '/app/activity', label: 'Job detail', icon: History },
   { href: '/app/reliability', label: 'Reliability', icon: BellRing },
   { href: '/app/notifications', label: 'Notifications', icon: BellRing },
-  { href: '/app/reports', label: 'Reports', icon: BarChart3 },
   { href: '/app/billing', label: 'Billing', icon: CreditCard },
   { href: '/app/settings', label: 'Settings', icon: Settings },
 ];
@@ -58,7 +56,9 @@ export function AppShell({
       <div className="mx-auto flex max-w-[1440px] gap-6 px-4 py-6 lg:px-8">
         <aside className="hidden w-80 shrink-0 rounded-[2rem] border border-white/10 bg-slate-950 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.28)] lg:block">
           <div className="mb-8 flex items-center gap-3">
-            <Image src="/assets/repurly-logo.png" alt="Repurly logo" width={40} height={40} className="rounded-xl" />
+            <div className="rounded-2xl bg-white/10 p-2 text-white">
+              <Sparkles className="size-5" />
+            </div>
             <div>
               <div className="font-semibold tracking-tight">Repurly</div>
               <div className="text-sm text-white/60">Premium content operations</div>
@@ -73,7 +73,7 @@ export function AppShell({
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Payment is required before this workspace can use the product. Solo or Team unlocks access.
+              Payment is required before this workspace can use the product. Core or Growth unlocks access.
             </div>
           ) : null}
 
