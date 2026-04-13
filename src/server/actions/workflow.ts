@@ -4,12 +4,13 @@ import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { isFlagEnabled } from '@/lib/ops/feature-flags';
 import { inngest } from '@/lib/inngest/client';
-import { buildFallbackContentDrafts, generateContentDrafts, type ContentDraft, type GenerateContentDraftsArgs } from '@/lib/ai/content';
-import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
+import { buildAiReview, buildFallbackContentDrafts, buildSuggestedSchedule, generateContentDrafts, type ContentDraft, type GenerateContentDraftsArgs } from '@/lib/ai/content';
+import { approvalRequests, auditEvents, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
 
@@ -22,10 +23,43 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignWindowDays: number;
+  sourceMaterial: string;
+  voiceNotes: string;
+  blockedTerms: string;
+  targetPlatforms: string;
   savedAt: string;
 };
 
+
 const IMMEDIATE_PUBLISH_WINDOW_MS = 60 * 1000;
+
+async function writeAuditEvent(workspaceId: string, actorId: string | null, eventType: string, entityType: string, entityId: string, payload?: Record<string, unknown>) {
+  await db.insert(auditEvents).values({ workspaceId, actorId, eventType, entityType, entityId, payload: payload ?? null });
+}
+
+async function countLinkedInPostsScheduledForDay(workspaceId: string, scheduledFor: Date) {
+  const dayStart = new Date(scheduledFor);
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+  const rows = await db
+    .select({ id: publishJobs.id })
+    .from(publishJobs)
+    .innerJoin(postTargets, eq(postTargets.id, publishJobs.postTargetId))
+    .innerJoin(posts, eq(posts.id, publishJobs.postId))
+    .where(
+      and(
+        eq(posts.workspaceId, workspaceId),
+        eq(postTargets.provider, 'linkedin'),
+        gte(publishJobs.scheduledFor, dayStart),
+        lt(publishJobs.scheduledFor, dayEnd),
+      ),
+    );
+
+  return rows.length;
+}
 
 function parseScheduledFor(formData: FormData) {
   const rawValue = requiredString(formData, 'scheduledFor');
@@ -82,12 +116,28 @@ async function getBrand(workspaceId: string, brandId: string) {
       primaryCta: brands.primaryCta,
       secondaryCta: brands.secondaryCta,
       hashtags: brands.hashtags,
+      metadata: brands.metadata,
     })
     .from(brands)
     .where(and(eq(brands.workspaceId, workspaceId), eq(brands.id, brandId)))
     .limit(1);
 
   return row[0] ?? null;
+}
+
+async function getBrandPerformanceContext(workspaceId: string, brandId: string) {
+  const rows = await db
+    .select({ title: posts.title, body: posts.body, publishedAt: posts.publishedAt, updatedAt: posts.updatedAt })
+    .from(posts)
+    .where(and(eq(posts.workspaceId, workspaceId), eq(posts.brandId, brandId), eq(posts.status, 'published')))
+    .orderBy(desc(posts.publishedAt), desc(posts.updatedAt))
+    .limit(5);
+
+  return rows.map((row) => {
+    const excerpt = String(row.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 140);
+    const publishedLabel = row.publishedAt ? new Date(row.publishedAt).toISOString().slice(0, 10) : 'recently';
+    return `${row.title} (${publishedLabel})${excerpt ? ` — ${excerpt}` : ''}`;
+  });
 }
 
 async function getTargetForWorkspace(workspaceId: string, targetId: string) {
@@ -107,7 +157,19 @@ function requiredString(formData: FormData, key: string) {
 }
 
 function parseCount(formData: FormData) {
-  return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 6));
+  return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 30));
+}
+
+function parseCampaignWindowDays(formData: FormData) {
+  return Math.max(7, Math.min(Number(requiredString(formData, 'campaignWindowDays') || '30'), 180));
+}
+
+function parseCsvField(raw: string) {
+  return raw
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(', ');
 }
 
 async function persistSavedCampaign(formData: FormData) {
@@ -126,6 +188,11 @@ async function persistSavedCampaign(formData: FormData) {
     count: parseCount(formData),
     cadence: requiredString(formData, 'cadence') || 'weekly',
     preferredTimeOfDay: requiredString(formData, 'preferredTimeOfDay') || 'morning',
+    campaignWindowDays: parseCampaignWindowDays(formData),
+    sourceMaterial: requiredString(formData, 'sourceMaterial'),
+    voiceNotes: requiredString(formData, 'voiceNotes'),
+    blockedTerms: parseCsvField(requiredString(formData, 'blockedTerms')),
+    targetPlatforms: parseCsvField(requiredString(formData, 'targetPlatforms') || 'linkedin'),
     savedAt: new Date().toISOString(),
   };
 
@@ -282,8 +349,10 @@ function buildGeneratedDraftRows(args: {
   brief: string;
   cadence: string;
   preferredTimeOfDay: string;
+  generationArgs: GenerateContentDraftsArgs;
   drafts: ContentDraft[];
 }) {
+  const schedule = buildSuggestedSchedule(args.generationArgs);
   return args.drafts.map((draft, index) => ({
     workspaceId: args.workspaceId,
     brandId: args.brandId,
@@ -301,8 +370,82 @@ function buildGeneratedDraftRows(args: {
       callToAction: draft.callToAction,
       hashtags: draft.hashtags,
       draftNumber: index + 1,
+      suggestedSchedule: schedule[index] ?? null,
+      aiReview: buildAiReview(args.generationArgs, draft, index + 1),
     },
   }));
+}
+
+
+function mergePostMetadata(existing: unknown, patch: Record<string, unknown>) {
+  const base = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing as Record<string, unknown> : {};
+  return { ...base, ...patch };
+}
+
+async function autoScheduleDraftBatch(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const targetId = requiredString(formData, 'targetId');
+  const generatedIds = requiredString(formData, 'generatedIds')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const startAt = parseScheduledFor(formData);
+
+  if (!workspaceId || !targetId || !generatedIds.length || !startAt) {
+    return { error: 'invalid' as const, count: 0 };
+  }
+
+  const target = await getTargetForWorkspace(workspaceId, targetId);
+  if (!target) return { error: 'missing-target' as const, count: 0 };
+
+  const draftRows = await db
+    .select({
+      id: posts.id,
+      title: posts.title,
+      metadata: posts.metadata,
+    })
+    .from(posts)
+    .where(and(eq(posts.workspaceId, workspaceId), inArray(posts.id, generatedIds)));
+
+  const byId = new Map(draftRows.map((row) => [row.id, row]));
+  const ordered = generatedIds.map((id) => byId.get(id)).filter(Boolean);
+
+  for (const row of ordered) {
+    const suggestedDayOffset = Number((row!.metadata as Record<string, unknown> | null)?.aiReview && typeof (row!.metadata as Record<string, unknown>).aiReview === 'object'
+      ? ((row!.metadata as Record<string, unknown>).aiReview as Record<string, unknown>).suggestedDayOffset ?? 0
+      : ((row!.metadata as Record<string, unknown> | null)?.suggestedSchedule as Record<string, unknown> | undefined)?.dayOffset ?? 0);
+
+    const scheduledFor = new Date(startAt.getTime() + Math.max(0, suggestedDayOffset) * 24 * 60 * 60 * 1000);
+
+    await db
+      .update(posts)
+      .set({
+        status: 'scheduled',
+        scheduledFor,
+        updatedAt: new Date(),
+        metadata: mergePostMetadata(row!.metadata, {
+          autoPlacedAt: new Date().toISOString(),
+          autoPlacedFromBatch: true,
+          autoPlacedStart: startAt.toISOString(),
+        }),
+      })
+      .where(eq(posts.id, row!.id));
+
+    const existingTarget = await db.select({ id: postTargets.id }).from(postTargets).where(eq(postTargets.postId, row!.id)).limit(1);
+    let postTargetId: string | null = null;
+    if (existingTarget[0]?.id) {
+      const updated = await db.update(postTargets).set({ platformAccountId: target.id, provider: target.provider, targetType: target.targetType, platformStatus: 'queued', scheduledFor, updatedAt: new Date() }).where(eq(postTargets.id, existingTarget[0].id)).returning({ id: postTargets.id });
+      postTargetId = updated[0]?.id ?? existingTarget[0].id;
+    } else {
+      const inserted = await db.insert(postTargets).values({ postId: row!.id, platformAccountId: target.id, provider: target.provider, targetType: target.targetType, platformStatus: 'queued', scheduledFor }).returning({ id: postTargets.id });
+      postTargetId = inserted[0]?.id ?? null;
+    }
+    if (!postTargetId) continue;
+    const publishJobId = await upsertQueuedPublishJob(row!.id, postTargetId, scheduledFor);
+    await maybeDispatchScheduledPost({ publishJobId, postId: row!.id, postTargetId, scheduledFor });
+  }
+
+  return { error: null as const, count: ordered.length };
 }
 
 async function refreshWorkflowPages() {
@@ -313,6 +456,17 @@ async function refreshWorkflowPages() {
   revalidatePath('/app/brands');
   revalidatePath('/app/engagement');
   revalidatePath('/app/leads');
+}
+
+export async function autoPlaceGeneratedDrafts(formData: FormData) {
+  const generatedIds = requiredString(formData, 'generatedIds');
+  const result = await autoScheduleDraftBatch(formData);
+  if (result.error) {
+    redirect(buildContentPath({ error: result.error, generatedIds }, 'generated-drafts') as Route);
+  }
+
+  await refreshWorkflowPages();
+  redirect(buildContentPath({ ok: 'auto-placed', generatedIds }, 'generated-drafts') as Route);
 }
 
 export async function saveCampaign(formData: FormData) {
@@ -371,13 +525,20 @@ export async function requestApproval(formData: FormData) {
     .where(and(eq(approvalRequests.postId, post.id), eq(approvalRequests.workspaceId, post.workspaceId)))
     .limit(1);
 
+  const currentPost = await db.select({ metadata: posts.metadata }).from(posts).where(eq(posts.id, post.id)).limit(1);
+  const review = ((currentPost[0]?.metadata as Record<string, unknown> | null)?.aiReview ?? null) as Record<string, unknown> | null;
+  const approvalNote = [
+    requiredString(formData, 'approvalOwner') || null,
+    review ? `AI review: ${String(review.approvalRecommendation ?? 'Review manually')} | Performance fit ${String(review.performanceFitScore ?? 'n/a')}/100 | Compliance ${String(review.complianceRisk ?? 'none')}` : null,
+  ].filter(Boolean).join('\n');
+
   if (existingApproval[0]?.id) {
     await db
       .update(approvalRequests)
-      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null, updatedAt: new Date() })
+      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote || null, updatedAt: new Date() })
       .where(eq(approvalRequests.id, existingApproval[0].id));
   } else {
-    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null });
+    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote || null });
   }
 
   await refreshWorkflowPages();
@@ -387,9 +548,34 @@ export async function requestApproval(formData: FormData) {
 export async function schedulePost(formData: FormData) {
   const scheduledFor = requiredString(formData, 'scheduledFor');
   const postId = requiredString(formData, 'postId');
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const authorId = requiredString(formData, 'authorId');
 
   if (!scheduledFor) {
     redirect(buildContentPath({ error: 'missing-schedule', postId: postId || undefined }, 'composer') as Route);
+  }
+
+  if (workspaceId && await isFlagEnabled(workspaceId, 'pause_publishing')) {
+    redirect(buildContentPath({ error: 'publishing-paused', postId: postId || undefined }, 'target-selection') as Route);
+  }
+
+  const parsed = parseScheduledFor(formData);
+  if (!parsed || Number.isNaN(parsed.getTime())) {
+    redirect(buildContentPath({ error: 'invalid-schedule', postId: postId || undefined }, 'composer') as Route);
+  }
+  const parsedDate = parsed as Date;
+
+  if (parsedDate.getTime() < Date.now() - 60 * 1000) {
+    redirect(buildContentPath({ error: 'schedule-in-past', postId: postId || undefined }, 'composer') as Route);
+  }
+
+  const targetId = requiredString(formData, 'targetId');
+  const targetRecord = await getTargetForWorkspace(workspaceId, targetId);
+  if (targetRecord?.provider === 'linkedin') {
+    const sameDayCount = await countLinkedInPostsScheduledForDay(workspaceId, parsedDate);
+    if (sameDayCount >= 5) {
+      redirect(buildContentPath({ error: 'linkedin-day-limit', postId: postId || undefined }, 'target-selection') as Route);
+    }
   }
 
   const { error, post } = await createOrUpdateBasePost(formData, 'scheduled');
@@ -407,8 +593,29 @@ export async function schedulePost(formData: FormData) {
     scheduledFor: post.scheduledFor,
   });
 
+  await writeAuditEvent(post.workspaceId, authorId || null, 'post_scheduled', 'post', post.id, { publishJobId, scheduledFor: post.scheduledFor?.toISOString?.() ?? null, provider: target.provider });
   await refreshWorkflowPages();
   redirect(buildContentPath({ ok: 'scheduled', postId: post.id }, 'target-selection') as Route);
+}
+
+export async function clearQueuedPosts(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const actorId = requiredString(formData, 'authorId');
+  if (!workspaceId) redirect('/app/calendar?error=invalid' as Route);
+
+  const queued = await db
+    .select({ id: publishJobs.id })
+    .from(publishJobs)
+    .innerJoin(posts, eq(posts.id, publishJobs.postId))
+    .where(and(eq(posts.workspaceId, workspaceId), eq(publishJobs.status, 'queued')));
+
+  if (queued.length) {
+    await db.delete(publishJobs).where(inArray(publishJobs.id, queued.map((row) => row.id)));
+  }
+
+  await writeAuditEvent(workspaceId, actorId || null, 'queue_cleared', 'publish_job', workspaceId, { clearedCount: queued.length });
+  await refreshWorkflowPages();
+  redirect('/app/calendar?ok=queue-cleared' as Route);
 }
 
 export async function generateAiDrafts(formData: FormData) {
@@ -430,12 +637,14 @@ export async function generateAiDrafts(formData: FormData) {
     redirect(buildContentPath({ error: 'generate-failed-save' }, 'campaign-planner') as Route);
   }
 
-  const brand = await getBrand(workspaceId, brandId);
+  const [brand, performanceContext] = await Promise.all([getBrand(workspaceId, brandId), getBrandPerformanceContext(workspaceId, brandId)]);
   if (!brand) {
     redirect(buildContentPath({ error: 'missing-brand' }, 'campaign-planner') as Route);
   }
 
   await persistSavedCampaign(formData);
+
+  const aiProfile = (brand.metadata && typeof brand.metadata === 'object' ? (brand.metadata as Record<string, unknown>).aiProfile : null) as Record<string, unknown> | null;
 
   const generationArgs: GenerateContentDraftsArgs = {
     brandName: brand.name,
@@ -450,6 +659,13 @@ export async function generateAiDrafts(formData: FormData) {
     postFormat,
     cadence,
     preferredTimeOfDay,
+    campaignWindowDays: parseCampaignWindowDays(formData),
+    sourceMaterial: requiredString(formData, 'sourceMaterial') || null,
+    voiceNotes: [String(aiProfile?.voiceNotes ?? ''), requiredString(formData, 'voiceNotes')].filter(Boolean).join(' | ') || null,
+    blockedTerms: [String(aiProfile?.blockedTerms ?? ''), requiredString(formData, 'blockedTerms')].join(',').split(/[\n,]/).map((item) => item.trim()).filter(Boolean),
+    targetPlatforms: requiredString(formData, 'targetPlatforms').split(/[\n,]/).map((item) => item.trim().toLowerCase()).filter(Boolean),
+    performanceContext,
+    complianceRules: String(aiProfile?.complianceRules ?? '').split(/[\n,]/).map((item) => item.trim()).filter(Boolean),
   };
 
   let drafts: ContentDraft[];
@@ -469,6 +685,7 @@ export async function generateAiDrafts(formData: FormData) {
       brief,
       cadence,
       preferredTimeOfDay,
+      generationArgs,
       drafts: draftBatch,
     })).returning({ id: posts.id });
   };

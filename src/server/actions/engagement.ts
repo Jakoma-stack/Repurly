@@ -43,6 +43,7 @@ async function upsertLeadFromComment(args: {
     intentScore: args.intentScore,
     stage: args.intentScore >= 75 ? 'qualified' : 'new',
     nextAction: args.nextAction ?? (args.intentScore >= 75 ? 'Send DM and offer a practical next step.' : 'Reply in-thread and gauge buying intent.'),
+    notes: null,
     updatedAt: new Date(),
   };
 
@@ -143,6 +144,11 @@ export async function generateEngagementReply(formData: FormData) {
     .set({
       replyOptions: suggestions.replies,
       suggestedDmText: suggestions.dm,
+      metadata: {
+        aiQualificationSummary: suggestions.qualificationSummary,
+        aiNextBestAction: suggestions.nextBestAction,
+        aiEscalationRecommendation: suggestions.escalationRecommendation,
+      },
       updatedAt: new Date(),
     })
     .where(eq(engagementComments.id, comment.id));
@@ -155,8 +161,33 @@ export async function generateEngagementReply(formData: FormData) {
       leadName: comment.commenterName,
       leadHandle: comment.commenterHandle,
       intentScore: comment.intentScore,
-      nextAction: comment.intentScore >= 75 ? 'Send reply and DM with a concrete next step.' : 'Reply publicly and see if a DM is warranted.',
+      nextAction: suggestions.nextBestAction,
     });
+
+    const leadRows = await db
+      .select({ id: leadPipeline.id })
+      .from(leadPipeline)
+      .where(and(eq(leadPipeline.workspaceId, workspaceId), eq(leadPipeline.commentId, comment.id)))
+      .limit(1);
+
+    if (leadRows[0]?.id) {
+      await db
+        .update(leadPipeline)
+        .set({ notes: suggestions.leadNotes, nextAction: suggestions.nextBestAction, updatedAt: new Date() })
+        .where(eq(leadPipeline.id, leadRows[0].id));
+    }
+  } else {
+    await db
+      .update(engagementComments)
+      .set({
+        metadata: {
+          aiQualificationSummary: suggestions.qualificationSummary,
+          aiNextBestAction: suggestions.nextBestAction,
+          aiEscalationRecommendation: suggestions.escalationRecommendation,
+        },
+        updatedAt: new Date(),
+      })
+      .where(eq(engagementComments.id, comment.id));
   }
 
   await refreshPages();
