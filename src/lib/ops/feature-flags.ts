@@ -24,16 +24,6 @@ export async function getWorkspaceOperatorFlags(workspaceId: string) {
   return Object.fromEntries(OPERATOR_FLAG_KEYS.map((key) => [key, Boolean(current.get(key))])) as Record<OperatorFlagKey, boolean>;
 }
 
-export async function isFlagEnabled(workspaceId: string, key: OperatorFlagKey) {
-  const rows = await db
-    .select({ enabled: featureFlags.enabled })
-    .from(featureFlags)
-    .where(and(eq(featureFlags.workspaceId, workspaceId), eq(featureFlags.key, key)))
-    .limit(1);
-
-  return Boolean(rows[0]?.enabled);
-}
-
 export async function setWorkspaceOperatorFlag(workspaceId: string, key: OperatorFlagKey, enabled: boolean) {
   const existing = await db
     .select({ id: featureFlags.id })

@@ -185,21 +185,4 @@ export async function syncPlatformAccounts(
       });
     }
   }
-
-  if (provider === "linkedin") {
-    const refreshed = await db
-      .select({ id: platformAccounts.id, targetType: platformAccounts.targetType, publishEnabled: platformAccounts.publishEnabled, updatedAt: platformAccounts.updatedAt })
-      .from(platformAccounts)
-      .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
-
-    const preferred = refreshed
-      .filter((row) => row.publishEnabled && row.targetType === "organization")
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
-      ?? refreshed.filter((row) => row.publishEnabled).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0];
-
-    if (preferred?.id) {
-      await db.update(platformAccounts).set({ isDefault: false, updatedAt: new Date() }).where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
-      await db.update(platformAccounts).set({ isDefault: true, updatedAt: new Date() }).where(eq(platformAccounts.id, preferred.id));
-    }
-  }
 }

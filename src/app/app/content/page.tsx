@@ -26,11 +26,6 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
-  campaignType: string;
-  audienceFocus: string;
-  messageAngle: string;
-  proofPoints: string;
-  avoidTopics: string;
   savedAt: string;
 };
 
@@ -64,11 +59,6 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
       count: Number(parsed.count ?? 3),
       cadence: parsed.cadence ?? 'weekly',
       preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
-      campaignType: parsed.campaignType ?? 'thought leadership',
-      audienceFocus: parsed.audienceFocus ?? '',
-      messageAngle: parsed.messageAngle ?? '',
-      proofPoints: parsed.proofPoints ?? '',
-      avoidTopics: parsed.avoidTopics ?? '',
       savedAt: parsed.savedAt ?? new Date(0).toISOString(),
     };
   } catch {
@@ -248,20 +238,12 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     generatedIds.length ? getPostsByIds(session.workspaceId, generatedIds) : Promise.resolve([]),
   ]);
 
-  const selectedBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? brandOptions[0] ?? null;
-  const plannerBrief = savedCampaign?.brief ?? (selectedBrand
-    ? `Write three LinkedIn posts for ${selectedBrand.name} aimed at ${selectedBrand.audience || 'the right B2B audience'}, using the tone "${selectedBrand.defaultTone || 'clear, sharp, commercially realistic'}". Keep the CTA aligned to ${selectedBrand.primaryCta || 'qualified commercial conversations'}. Stay tightly aligned to this campaign only. Do not mention or blend in other brands in this workspace. Make each draft a different angle within the same campaign.`
-    : 'Write three LinkedIn posts for the selected brand using only that brand’s tone, audience, CTA, and campaign guardrails. Do not mix in other workspace brands.');
-  const plannerGoal = savedCampaign?.commercialGoal ?? 'Build authority with the selected audience';
+  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows on LinkedIn.';
+  const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
   const plannerFormat = savedCampaign?.postFormat ?? 'text';
   const plannerCadence = savedCampaign?.cadence ?? 'weekly';
   const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
-  const plannerCampaignType = savedCampaign?.campaignType ?? 'thought leadership';
-  const plannerAudienceFocus = savedCampaign?.audienceFocus ?? (selectedBrand?.audience ?? '');
-  const plannerMessageAngle = savedCampaign?.messageAngle ?? '';
-  const plannerProofPoints = savedCampaign?.proofPoints ?? '';
-  const plannerAvoidTopics = savedCampaign?.avoidTopics ?? '';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
 
@@ -288,49 +270,17 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Repurly should use only the currently selected brand and this specific campaign’s guardrails for AI drafting, CTA, tone, audience, proof points, and message angle.</p>
+                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Audience context is inherited from the selected brand, so you do not need a separate target-audience field for every post.</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>
                 <textarea name="brief" className="mt-2 min-h-[140px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBrief} required />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Campaign type</label>
-                  <select name="campaignType" defaultValue={plannerCampaignType} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
-                    <option value="thought leadership">Thought leadership</option>
-                    <option value="point of view">Point of view</option>
-                    <option value="pain-point series">Pain-point series</option>
-                    <option value="proof-led series">Proof-led series</option>
-                    <option value="conversion series">Conversion series</option>
-                    <option value="educational series">Educational series</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Audience focus</label>
-                  <input name="audienceFocus" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerAudienceFocus} />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-900">Message angle</label>
-                <textarea name="messageAngle" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerMessageAngle} />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Proof points or specifics</label>
-                  <textarea name="proofPoints" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerProofPoints} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Avoid topics</label>
-                  <textarea name="avoidTopics" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerAvoidTopics} />
-                </div>
               </div>
             </div>
             <div className="space-y-4 rounded-3xl border border-border p-5">
               <div>
                 <label className="text-sm font-medium text-slate-900">Commercial goal</label>
                 <input name="commercialGoal" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerGoal} />
-                <p className="mt-2 text-xs text-muted-foreground">Use a campaign-specific goal like “Build authority with CIOs in regulated sectors” rather than a broad generic goal.</p>
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
                 <div>
@@ -374,7 +324,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <button formAction={saveCampaign} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Save campaign for later</button>
                 <button formAction={clearSavedCampaign} formNoValidate className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Clear saved campaign</button>
               </div>
-              <p className="text-xs text-muted-foreground">Cadence and time-of-day shape the draft planning only. Repurly still requires you to confirm each final schedule manually. For the strongest output, keep the selected brand fixed and define one clear campaign lane with one audience, one message angle, and one CTA family.</p>
+              <p className="text-xs text-muted-foreground">Cadence and time-of-day shape the draft planning only. Repurly still requires you to confirm each final schedule manually.</p>
             </div>
           </form>
         </CardContent>

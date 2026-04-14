@@ -22,11 +22,6 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
-  campaignType: string;
-  audienceFocus: string;
-  messageAngle: string;
-  proofPoints: string;
-  avoidTopics: string;
   savedAt: string;
 };
 
@@ -131,11 +126,6 @@ async function persistSavedCampaign(formData: FormData) {
     count: parseCount(formData),
     cadence: requiredString(formData, 'cadence') || 'weekly',
     preferredTimeOfDay: requiredString(formData, 'preferredTimeOfDay') || 'morning',
-    campaignType: requiredString(formData, 'campaignType') || 'thought leadership',
-    audienceFocus: requiredString(formData, 'audienceFocus'),
-    messageAngle: requiredString(formData, 'messageAngle'),
-    proofPoints: requiredString(formData, 'proofPoints'),
-    avoidTopics: requiredString(formData, 'avoidTopics'),
     savedAt: new Date().toISOString(),
   };
 
@@ -213,15 +203,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
 
 async function attachTarget(postId: string, workspaceId: string, formData: FormData) {
   const targetId = requiredString(formData, 'targetId');
-  let target = await getTargetForWorkspace(workspaceId, targetId);
-  if (!target) {
-    const defaultTarget = await db
-      .select({ id: platformAccounts.id, provider: platformAccounts.provider, targetType: platformAccounts.targetType })
-      .from(platformAccounts)
-      .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.publishEnabled, true), eq(platformAccounts.isDefault, true)))
-      .limit(1);
-    target = defaultTarget[0] ?? null;
-  }
+  const target = await getTargetForWorkspace(workspaceId, targetId);
   if (!target) return null;
 
   const existing = await db.select({ id: postTargets.id }).from(postTargets).where(eq(postTargets.postId, postId)).limit(1);
@@ -439,11 +421,6 @@ export async function generateAiDrafts(formData: FormData) {
   const postFormat = requiredString(formData, 'postFormat');
   const cadence = requiredString(formData, 'cadence') || 'weekly';
   const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
-  const campaignType = requiredString(formData, 'campaignType') || 'thought leadership';
-  const audienceFocus = requiredString(formData, 'audienceFocus');
-  const messageAngle = requiredString(formData, 'messageAngle');
-  const proofPoints = requiredString(formData, 'proofPoints');
-  const avoidTopics = requiredString(formData, 'avoidTopics');
 
   if (!workspaceId || !authorId || !brandId || !brief) {
     redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
@@ -473,11 +450,6 @@ export async function generateAiDrafts(formData: FormData) {
     postFormat,
     cadence,
     preferredTimeOfDay,
-    campaignType,
-    audienceFocus,
-    messageAngle,
-    proofPoints,
-    avoidTopics,
   };
 
   let drafts: ContentDraft[];

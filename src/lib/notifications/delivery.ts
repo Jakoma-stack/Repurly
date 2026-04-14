@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { notificationDeliveries, notificationPreferences, workspaces } from '../../../drizzle/schema';
-import { resend } from '@/lib/email/client';
+import { getResendClient } from '@/lib/email/client';
 import { ProviderOutcomeEmail } from '@/emails/provider-outcome-email';
 
 export async function createNotificationDeliveries(input: {
@@ -52,7 +52,7 @@ export async function createNotificationDeliveries(input: {
     if (row[0]?.id) insertedIds.push(row[0].id);
 
     if (shouldSendNow && pref.channel === 'email' && pref.target && process.env.RESEND_API_KEY && process.env.EMAIL_FROM) {
-      await resend.emails.send({
+      await getResendClient().emails.send({
         from: process.env.EMAIL_FROM,
         to: pref.target,
         subject: input.title,
