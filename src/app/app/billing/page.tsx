@@ -130,7 +130,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
           <h3 className="text-lg font-semibold">Current access state</h3>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Workspace plan: <strong className="text-slate-950">{billingAccess.plan}</strong>
+          Workspace plan: <strong className="text-slate-950">{billingAccess?.plan ?? 'core'}</strong>
         </CardContent>
       </Card>
     </div>
