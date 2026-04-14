@@ -21,29 +21,37 @@ const features = [
   ],
 ] as const;
 
-const pricing = [
+const pricing: Array<{
+  name: string;
+  price: string;
+  body: string;
+  ctaLabel: string;
+  ctaHref: string;
+  featured?: boolean;
+}> = [
   {
-    name: 'Core',
-    price: 'From £297/mo',
-    body: 'For focused LinkedIn workflows with a tighter team, clear limits, and reliable publishing fundamentals.',
-    ctaLabel: 'Start with Core',
-    ctaHref: '/sign-up?plan=core',
+    name: 'Solo',
+    price: '£59/mo',
+    body: 'For one-brand LinkedIn workflows with a smaller team, clear limits, and reliable publishing fundamentals.',
+    ctaLabel: 'Start Solo',
+    ctaHref: '/sign-up?plan=solo',
   },
   {
-    name: 'Growth',
-    price: 'From £697/mo',
-    body: 'For agencies and B2B teams that need approvals, more operational capacity, and stronger commercial controls.',
-    ctaLabel: 'Start with Growth',
-    ctaHref: '/sign-up?plan=growth',
+    name: 'Team',
+    price: '£199/mo',
+    body: 'For agencies and B2B teams that need approvals, stronger operational capacity, and multi-brand workflow control.',
+    ctaLabel: 'Start Team',
+    ctaHref: '/sign-up?plan=team',
+    featured: true,
   },
   {
-    name: 'Scale',
-    price: 'Custom',
-    body: 'For higher-governance pilots and service-heavy accounts that should be sold deliberately rather than self-serve.',
-    ctaLabel: 'Talk to sales',
-    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Scale%20plan',
+    name: 'Agency',
+    price: '£499/mo',
+    body: 'For larger multi-brand client operations that need higher limits, priority support, and commercial onboarding support.',
+    ctaLabel: 'Start Agency',
+    ctaHref: '/sign-up?plan=agency',
   },
-] as const;
+];
 
 export default function HomePage() {
   return (
@@ -69,49 +77,49 @@ export default function HomePage() {
             Pricing for focused teams that need a premium workflow, not a bloated suite
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The
-            commercial posture is simple: charge for workflow control, multi-brand operations, and operational confidence.
+            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The commercial posture is
+            simple: charge for workflow control, multi-brand operations, and operational confidence.
+          </p>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Guided pilot or onboarding support is available from <strong>£1,500</strong> one-off.
           </p>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-3">
-          {pricing.map((plan, index) => {
-            const featured = index === 1;
-            return (
-              <Card
-                key={plan.name}
-                className={
-                  featured
-                    ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
-                    : 'border-slate-200/80 bg-white/95'
-                }
-              >
-                <CardHeader>
-                  <div className={featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
-                    {plan.name}
-                  </div>
-                  <div className="mt-2 text-3xl font-semibold">{plan.price}</div>
-                </CardHeader>
-                <CardContent>
-                  <p className={featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
-                    {plan.body}
-                  </p>
-                  <div className="mt-6">
-                    <a
-                      href={plan.ctaHref}
-                      className={
-                        featured
-                          ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
-                          : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
-                      }
-                    >
-                      {plan.ctaLabel}
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {pricing.map((plan) => (
+            <Card
+              key={plan.name}
+              className={
+                plan.featured
+                  ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
+                  : 'border-slate-200/80 bg-white/95'
+              }
+            >
+              <CardHeader>
+                <div className={plan.featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
+                  {plan.name}
+                </div>
+                <div className="mt-2 text-3xl font-semibold">{plan.price}</div>
+              </CardHeader>
+              <CardContent>
+                <p className={plan.featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
+                  {plan.body}
+                </p>
+                <div className="mt-6">
+                  <a
+                    href={plan.ctaHref}
+                    className={
+                      plan.featured
+                        ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
+                        : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
+                    }
+                  >
+                    {plan.ctaLabel}
+                  </a>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -120,12 +128,12 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Create your account, choose Core or Growth, complete checkout, and then unlock the workspace workflow.
+              Start with Solo or Team, or move to Agency if you manage higher-volume multi-brand operations.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Start with Core
+            <Link href="/sign-up?plan=team" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
+              Start with Team
             </Link>
             <Link href="/sign-in" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Sign in
