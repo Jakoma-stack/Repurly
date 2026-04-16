@@ -1,0 +1,302 @@
+export type ContentDraft = {
+  title: string;
+  body: string;
+  hashtags: string[];
+  titleHint: string;
+  callToAction: string;
+};
+
+export type GenerateContentDraftsArgs = {
+  brandName: string;
+  brandTone?: string | null;
+  audience?: string | null;
+  primaryCta?: string | null;
+  secondaryCta?: string | null;
+  hashtags?: string[] | null;
+  brief: string;
+  postFormat?: string | null;
+  commercialGoal?: string | null;
+  cadence?: string | null;
+  preferredTimeOfDay?: string | null;
+  count?: number;
+};
+
+const TITLE_MAX_LENGTH = 150;
+const BODY_MAX_LENGTH = 5000;
+const TITLE_HINT_MAX_LENGTH = 120;
+const CTA_MAX_LENGTH = 140;
+const HASHTAG_LIMIT = 5;
+
+function unique(items: string[]) {
+  return Array.from(new Set(items.filter(Boolean)));
+}
+
+function parseHashtags(input?: string[] | null) {
+  return unique((input ?? []).map((item) => item.replace(/^#/, '').trim()).filter(Boolean));
+}
+
+function cleanSentence(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function trimTo(value: string, maxLength: number) {
+  const trimmed = value.trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return `${trimmed.slice(0, maxLength - 3).trim()}...`;
+}
+
+function summarizeBrief(brief: string) {
+  const normalized = brief
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^audience\s*:/i.test(line))
+    .filter((line) => !/^goal\s*:/i.test(line))
+    .filter((line) => !/^positioning\s*:/i.test(line))
+    .filter((line) => !/^important constraints\s*:/i.test(line))
+    .filter((line) => !/^tone\s*:/i.test(line))
+    .filter((line) => !/^create \d+/i.test(line))
+    .filter((line) => !/^each post should\s*:/i.test(line))
+    .filter((line) => !line.startsWith('-'))
+    .join(' ');
+
+  const firstSentence = normalized.split(/(?<=[.!?])\s+/)[0] ?? normalized;
+  const summary = cleanSentence(firstSentence).replace(/^write\s+/i, '').replace(/^create\s+/i, '');
+
+  if (!summary) {
+    return 'Use a narrow, reliable LinkedIn workflow that gets good posts approved and published without extra tool sprawl.';
+  }
+
+  return summary.length > 220 ? `${summary.slice(0, 217).trim()}...` : summary;
+}
+
+function fallbackTitle(args: GenerateContentDraftsArgs, index: number) {
+  return trimTo(`${args.brandName} LinkedIn draft ${index + 1}`, TITLE_MAX_LENGTH);
+}
+
+function stripMetaLines(body: string) {
+  return body
+    .split('\n')
+    .filter((line) => !/^(tone|audience|title hint|format)\s*:/i.test(line.trim()))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: GenerateContentDraftsArgs, index: number): ContentDraft {
+  const hashtags = unique([
+    ...parseHashtags(args.hashtags),
+    ...((draft?.hashtags ?? []).map((tag) => String(tag ?? '').replace(/^#/, '').trim()).filter(Boolean)),
+  ]).slice(0, HASHTAG_LIMIT);
+
+  const callToAction = trimTo(
+    draft?.callToAction?.trim() || args.primaryCta?.trim() || 'Book a demo.',
+    CTA_MAX_LENGTH,
+  );
+
+  const title = trimTo(
+    draft?.title?.trim() || fallbackTitle(args, index),
+    TITLE_MAX_LENGTH,
+  );
+
+  const titleHint = trimTo(
+    draft?.titleHint?.trim() || `${(args.commercialGoal || 'Drive qualified action').trim()} (${(args.postFormat || 'text').trim()})`,
+    TITLE_HINT_MAX_LENGTH,
+  );
+
+  const rawBody = draft?.body?.trim();
+  const body = trimTo(
+    stripMetaLines(rawBody || [
+      'Most teams do not need more posts. They need a cleaner way to brief, approve, and publish the right post without delay.',
+      '',
+      summarizeBrief(args.brief),
+      '',
+      callToAction,
+      '',
+      hashtags.map((tag) => `#${tag}`).join(' '),
+    ].filter(Boolean).join('\n')),
+    BODY_MAX_LENGTH,
+  );
+
+  return {
+    title,
+    body,
+    hashtags,
+    titleHint,
+    callToAction,
+  };
+}
+
+function readOutputText(payload: unknown) {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const direct = (payload as { output_text?: unknown }).output_text;
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct;
+  }
+
+  const output = (payload as { output?: Array<{ content?: Array<{ text?: string; type?: string }> }> }).output;
+  if (!Array.isArray(output)) return null;
+
+  const text = output
+    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
+    .filter((item) => item?.type === 'output_text' || typeof item?.text === 'string')
+    .map((item) => item.text?.trim() ?? '')
+    .filter(Boolean)
+    .join('');
+
+  return text || null;
+}
+
+function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
+  const count = Math.max(1, Math.min(args.count ?? 3, 6));
+  const hashtags = parseHashtags(args.hashtags);
+  const cta = args.primaryCta?.trim() || 'Book a demo.';
+  const audience = args.audience?.trim() || 'B2B marketing and operations teams';
+  const goal = args.commercialGoal?.trim() || 'start more qualified buyer conversations';
+  const format = args.postFormat?.trim() || 'text';
+  const cadence = args.cadence?.trim() || 'weekly';
+  const preferredTimeOfDay = args.preferredTimeOfDay?.trim() || 'morning';
+  const briefSummary = summarizeBrief(args.brief);
+
+  const patterns = [
+    {
+      title: `${args.brandName}: the workflow lesson most teams miss`,
+      opener: 'Most teams do not have a content problem. They have a workflow problem.',
+      middle: `When approvals, targets, and recovery steps are vague, good ideas stall and deadlines slip. ${briefSummary}`,
+      closer: 'The practical fix is a tighter operating system: one owner, one target, one approval path, one queue.',
+    },
+    {
+      title: `${args.brandName}: the buyer pain behind the brief`,
+      opener: 'A lot of "we need more content" requests are really a signal that the underlying process is too loose.',
+      middle: `What buyers usually want is confidence: clear messaging, reliable posting, and fewer handoff gaps. ${briefSummary}`,
+      closer: 'That is why we bias toward fewer channels, higher quality, and a workflow the team will actually use.',
+    },
+    {
+      title: `${args.brandName}: a point of view post for ${audience}`,
+      opener: 'A useful content system should make commercial follow-up easier, not create more admin.',
+      middle: `For ${audience}, the best workflow is the one that keeps strategy, drafting, approvals, and next actions connected. ${briefSummary}`,
+      closer: 'If the system cannot help the team move from post to reply to lead follow-up, it is only solving half the problem.',
+    },
+    {
+      title: `${args.brandName}: proof-driven post idea`,
+      opener: 'One of the fastest ways to improve LinkedIn performance is to reduce workflow drag before you increase volume.',
+      middle: `Less time lost in approvals means more time refining the message. ${briefSummary}`,
+      closer: 'Teams that treat publishing like an operational process usually outperform teams that treat it like ad hoc posting.',
+    },
+  ];
+
+  return Array.from({ length: count }, (_, index) => {
+    const pattern = patterns[index % patterns.length];
+    const finalHashtags = unique(['linkedin', 'b2bmarketing', ...hashtags]).slice(0, HASHTAG_LIMIT);
+    return normalizeDraft({
+      title: pattern.title,
+      titleHint: `${goal} · ${cadence} · ${preferredTimeOfDay} (${format})`,
+      callToAction: cta,
+      hashtags: finalHashtags,
+      body: [
+        pattern.opener,
+        '',
+        pattern.middle,
+        '',
+        pattern.closer,
+        '',
+        cta,
+        '',
+        finalHashtags.map((tag) => `#${tag}`).join(' '),
+      ].join('\n'),
+    }, args, index);
+  });
+}
+
+export function buildFallbackContentDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
+  return buildFallbackDrafts(args);
+}
+
+async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<ContentDraft[] | null> {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) return null;
+
+  const count = Math.max(1, Math.min(args.count ?? 3, 6));
+  const prompt = [
+    `You are writing LinkedIn-first B2B posts for ${args.brandName}.`,
+    'Return strict JSON with the shape {"drafts":[{"title":"","body":"","hashtags":[""],"titleHint":"","callToAction":""}]}',
+    'Keep the tone commercially realistic and avoid hype.',
+    'Do not paste the brief verbatim into the post body.',
+    'Never include internal labels like Tone:, Audience:, Format:, or Title Hint: inside the post body.',
+    'Turn the brief into original post copy with a clean opening line, 2-4 short body paragraphs, and a concise CTA.',
+    `Brand: ${args.brandName}`,
+    `Tone: ${args.brandTone ?? 'clear, sharp, commercially realistic'}`,
+    `Audience: ${args.audience ?? 'B2B teams'}`,
+    `Primary CTA: ${args.primaryCta ?? ''}`,
+    `Secondary CTA: ${args.secondaryCta ?? ''}`,
+    `Hashtags: ${(args.hashtags ?? []).join(', ')}`,
+    `Commercial goal: ${args.commercialGoal ?? ''}`,
+    `Preferred format: ${args.postFormat ?? 'text'}`,
+    `Planning cadence: ${args.cadence ?? 'weekly'}`,
+    `Preferred time of day: ${args.preferredTimeOfDay ?? 'morning'}`,
+    `Brief: ${args.brief}`,
+    `Draft count: ${count}`,
+  ].join('\n');
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4.1-mini',
+        input: prompt,
+        text: {
+          format: {
+            type: 'json_schema',
+            name: 'repurly_content_drafts',
+            schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                drafts: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                      title: { type: 'string' },
+                      body: { type: 'string' },
+                      hashtags: { type: 'array', items: { type: 'string' } },
+                      titleHint: { type: 'string' },
+                      callToAction: { type: 'string' },
+                    },
+                    required: ['title', 'body', 'hashtags', 'titleHint', 'callToAction'],
+                  },
+                },
+              },
+              required: ['drafts'],
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const outputText = readOutputText(payload);
+    if (!outputText) return null;
+
+    const parsed = JSON.parse(outputText) as { drafts?: Array<Partial<ContentDraft>> };
+    if (!parsed.drafts?.length) return null;
+
+    return parsed.drafts.slice(0, count).map((draft, index) => normalizeDraft(draft, args, index));
+  } catch {
+    return null;
+  }
+}
+
+export async function generateContentDrafts(args: GenerateContentDraftsArgs): Promise<ContentDraft[]> {
+  const aiDrafts = await generateWithOpenAi(args);
+  if (aiDrafts?.length) return aiDrafts;
+  return buildFallbackDrafts(args);
+}
