@@ -2,19 +2,25 @@
 
 ## Product boundaries
 
-Repurly is a premium multi-channel content operations system. It is still positioned LinkedIn-first commercially, but the product foundation is now platform-extensible.
+Repurly is a premium content-operations system with a **LinkedIn-first launch wedge** and a **platform-extensible adapter layer** behind it.
+
+That distinction matters:
+
+- the commercial story is intentionally narrow and premium
+- the implementation is broader so additional channels can be added without cloning the product
+- launch readiness should not be inferred from adapter presence alone
 
 ## Core subsystems
 
 ### App shell
 - Next.js App Router
-- Route groups for marketing vs authenticated product
-- Server components by default
-- Server actions for trusted mutations
+- route groups for marketing vs authenticated product
+- server components by default
+- server actions for trusted mutations
 
 ### Identity
 - Clerk for auth, sessions, passwordless or email/password, org-aware access
-- Internal workspace membership tables for product roles and billing tiers
+- internal workspace membership tables for product roles and billing tiers
 
 ### Data
 - Postgres as source of truth
@@ -28,8 +34,10 @@ Repurly is a premium multi-channel content operations system. It is still positi
   - posts
   - post targets
   - publish jobs
+  - delivery logs
   - audit events
-  - billing customers
+  - usage events
+  - billing fields on workspaces
 
 ### Media and assets
 - S3-compatible storage
@@ -39,18 +47,19 @@ Repurly is a premium multi-channel content operations system. It is still positi
 
 ### Background execution
 - Inngest handles:
-  - scheduled publish jobs
-  - provider token refresh jobs
-  - onboarding and lifecycle emails
-  - dead-letter / retry visibility
+  - scheduled publish dispatch
+  - per-post publish execution
+  - retry and dead-letter posture
+  - onboarding and lifecycle messaging hooks
 
 ### Billing
 - Stripe Checkout for acquisition
 - Stripe Billing Portal for self-service changes
-- webhooks sync subscription state into Postgres
+- webhook-driven subscription state sync into Postgres
 
-### Email
-- Resend for welcome, invite, reset-adjacent product emails, billing notices, and publish alerts
+### Email and ops awareness
+- Resend for welcome, invite, billing-adjacent, and alert emails
+- optional webhook/email alerts for publish failures and reconnect warnings
 
 ### Platform adapter layer
 Every network sits behind a common interface.
@@ -63,14 +72,26 @@ Each adapter owns:
 - publish logic
 - capability declaration
 
-### Supported channels in this build
-- LinkedIn: live-first adapter scaffold with existing token lifecycle and publish path
-- X: scaffolded adapter
-- Facebook Pages: scaffolded adapter
-- Instagram Business: scaffolded adapter
-- Threads: scaffolded adapter
-- YouTube: scaffolded adapter
+## Channel posture in this repo
+
+### Operational launch focus
+- LinkedIn is the primary launch channel and onboarding path
+
+### Implemented provider paths in code
+- LinkedIn
+- X
+- Facebook Pages
+- Instagram Business
+
+These have meaningful code for connect and/or publish flows, but still require provider approval, credential setup, and live verification before claiming production readiness.
+
+### Scaffolded / future-facing providers
+- Threads
+- YouTube
+- TikTok
+
+These have adapter placeholders and related docs/hooks, but not full production workflows.
 
 ## Why this matters
 
-This avoids cloning the entire product per network. The shared product owns workspaces, approvals, storage, billing, and scheduling once. New networks only add adapter logic and provider-specific UX.
+This architecture avoids duplicating the product per network. Shared layers own workspaces, approvals, storage, billing, scheduling, delivery logs, and recovery posture once. New networks should mainly add adapter logic plus provider-specific UX and operational hardening.
