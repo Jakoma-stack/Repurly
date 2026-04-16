@@ -29,6 +29,24 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
   const snapshot = await getSettingsSnapshot(session.workspaceId);
+  const supportSnapshot = snapshot?.supportSnapshot ?? {
+    drafts: 0,
+    pendingApprovals: 0,
+    queuedJobs: 0,
+    retryingJobs: 0,
+    connectedIntegrations: 0,
+    livePublishTargets: 0,
+    workspaceMembers: 0,
+  };
+  const members = snapshot?.members ?? [];
+  const invites = snapshot?.invites ?? [];
+  const flags = snapshot?.flags ?? {
+    pause_publishing: false,
+    advanced_ai_planner: false,
+    social_listening_automation: false,
+    facebook_channel_visibility: false,
+    auto_calendar_placement: false,
+  };
   const params = (await searchParams) ?? {};
   const ok = firstParam(params.ok);
   const error = firstParam(params.error);
@@ -50,7 +68,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
             {OPERATOR_FLAG_KEYS.map((key) => {
-              const enabled = snapshot.flags[key];
+              const enabled = flags[key] ?? false;
               return (
                 <form key={key} action={updateOperatorControl} className="rounded-2xl border border-border p-4">
                   <input type="hidden" name="workspaceId" value={session.workspaceId} />
@@ -78,13 +96,13 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
             {[
-              ['Drafts', snapshot.supportSnapshot.drafts],
-              ['Pending approvals', snapshot.supportSnapshot.pendingApprovals],
-              ['Queued jobs', snapshot.supportSnapshot.queuedJobs],
-              ['Retrying jobs', snapshot.supportSnapshot.retryingJobs],
-              ['Connected integrations', snapshot.supportSnapshot.connectedIntegrations],
-              ['Live publish targets', snapshot.supportSnapshot.livePublishTargets],
-              ['Workspace members', snapshot.supportSnapshot.workspaceMembers],
+              ['Drafts', supportSnapshot.drafts],
+              ['Pending approvals', supportSnapshot.pendingApprovals],
+              ['Queued jobs', supportSnapshot.queuedJobs],
+              ['Retrying jobs', supportSnapshot.retryingJobs],
+              ['Connected integrations', supportSnapshot.connectedIntegrations],
+              ['Live publish targets', supportSnapshot.livePublishTargets],
+              ['Workspace members', supportSnapshot.workspaceMembers],
             ].map(([label, value]) => (
               <div key={String(label)} className="rounded-2xl border border-border bg-slate-50 p-4">
                 <div className="text-muted-foreground">{label}</div>
@@ -124,7 +142,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
 
             <div className="space-y-3">
               <h3 className="font-medium text-slate-950">Pending invites</h3>
-              {snapshot.invites.length ? snapshot.invites.map((invite) => (
+              {invites.length ? invites.map((invite) => (
                 <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4 text-sm">
                   <div>
                     <div className="font-medium text-slate-950">{invite.email}</div>
@@ -154,7 +172,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
             <p className="text-sm text-muted-foreground">Roles currently active in this workspace.</p>
           </CardHeader>
           <CardContent className="space-y-3">
-            {snapshot.members.length ? snapshot.members.map((member) => (
+            {members.length ? members.map((member) => (
               <div key={member.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border p-4 text-sm">
                 <div>
                   <div className="font-medium text-slate-950">{member.clerkUserId}</div>
