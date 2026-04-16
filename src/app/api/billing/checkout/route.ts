@@ -7,11 +7,13 @@ export const runtime = 'nodejs';
 
 type PlanKey = keyof typeof plans;
 type SelfServePlan = Extract<PlanKey, 'core' | 'growth'>;
+type BillingPlan = SelfServePlan | 'scale';
 type CheckoutError =
   | 'checkout-not-configured'
   | 'checkout-unavailable'
   | 'forbidden'
   | 'invalid-plan'
+  | 'sales-contact-required'
   | 'checkout-error';
 
 type CheckoutSessionResult =
@@ -20,23 +22,40 @@ type CheckoutSessionResult =
 
 const BILLING_ROLES = new Set(['owner', 'admin']);
 
-function normalizePlan(input: unknown): SelfServePlan | null {
-  return input === 'core' || input === 'growth' ? input : null;
+function normalizeBillingPlan(input: unknown): BillingPlan | null {
+  switch (input) {
+    case 'solo':
+    case 'core':
+      return 'core';
+    case 'team':
+    case 'growth':
+      return 'growth';
+    case 'agency':
+    case 'scale':
+      return 'scale';
+    default:
+      return null;
+  }
+}
+
+function normalizeSelfServePlan(input: unknown): SelfServePlan | null {
+  const plan = normalizeBillingPlan(input);
+  return plan === 'core' || plan === 'growth' ? plan : null;
 }
 
 function getOrigin(request: NextRequest) {
   return (process.env.NEXT_PUBLIC_APP_URL ?? new URL(request.url).origin).replace(/\/$/, '');
 }
 
-async function readPlanFromRequest(request: NextRequest): Promise<SelfServePlan | null> {
-  const queryPlan = normalizePlan(request.nextUrl.searchParams.get('plan'));
+async function readBillingPlanFromRequest(request: NextRequest): Promise<BillingPlan | null> {
+  const queryPlan = normalizeBillingPlan(request.nextUrl.searchParams.get('plan'));
   if (queryPlan) return queryPlan;
 
   const contentType = request.headers.get('content-type') ?? '';
 
   if (contentType.includes('application/json')) {
     const body = (await request.json().catch(() => ({}))) as { plan?: unknown };
-    return normalizePlan(body.plan);
+    return normalizeBillingPlan(body.plan);
   }
 
   if (
@@ -44,7 +63,7 @@ async function readPlanFromRequest(request: NextRequest): Promise<SelfServePlan 
     contentType.includes('multipart/form-data')
   ) {
     const formData = await request.formData().catch(() => null);
-    return normalizePlan(formData?.get('plan'));
+    return normalizeBillingPlan(formData?.get('plan'));
   }
 
   return null;
@@ -85,12 +104,6 @@ async function createCheckoutSession(
     }
 
     const origin = getOrigin(request);
-    console.error('[billing.checkout] creating session', {
-      workspaceId: session.workspaceId,
-      plan,
-      price,
-      origin,
-    });
 
     const checkout = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -133,7 +146,7 @@ async function createCheckoutSession(
 function buildBillingRedirect(
   request: NextRequest,
   billingState: CheckoutError,
-  plan: SelfServePlan | null,
+  plan: BillingPlan | null,
 ) {
   const redirectUrl = new URL('/app/billing', getOrigin(request));
   redirectUrl.searchParams.set('billing', billingState);
@@ -142,24 +155,21 @@ function buildBillingRedirect(
     redirectUrl.searchParams.set('plan', plan);
   }
 
-  console.error('[billing.redirect]', {
-    envAppUrl: process.env.NEXT_PUBLIC_APP_URL,
-    requestUrl: request.url,
-    redirectTo: redirectUrl.toString(),
-    billingState,
-    plan,
-  });
-
   return NextResponse.redirect(redirectUrl, { status: 303 });
 }
 
 export async function GET(request: NextRequest) {
-  const plan = normalizePlan(request.nextUrl.searchParams.get('plan'));
-  if (!plan) {
+  const billingPlan = normalizeBillingPlan(request.nextUrl.searchParams.get('plan'));
+
+  if (!billingPlan) {
     return buildBillingRedirect(request, 'invalid-plan', null);
   }
 
-  const result = await createCheckoutSession(request, plan);
+  if (billingPlan === 'scale') {
+    return buildBillingRedirect(request, 'sales-contact-required', billingPlan);
+  }
+
+  const result = await createCheckoutSession(request, billingPlan);
 
   if (result.error) {
     return buildBillingRedirect(request, result.error, result.plan);
@@ -169,14 +179,14 @@ export async function GET(request: NextRequest) {
     return buildBillingRedirect(request, 'checkout-error', result.plan);
   }
 
-  return NextResponse.redirect(result.url);
+  return NextResponse.redirect(result.url, { status: 303 });
 }
 
 export async function POST(request: NextRequest) {
   const isJsonRequest = request.headers.get('content-type')?.includes('application/json') ?? false;
-  const plan = await readPlanFromRequest(request);
+  const billingPlan = await readBillingPlanFromRequest(request);
 
-  if (!plan) {
+  if (!billingPlan) {
     if (isJsonRequest) {
       return NextResponse.json({ error: 'Invalid plan', code: 'invalid-plan' }, { status: 400 });
     }
@@ -184,7 +194,18 @@ export async function POST(request: NextRequest) {
     return buildBillingRedirect(request, 'invalid-plan', null);
   }
 
-  const result = await createCheckoutSession(request, plan);
+  if (billingPlan === 'scale') {
+    if (isJsonRequest) {
+      return NextResponse.json(
+        { error: 'Sales contact required', code: 'sales-contact-required' },
+        { status: 409 },
+      );
+    }
+
+    return buildBillingRedirect(request, 'sales-contact-required', billingPlan);
+  }
+
+  const result = await createCheckoutSession(request, billingPlan);
 
   if (isJsonRequest) {
     if (result.error === 'forbidden') {
@@ -192,7 +213,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error === 'checkout-not-configured' || result.error === 'checkout-unavailable') {
-      return NextResponse.json({ error: 'Checkout unavailable', code: result.error }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Checkout unavailable', code: result.error },
+        { status: 503 },
+      );
     }
 
     if (result.error) {
@@ -200,7 +224,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!result.url) {
-      return NextResponse.json({ error: 'Checkout error', code: 'checkout-error' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Checkout error', code: 'checkout-error' },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ url: result.url });
