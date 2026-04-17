@@ -31,7 +31,16 @@ export default async function ProductLayout({ children }: { children: React.Reac
     );
   }
 
-  const billingAccess = await getWorkspaceBillingAccessState(session.workspaceId);
+  let billingAccess = null;
+
+  try {
+    billingAccess = await getWorkspaceBillingAccessState(session.workspaceId);
+  } catch (error) {
+    console.error('[app.layout] Failed to load workspace billing access state', {
+      workspaceId: session.workspaceId,
+      error,
+    });
+  }
 
   return (
     <AppShell session={session} billingAccess={billingAccess}>
