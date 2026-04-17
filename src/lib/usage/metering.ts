@@ -2,7 +2,7 @@ import { and, count, eq, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { integrations, platformAccounts, usageEvents, workspaces, workspaceMemberships } from '../../../drizzle/schema';
 import type { PlatformKey } from '@/lib/platforms/types';
-import type { UsageSnapshot } from '@/lib/billing/plans';
+import { normalizePlanKey, type UsageSnapshot } from '@/lib/billing/plans';
 
 export type UsageMetricKey = 'published_post' | 'storage_bytes' | 'channel_connected' | 'channel_reconnect_required';
 
@@ -57,7 +57,7 @@ export async function getLiveUsageSnapshot(workspaceId?: string): Promise<UsageS
     : [{ total: 6 }];
 
   return {
-    plan: (plan as UsageSnapshot['plan']) ?? 'growth',
+    plan: normalizePlanKey(plan),
     membersUsed: Number(membersRow?.total ?? 0),
     postsUsedThisMonth: Number(postsRow?.total ?? 0),
     storageUsedGb: Math.max(0, Math.round(Number(storageRow?.totalBytes ?? 0) / (1024 * 1024 * 1024))),

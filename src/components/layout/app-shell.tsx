@@ -82,7 +82,7 @@ export function AppShell({
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Payment is required before this workspace can use the product. Core or Growth unlocks access.
+              Payment is required before this workspace can use the product. Solo, Team, or Agency unlocks access.
             </div>
           ) : null}
 
@@ -113,7 +113,7 @@ export function AppShell({
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950">{session.workspaceName}</h1>
                 <p className="text-sm text-muted-foreground">
                   {session.role} • {session.availableWorkspaces.length} workspace access
-                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? billingAccess.plan : 'payment required'}` : ''}
+                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? (billingAccess.plan === 'core' ? 'Solo' : billingAccess.plan === 'growth' ? 'Team' : 'Agency') : 'payment required'}` : ''}
                 </p>
               </div>
             </div>
