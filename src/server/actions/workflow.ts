@@ -485,7 +485,8 @@ export async function generateAiDrafts(formData: FormData) {
   const brief = requiredString(formData, 'brief');
   const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
-  const postFormat = requiredString(formData, 'postFormat') || 'auto';
+  const postFormat: GenerateContentDraftsArgs['postFormat'] =
+    (requiredString(formData, 'postFormat') || 'auto') as GenerateContentDraftsArgs['postFormat'];
   const cadence = requiredString(formData, 'cadence') || 'weekly';
   const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
   const campaignWindowDays = parseCampaignWindowDays(formData);
