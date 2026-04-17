@@ -28,6 +28,11 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignWindowDays: number;
+  sourceMaterial: string;
+  voiceNotes: string;
+  blockedTerms: string;
+  targetPlatforms: string;
   savedAt: string;
 };
 
@@ -57,10 +62,15 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
       brandId: parsed.brandId ?? '',
       brief: parsed.brief ?? '',
       commercialGoal: parsed.commercialGoal ?? '',
-      postFormat: parsed.postFormat ?? 'text',
+      postFormat: parsed.postFormat ?? 'auto',
       count: Number(parsed.count ?? 3),
       cadence: parsed.cadence ?? 'weekly',
       preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
+      campaignWindowDays: Number(parsed.campaignWindowDays ?? 30),
+      sourceMaterial: parsed.sourceMaterial ?? '',
+      voiceNotes: parsed.voiceNotes ?? '',
+      blockedTerms: parsed.blockedTerms ?? '',
+      targetPlatforms: parsed.targetPlatforms ?? 'linkedin',
       savedAt: parsed.savedAt ?? new Date(0).toISOString(),
     };
   } catch {
@@ -243,9 +253,14 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows.';
   const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
-  const plannerFormat = savedCampaign?.postFormat ?? 'text';
+  const plannerFormat = savedCampaign?.postFormat ?? 'auto';
   const plannerCadence = savedCampaign?.cadence ?? 'weekly';
   const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
+  const plannerWindowDays = savedCampaign?.campaignWindowDays ?? 30;
+  const plannerSourceMaterial = savedCampaign?.sourceMaterial ?? '';
+  const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
+  const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
+  const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
   const activeBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? brandOptions[0] ?? null;
@@ -300,7 +315,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
           <div className="eyebrow">Campaign planner</div>
           <h2 className="mt-2 text-2xl font-semibold">Generate premium starting points, not generic filler</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Store a reusable campaign brief, choose the format, and generate drafts anchored in the selected brand and destination.
+            The planner now uses brand memory, website grounding, source material, compliance constraints, and format selection to build a better campaign batch before you refine the final post.
           </p>
         </CardHeader>
         <CardContent>
@@ -317,7 +332,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                   ))}
                 </select>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Tone, audience, CTA direction, and hashtags are inherited from the selected brand.
+                  Tone, audience, CTA direction, hashtags, and brand website context are inherited from the selected brand.
                 </p>
               </div>
 
@@ -336,10 +351,26 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                   <select name="cadence" defaultValue={plannerCadence} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
-                    <option value="biweekly">Biweekly</option>
+                    <option value="twice-weekly">Twice weekly</option>
                     <option value="monthly">Monthly</option>
                   </select>
                 </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Campaign window (days)</label>
+                  <input name="campaignWindowDays" type="number" min={7} max={180} defaultValue={plannerWindowDays} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Target platforms</label>
+                  <input name="targetPlatforms" defaultValue={plannerTargetPlatforms} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="linkedin" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-900">Source material to repurpose</label>
+                <textarea name="sourceMaterial" className="mt-2 min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerSourceMaterial} placeholder="Paste notes, transcript sections, newsletter copy, case study details, or a webinar summary" />
               </div>
             </div>
 
@@ -348,6 +379,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <div>
                   <label className="text-sm font-medium text-slate-900">Format</label>
                   <select name="postFormat" defaultValue={plannerFormat} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="auto">Auto-select best format</option>
                     <option value="text">Text post</option>
                     <option value="link">Link post</option>
                     <option value="image">Single image</option>
@@ -357,13 +389,14 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 </div>
                 <div>
                   <label className="text-sm font-medium text-slate-900">Draft count</label>
-                  <input name="count" type="number" min={1} max={6} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+                  <input name="count" type="number" min={1} max={12} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
               </div>
 
               <div>
                 <label className="text-sm font-medium text-slate-900">Preferred publishing window</label>
                 <select name="preferredTimeOfDay" defaultValue={plannerPreferredTime} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                  <option value="early-morning">Early morning</option>
                   <option value="morning">Morning</option>
                   <option value="midday">Midday</option>
                   <option value="afternoon">Afternoon</option>
@@ -371,12 +404,23 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 </select>
               </div>
 
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Voice notes</label>
+                  <textarea name="voiceNotes" className="mt-2 min-h-[110px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerVoiceNotes} placeholder="Senior, practical, premium, no hype, clear point of view" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Blocked terms</label>
+                  <textarea name="blockedTerms" className="mt-2 min-h-[110px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBlockedTerms} placeholder="revolutionary, guaranteed, market-leading" />
+                </div>
+              </div>
+
               <div className="rounded-[1.5rem] border border-violet-100 bg-violet-50/60 p-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-violet-950"><Wand2 className="size-4" /> Premium creative guardrails</div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-violet-950"><Wand2 className="size-4" /> Top-tier campaign guardrails</div>
                 <ul className="mt-3 space-y-2 text-sm leading-6 text-violet-900/80">
-                  <li>• Generate hooks that stop the scroll instead of generic summaries.</li>
-                  <li>• Use the selected brand voice, CTA direction, and audience context.</li>
-                  <li>• Treat carousel as a premium storytelling format, not a downgraded image post.</li>
+                  <li>• Use the selected brand, website, and source material to ground the draft.</li>
+                  <li>• Plan the batch across different angles, funnel stages, and formats.</li>
+                  <li>• Generate asset direction for carousel, image, and video ideas instead of text alone.</li>
                 </ul>
               </div>
 
@@ -397,20 +441,43 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
             <h2 className="mt-2 text-2xl font-semibold">Pick the strongest angle, then bring it into the studio</h2>
           </CardHeader>
           <CardContent className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {generatedBatch.map((item) => (
-              <a key={item.id} href={`/app/content?postId=${item.id}#composer`} className="block rounded-[1.5rem] border border-slate-200/80 p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_20px_44px_rgba(15,23,42,0.08)]">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Draft {item.draftNumber || '—'}</div>
-                  <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{item.postType.replace('_', ' ')}</div>
-                </div>
-                <div className="mt-3 text-lg font-semibold text-slate-950">{item.title}</div>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.excerpt}</p>
-                <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{item.brandName}</span>
-                  <span className="inline-flex items-center gap-1 font-medium text-primary">Open draft <ArrowRight className="size-4" /></span>
-                </div>
-              </a>
-            ))}
+            {generatedBatch.map((item) => {
+              const metadata = (item.metadata as Record<string, unknown> | null) ?? null;
+              const assetPlan = metadata?.assetPlan as Record<string, unknown> | undefined;
+              const aiReview = metadata?.aiReview as Record<string, unknown> | undefined;
+              return (
+                <a key={item.id} href={`/app/content?postId=${item.id}#composer`} className="block rounded-[1.5rem] border border-slate-200/80 p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_20px_44px_rgba(15,23,42,0.08)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Draft {item.draftNumber || '—'}</div>
+                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{item.postType.replace('_', ' ')}</div>
+                  </div>
+                  <div className="mt-3 text-lg font-semibold text-slate-950">{item.title}</div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+                    {metadata?.angle ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{String(metadata.angle)}</span> : null}
+                    {metadata?.funnelStage ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{String(metadata.funnelStage)}</span> : null}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.excerpt}</p>
+                  {assetPlan ? (
+                    <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+                      <div className="font-semibold text-slate-900">Asset direction</div>
+                      <div>Format: {String(assetPlan.format ?? item.postType).replace('_', ' ')}</div>
+                      {assetPlan.carouselTitle ? <div>Carousel: {String(assetPlan.carouselTitle)}</div> : null}
+                      {Array.isArray(assetPlan.carouselSlides) ? <div>Slides: {assetPlan.carouselSlides.length}</div> : null}
+                      {assetPlan.videoHook ? <div>Video hook: {String(assetPlan.videoHook)}</div> : null}
+                    </div>
+                  ) : null}
+                  {aiReview ? (
+                    <div className="mt-4 text-xs leading-6 text-slate-500">
+                      Fit: {String(aiReview.performanceFitScore ?? 'n/a')}/100 · Compliance: {String(aiReview.complianceRisk ?? 'none')}
+                    </div>
+                  ) : null}
+                  <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{item.brandName}</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-primary">Open draft <ArrowRight className="size-4" /></span>
+                  </div>
+                </a>
+              );
+            })}
           </CardContent>
         </Card>
       ) : null}
