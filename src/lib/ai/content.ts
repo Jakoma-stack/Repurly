@@ -118,7 +118,7 @@ function summarizeBrief(brief: string) {
   const summary = compactWhitespace(firstSentence).replace(/^write\s+/i, '').replace(/^create\s+/i, '');
 
   if (!summary) {
-    return 'Use a focused publishing workflow that turns sharp ideas into approved, scheduled, high-trust content without extra sprawl.';
+    return 'Turn a strong brief into clear, high-trust ideas with practical commercial value and a credible next step.';
   }
 
   return summary.length > 240 ? `${summary.slice(0, 237).trim()}...` : summary;
@@ -134,13 +134,24 @@ function fallbackTitle(args: GenerateContentDraftsArgs, index: number) {
   return trimTo(`${args.brandName} campaign draft ${index + 1}`, TITLE_MAX_LENGTH);
 }
 
-function stripMetaLines(body: string) {
+function stripPlanningArtifacts(body: string) {
   return body
-    .split('\n')
-    .filter((line) => !/^(tone|audience|title hint|format|platform|funnel stage|angle|proof point)\s*:/i.test(line.trim()))
-    .join('\n')
+    .replace(/[^.?!\n]*(?:brand grounding:|source material to repurpose:|proof or trust signal:|recommended timing:|campaign angle:|audience:|tone:|format:|title hint:|platform:|funnel stage:)[^.?!\n]*[.?!]?/gi, ' ')
+    .replace(/[^.?!\n]*this campaign angle is about[^.?!\n]*[.?!]?/gi, ' ')
+    .replace(/\s{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function stripMetaLines(body: string) {
+  return stripPlanningArtifacts(
+    body
+      .split('\n')
+      .filter((line) => !/^(tone|audience|title hint|format|platform|funnel stage|angle|proof point|brand grounding|source material to repurpose|proof or trust signal|recommended timing)\s*:/i.test(line.trim()))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim(),
+  );
 }
 
 function normalizeFormat(value?: string | null): RequestedAssetFormat {
@@ -162,6 +173,30 @@ function normalizeFunnelStage(value?: string | null): FunnelStage {
     return value;
   }
   return 'awareness';
+}
+
+function inferBrandDomain(args: GenerateContentDraftsArgs) {
+  const joined = [
+    args.brief,
+    args.audience,
+    args.websiteSummary,
+    ...(args.websiteEvidence ?? []),
+    ...(args.proofPoints ?? []),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (/(governance|audit|assurance|risk|board|regulat|public sector|operational insight|analytics|transformation|ai adoption|data governance)/.test(joined)) {
+    return 'governance';
+  }
+
+  if (/(linkedin|content|campaign|publishing|social|demand gen|lead gen|creator|posting)/.test(joined)) {
+    return 'content';
+  }
+
+  return 'general';
+}
+
+function containsContentOpsLeakage(body: string) {
+  return /(content problem|workflow problem|content system|publishing like an operational process|lead follow-up|more posts|brief, approve, publish|posting everywhere|content operations?)/i.test(body);
 }
 
 function makeSlides(title: string, proofPoint: string, briefSummary: string) {
@@ -272,7 +307,9 @@ function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: G
   const reasoning = trimTo(draft?.reasoning?.trim() || `Built for ${funnelStage} using a ${postFormat.replace('_', ' ')} format to make the angle feel distinct within the batch.`, 260);
   const briefSummary = summarizeBrief(args.brief);
 
-  const rawBody = draft?.body?.trim();
+  const leakedBody = draft?.body?.trim() || '';
+  const domain = inferBrandDomain(args);
+  const rawBody = domain === 'governance' && containsContentOpsLeakage(leakedBody) ? '' : leakedBody;
   const body = trimTo(
     stripMetaLines(
       rawBody || [
@@ -464,48 +501,73 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
   const count = Math.max(1, Math.min(args.count ?? 3, MAX_DRAFT_COUNT));
   const hashtags = parseHashtags(args.hashtags);
   const cta = args.primaryCta?.trim() || 'Start a conversation.';
-  const audience = args.audience?.trim() || 'ambitious teams';
   const goal = args.commercialGoal?.trim() || 'start more qualified buyer conversations';
   const cadence = args.cadence?.trim() || 'weekly';
   const preferredTimeOfDay = args.preferredTimeOfDay?.trim() || 'morning';
   const briefSummary = summarizeBrief(args.brief);
   const sourceSummary = summarizeSourceMaterial(args.sourceMaterial);
-  const websiteSummary = args.websiteSummary?.trim() || '';
+  const websiteSummary = compactWhitespace(args.websiteSummary ?? '');
   const proofPoints = unique([...parseTextList(args.proofPoints), ...parseTextList(args.websiteEvidence)]).slice(0, 6);
   const strategies = buildCampaignStrategies({ ...args, count });
   const schedule = buildSuggestedSchedule({ ...args, count });
+  const domain = inferBrandDomain(args);
+
+  const openers = domain === 'governance'
+    ? {
+        contrarian: 'Safer AI adoption is rarely blocked by ambition. It is blocked by weak governance, unclear accountability, and poor operational visibility.',
+        checklist: 'Before another transformation initiative moves forward, three questions matter: who owns the decision, what evidence exists, and how the control model will stand up to scrutiny.',
+        proof: 'The organisations that move with confidence are rarely the ones talking most about innovation. They are the ones with clearer controls, stronger visibility, and delivery that can be defended.',
+        objection: 'When leaders hesitate, it is often because the risk picture is vague, not because the ambition is missing.',
+        framework: 'A practical governance model does not need to be heavy. It needs to make accountability, evidence, and decisions clearer.',
+        insight: 'Operational clarity is not administrative overhead. It is what lets complex organisations move without losing control.',
+      }
+    : {
+        contrarian: 'Most teams do not need more activity. They need a clearer point of view and a stronger way to turn good ideas into action.',
+        checklist: 'The best campaigns usually improve when you make the next decision easier for the buyer.',
+        proof: 'Strong commercial content rarely comes from volume alone. It comes from sharper positioning, better proof, and cleaner execution.',
+        objection: 'Buyer hesitation is often a trust problem before it is a budget problem.',
+        framework: 'A useful operating model makes the message clearer and the next action easier to take.',
+        insight: 'The strongest ideas usually come from operational clarity, not last-minute inspiration.',
+      };
 
   return Array.from({ length: count }, (_, index) => {
     const strategy = strategies[index];
-    const finalHashtags = unique([...hashtags, 'contentstrategy', 'contentops']).slice(0, HASHTAG_LIMIT);
+    const finalHashtags = hashtags.slice(0, HASHTAG_LIMIT);
     const proofPoint = strategy.proofPoint || proofPoints[index % Math.max(1, proofPoints.length)] || briefSummary;
     const slot = schedule[index];
 
     const opener = strategy.angle === 'Contrarian point of view'
-      ? 'Most teams do not need more content. They need a stronger point of view and a cleaner operating system.'
+      ? openers.contrarian
       : strategy.angle === 'Practical checklist'
-        ? 'A useful campaign usually gets stronger when you make the next decision easier for the buyer.'
+        ? openers.checklist
         : strategy.angle === 'Proof-led lesson'
-          ? 'Strong content is rarely the result of volume alone. It usually comes from sharper positioning and better proof.'
+          ? openers.proof
           : strategy.angle === 'Buyer-objection reframing'
-            ? 'A lot of hesitation from buyers is not a budget problem. It is a trust problem.'
+            ? openers.objection
             : strategy.angle === 'Framework or model'
-              ? 'Good campaigns get easier to run when the team can see the structure behind the message.'
-              : 'The strongest social content usually comes from operational clarity, not last-minute inspiration.';
+              ? openers.framework
+              : openers.insight;
 
-    const middle = [
-      `For ${audience}, this campaign angle is about ${briefSummary}`,
-      websiteSummary ? `Brand grounding: ${websiteSummary}` : '',
-      sourceSummary ? `Source material to repurpose: ${sourceSummary}` : '',
-      proofPoint ? `Proof or trust signal: ${proofPoint}` : '',
-      `Recommended timing: ${slot.label} of a ${Math.max(1, Math.min(args.campaignWindowDays ?? 30, 180))}-day campaign.`,
-    ].filter(Boolean).join(' ');
+    const middle = domain === 'governance'
+      ? [
+          'The stronger move is to make the decision sharper before the work scales.',
+          briefSummary,
+          websiteSummary ? trimTo(websiteSummary, 220) : '',
+          proofPoint ? `One useful trust signal is this: ${proofPoint}` : '',
+          sourceSummary ? `Use this source material as supporting context: ${sourceSummary}` : '',
+        ].filter(Boolean).join(' ')
+      : [
+          'The goal is to make the buyer see the problem more clearly and trust the next step more quickly.',
+          briefSummary,
+          proofPoint ? `Anchor it in something concrete: ${proofPoint}` : '',
+          sourceSummary ? `Use this source material as supporting context: ${sourceSummary}` : '',
+        ].filter(Boolean).join(' ');
 
     const closer = strategy.funnelStage === 'conversion'
-      ? `Use the post to create a commercially useful next step rather than chasing empty engagement. ${cta}`
+      ? `Make the next step commercially useful rather than louder. ${cta}`
       : strategy.funnelStage === 'consideration'
-        ? 'Make the idea concrete enough that the right buyer can picture what better execution looks like.'
-        : 'Give the audience a sharper frame they can carry into their next decision or meeting.';
+        ? 'Make the practical path forward easier to understand, not more abstract.'
+        : 'Give the reader a sharper frame they can carry into the next decision or meeting.';
 
     return normalizeDraft({
       title: `${args.brandName}: ${strategy.angle.toLowerCase()} for ${goal}`,
@@ -532,10 +594,9 @@ function buildFallbackDrafts(args: GenerateContentDraftsArgs): ContentDraft[] {
         middle,
         '',
         closer,
-        strategy.funnelStage !== 'conversion' ? '' : '',
-        strategy.funnelStage !== 'conversion' ? cta : '',
+        strategy.funnelStage === 'conversion' ? '' : cta,
         '',
-        finalHashtags.map((tag) => `#${tag}`).join(' '),
+        finalHashtags.length ? finalHashtags.map((tag) => `#${tag}`).join(' ') : '',
       ].filter(Boolean).join('\n'),
     }, args, index, strategy);
   });
@@ -564,7 +625,10 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
     'If the preferred format is auto, choose the best format per draft. Use multi_image for checklist/framework ideas, image for quote/proof-led ideas, text for contrarian or authority-led ideas, and video only when the idea benefits from spoken delivery.',
     'When format is multi_image, provide a carouselTitle and 4-7 strong slides.',
     'When format is image or multi_image, include a visualBrief and imagePrompt.',
-    'Avoid hype, empty motivational language, generic consulting phrasing, and repeated openings.',
+    'Avoid hype, empty motivational language, generic consulting phrasing, repeated openings, and any leakage of internal planning language.',
+    'Do not quote or paraphrase the campaign brief, audience description, website summary, source material, or proof point labels verbatim inside the post body.',
+    'Never use phrases such as Brand grounding:, Source material to repurpose:, Proof or trust signal:, Recommended timing:, campaign angle, or this campaign angle is about.',
+    'If the brand context is governance, assurance, audit, AI adoption, analytics, or transformation, do not mention content strategy, publishing workflows, approvals, social operations, or lead follow-up unless the brief explicitly asks for that.',
     'Never include internal labels like Tone:, Audience:, Format:, Title Hint:, Platform:, or Funnel Stage: inside the body text.',
     `Brand: ${args.brandName}`,
     `Tone: ${args.brandTone ?? 'clear, sharp, commercially credible'}`,
