@@ -1,4 +1,6 @@
 export type PlanKey = 'core' | 'growth' | 'scale';
+export type LegacyPlanKey = 'solo' | 'team' | 'agency';
+export type PlanInput = PlanKey | LegacyPlanKey | string | null | undefined;
 
 export type PlanLimits = {
   workspaceMembers: number;
@@ -41,7 +43,7 @@ export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
 };
 
 export type UsageSnapshot = {
-  plan: PlanKey;
+  plan: PlanInput;
   membersUsed: number;
   brandsUsed?: number;
   postsUsedThisMonth: number;
@@ -49,8 +51,24 @@ export type UsageSnapshot = {
   channelsConnected: number;
 };
 
-export function getPlanLimits(plan: PlanKey): PlanLimits {
-  return PLAN_LIMITS[plan];
+export function normalizePlanKey(plan: PlanInput, fallback: PlanKey = 'growth'): PlanKey {
+  switch ((plan ?? '').toString().trim().toLowerCase()) {
+    case 'solo':
+    case 'core':
+      return 'core';
+    case 'team':
+    case 'growth':
+      return 'growth';
+    case 'agency':
+    case 'scale':
+      return 'scale';
+    default:
+      return fallback;
+  }
+}
+
+export function getPlanLimits(plan: PlanInput): PlanLimits {
+  return PLAN_LIMITS[normalizePlanKey(plan)];
 }
 
 export function buildUsageRows(snapshot: UsageSnapshot) {
@@ -73,8 +91,8 @@ export function buildUsageRows(snapshot: UsageSnapshot) {
   });
 }
 
-export function canConsume(plan: PlanKey, feature: keyof PlanLimits, currentValue: number) {
-  const limit = PLAN_LIMITS[plan][feature];
+export function canConsume(plan: PlanInput, feature: keyof PlanLimits, currentValue: number) {
+  const limit = getPlanLimits(plan)[feature];
 
   if (typeof limit !== 'number') {
     return Boolean(limit);

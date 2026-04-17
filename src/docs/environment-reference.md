@@ -1,0 +1,90 @@
+# Environment reference
+
+This file reflects the environment variables that the current codebase actually uses.
+
+## Required for the core app
+
+- `DATABASE_URL`
+- `NEXT_PUBLIC_APP_URL`
+- `CLERK_SECRET_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_PRICE_CORE`
+- `STRIPE_PRICE_GROWTH`
+- `STRIPE_PRICE_SCALE`
+- `RESEND_API_KEY`
+- `EMAIL_FROM`
+- `S3_REGION`
+- `S3_BUCKET`
+- `S3_ACCESS_KEY_ID`
+- `S3_SECRET_ACCESS_KEY`
+- `LINKEDIN_CLIENT_ID`
+- `LINKEDIN_CLIENT_SECRET`
+- `LINKEDIN_REDIRECT_URI`
+- `LINKEDIN_SCOPE`
+- `TOKEN_ENCRYPTION_SECRET`
+
+## Common optional variables already supported
+
+### App and workflow
+- `INNGEST_EVENT_KEY`
+- `INNGEST_SIGNING_KEY`
+- `PUBLISH_DUE_BATCH_SIZE`
+- `PUBLISH_DISPATCH_THROTTLE_MS`
+- `ENABLE_LIVE_USAGE_METERING`
+- `RECONNECT_WARNING_DAYS`
+
+### Alerts and observability
+- `ALERT_EMAIL_TO`
+- `ALERT_WEBHOOK_URL`
+- `SENTRY_DSN`
+
+### Storage
+- `S3_ENDPOINT`
+- `S3_PUBLIC_BASE_URL`
+
+### AI
+- `OPENAI_API_KEY`
+
+### LinkedIn tuning
+- `LINKEDIN_API_TIMEOUT_MS`
+- `LINKEDIN_OAUTH_TIMEOUT_MS`
+- `LINKEDIN_PUBLISH_TIMEOUT_MS`
+
+### X
+- `X_CLIENT_ID`
+- `X_CLIENT_SECRET`
+- `X_REDIRECT_URI`
+- `X_SCOPE`
+- `X_WEBHOOK_SECRET`
+
+### Meta / Facebook / Instagram
+- `META_APP_ID`
+- `META_APP_SECRET`
+- `FACEBOOK_REDIRECT_URI`
+- `FACEBOOK_SCOPE`
+- `INSTAGRAM_REDIRECT_URI`
+- `INSTAGRAM_SCOPE`
+- `META_WEBHOOK_VERIFY_TOKEN`
+- `INSTAGRAM_STATUS_MAX_POLLS`
+- `INSTAGRAM_STATUS_POLL_INTERVAL_MS`
+
+### YouTube
+- `YOUTUBE_WEBHOOK_SECRET`
+
+## Important drift that has now been corrected in the repo docs
+
+Older materials referenced or implied some legacy variables and services, including:
+
+- `BETTER_AUTH_SECRET`
+- `BETTER_AUTH_URL`
+- `FROM_EMAIL`
+- `SLACK_WEBHOOK_URL`
+- `UPSTASH_REDIS_REST_URL`
+- `UPSTASH_REDIS_REST_TOKEN`
+- `BLOB_READ_WRITE_TOKEN`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- feature-flag vars such as `ENABLE_LINKEDIN`
+
+Those are not the current source of truth for this build.

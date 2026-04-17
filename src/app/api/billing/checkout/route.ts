@@ -6,19 +6,17 @@ import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
 export const runtime = 'nodejs';
 
 type PlanKey = keyof typeof plans;
-type SelfServePlan = Extract<PlanKey, 'core' | 'growth'>;
-type BillingPlan = SelfServePlan | 'scale';
+type BillingPlan = PlanKey;
 type CheckoutError =
   | 'checkout-not-configured'
   | 'checkout-unavailable'
   | 'forbidden'
   | 'invalid-plan'
-  | 'sales-contact-required'
   | 'checkout-error';
 
 type CheckoutSessionResult =
-  | { error: CheckoutError; plan: SelfServePlan; url: null }
-  | { error: null; plan: SelfServePlan; url: string };
+  | { error: CheckoutError; plan: BillingPlan; url: null }
+  | { error: null; plan: BillingPlan; url: string };
 
 const BILLING_ROLES = new Set(['owner', 'admin']);
 
@@ -36,11 +34,6 @@ function normalizeBillingPlan(input: unknown): BillingPlan | null {
     default:
       return null;
   }
-}
-
-function normalizeSelfServePlan(input: unknown): SelfServePlan | null {
-  const plan = normalizeBillingPlan(input);
-  return plan === 'core' || plan === 'growth' ? plan : null;
 }
 
 function getOrigin(request: NextRequest) {
@@ -71,7 +64,7 @@ async function readBillingPlanFromRequest(request: NextRequest): Promise<Billing
 
 async function createCheckoutSession(
   request: NextRequest,
-  plan: SelfServePlan,
+  plan: BillingPlan,
 ): Promise<CheckoutSessionResult> {
   if (!isStripeConfigured()) {
     console.error('[billing.checkout] Stripe is not configured');
@@ -165,10 +158,6 @@ export async function GET(request: NextRequest) {
     return buildBillingRedirect(request, 'invalid-plan', null);
   }
 
-  if (billingPlan === 'scale') {
-    return buildBillingRedirect(request, 'sales-contact-required', billingPlan);
-  }
-
   const result = await createCheckoutSession(request, billingPlan);
 
   if (result.error) {
@@ -192,17 +181,6 @@ export async function POST(request: NextRequest) {
     }
 
     return buildBillingRedirect(request, 'invalid-plan', null);
-  }
-
-  if (billingPlan === 'scale') {
-    if (isJsonRequest) {
-      return NextResponse.json(
-        { error: 'Sales contact required', code: 'sales-contact-required' },
-        { status: 409 },
-      );
-    }
-
-    return buildBillingRedirect(request, 'sales-contact-required', billingPlan);
   }
 
   const result = await createCheckoutSession(request, billingPlan);
