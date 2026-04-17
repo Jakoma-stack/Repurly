@@ -152,13 +152,6 @@ function parseCampaignWindowDays(formData: FormData) {
   return Math.max(7, Math.min(Number(requiredString(formData, 'campaignWindowDays') || '30'), 180));
 }
 
-function parseDelimitedList(raw: string) {
-  return raw
-    .split(/[\n,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function parseCsvField(raw: string) {
   return raw
     .split(/[\n,]/)
@@ -492,7 +485,8 @@ export async function generateAiDrafts(formData: FormData) {
   const brief = requiredString(formData, 'brief');
   const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
-  const postFormat = requiredString(formData, 'postFormat') || 'auto';
+  const postFormat: GenerateContentDraftsArgs['postFormat'] =
+    (requiredString(formData, 'postFormat') || 'auto') as GenerateContentDraftsArgs['postFormat'];
   const cadence = requiredString(formData, 'cadence') || 'weekly';
   const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
   const campaignWindowDays = parseCampaignWindowDays(formData);
