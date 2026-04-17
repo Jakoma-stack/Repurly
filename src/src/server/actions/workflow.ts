@@ -418,7 +418,16 @@ export async function generateAiDrafts(formData: FormData) {
   const brief = requiredString(formData, 'brief');
   const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
-  const postFormat = requiredString(formData, 'postFormat');
+  const rawPostFormat = requiredString(formData, 'postFormat');
+  const postFormat: GenerateContentDraftsArgs['postFormat'] =
+    rawPostFormat === 'text' ||
+    rawPostFormat === 'link' ||
+    rawPostFormat === 'image' ||
+    rawPostFormat === 'multi_image' ||
+    rawPostFormat === 'video' ||
+    rawPostFormat === 'auto'
+      ? rawPostFormat
+      : 'auto';
   const cadence = requiredString(formData, 'cadence') || 'weekly';
   const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
 
