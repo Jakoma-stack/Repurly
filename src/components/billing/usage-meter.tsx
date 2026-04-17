@@ -1,11 +1,16 @@
-import { buildUsageRows, normalizePlanKey, type UsageSnapshot } from '@/lib/billing/plans';
+import { buildUsageRows, type UsageSnapshot } from '@/lib/billing/plans';
 import { PLAN_CATALOG } from '@/lib/billing/catalog';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 export function UsageMeter({ snapshot }: { snapshot: UsageSnapshot }) {
   const rows = buildUsageRows(snapshot);
-  const normalizedPlan = normalizePlanKey(snapshot.plan);
-  const plan = PLAN_CATALOG[normalizedPlan];
+
+  const planKey =
+    snapshot.plan && snapshot.plan in PLAN_CATALOG
+      ? (snapshot.plan as keyof typeof PLAN_CATALOG)
+      : 'core';
+
+  const plan = PLAN_CATALOG[planKey];
 
   return (
     <Card>
@@ -27,7 +32,11 @@ export function UsageMeter({ snapshot }: { snapshot: UsageSnapshot }) {
             <div className="h-2 rounded-full bg-slate-100">
               <div
                 className={`h-2 rounded-full ${
-                  row.state === 'limit_reached' ? 'bg-red-500' : row.state === 'warning' ? 'bg-amber-500' : 'bg-primary'
+                  row.state === 'limit_reached'
+                    ? 'bg-red-500'
+                    : row.state === 'warning'
+                      ? 'bg-amber-500'
+                      : 'bg-primary'
                 }`}
                 style={{ width: `${row.percent}%` }}
               />
