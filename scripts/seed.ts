@@ -53,7 +53,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { db } = await import('../src/lib/db/client');
+  const { db } = await import('../lib/db/client');
   const { brands, engagementComments, leadPipeline, workspaceMemberships, workspaces } = await import('../drizzle/schema');
 
   const existingMembership = await db
