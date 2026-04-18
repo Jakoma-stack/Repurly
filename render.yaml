@@ -3,7 +3,7 @@ services:
     name: repurly
     env: node
     plan: starter
-    buildCommand: npm ci && npm run build
+    buildCommand: rm -f tsconfig.tsbuildinfo && npm ci && npm run build
     startCommand: npm run start
     autoDeploy: true
     envVars:
