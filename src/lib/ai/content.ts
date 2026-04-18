@@ -238,12 +238,12 @@ function normalizeDraft(draft: Partial<ContentDraft> | null | undefined, args: G
     hashtags,
     titleHint,
     callToAction,
-    postFormat: draft.postFormat || draftFormat,
-    angle: draft.angle,
-    funnelStage: draft.funnelStage,
-    proofPoint: draft.proofPoint,
-    reasoning: draft.reasoning,
-    assetPlan: draft.assetPlan ?? null,
+   postFormat: draft?.postFormat ?? draftFormat,
+angle: draft?.angle,
+funnelStage: draft?.funnelStage,
+proofPoint: draft?.proofPoint,
+reasoning: draft?.reasoning,
+assetPlan: draft?.assetPlan ?? null,
   };
 }
 
