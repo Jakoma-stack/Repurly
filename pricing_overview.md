@@ -5,26 +5,35 @@ Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams 
 
 ## Plans
 
-### Core — £149/mo
-- Up to 3 workspace members
+### Solo — £59/mo
+- Up to 2 workspace members
+- 1 brand
 - 120 posts per month
 - 3 connected channels
 - LinkedIn composer, queue, job detail, and recovery
 
-### Growth — £399/mo
-- Up to 10 workspace members
+### Team — £199/mo
+- Up to 5 workspace members
+- Up to 3 brands
 - 1,000 posts per month
 - 10 connected channels
-- Multi-brand workspaces
 - Approval flows
 - AI-assisted drafting
 - Engagement and leads workflow
 
-### Scale — Custom
-- Up to 50 workspace members
+### Agency — £499/mo
+- Up to 15 workspace members
+- Up to 10 brands
 - 10,000 posts per month
 - 30 connected channels
-- Tailored onboarding and workflow support
+- Priority support
+- Commercial onboarding support
+
+### Pilot / onboarding — from £1,500 one-off
+- Guided setup
+- Workflow and channel configuration
+- Team onboarding
+- Governance and workflow tuning
 
 ## Why this pricing exists
 Repurly is priced:

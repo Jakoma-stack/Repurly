@@ -8,7 +8,15 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { inngest } from '@/lib/inngest/client';
-import { buildFallbackContentDrafts, generateContentDrafts, type ContentDraft, type GenerateContentDraftsArgs } from '@/lib/ai/content';
+import { buildBrandIntelligence } from '@/lib/ai/brand-context';
+import {
+  buildAiReview,
+  buildFallbackContentDrafts,
+  buildSuggestedSchedule,
+  generateContentDrafts,
+  type ContentDraft,
+  type GenerateContentDraftsArgs,
+} from '@/lib/ai/content';
 import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
@@ -22,6 +30,11 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignWindowDays: number;
+  sourceMaterial: string;
+  voiceNotes: string;
+  blockedTerms: string;
+  targetPlatforms: string;
   savedAt: string;
 };
 
@@ -68,7 +81,12 @@ function buildContentPath(
 }
 
 async function getDefaultBrandId(workspaceId: string) {
-  const row = await db.select({ id: brands.id }).from(brands).where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active'))).limit(1);
+  const row = await db
+    .select({ id: brands.id })
+    .from(brands)
+    .where(and(eq(brands.workspaceId, workspaceId), eq(brands.status, 'active')))
+    .limit(1);
+
   return row[0]?.id;
 }
 
@@ -82,12 +100,32 @@ async function getBrand(workspaceId: string, brandId: string) {
       primaryCta: brands.primaryCta,
       secondaryCta: brands.secondaryCta,
       hashtags: brands.hashtags,
+      website: brands.website,
+      contactEmail: brands.contactEmail,
+      linkedinProfileUrl: brands.linkedinProfileUrl,
+      linkedinCompanyUrl: brands.linkedinCompanyUrl,
+      metadata: brands.metadata,
     })
     .from(brands)
     .where(and(eq(brands.workspaceId, workspaceId), eq(brands.id, brandId)))
     .limit(1);
 
   return row[0] ?? null;
+}
+
+async function getBrandPerformanceContext(workspaceId: string, brandId: string) {
+  const rows = await db
+    .select({ title: posts.title, body: posts.body, publishedAt: posts.publishedAt, updatedAt: posts.updatedAt })
+    .from(posts)
+    .where(and(eq(posts.workspaceId, workspaceId), eq(posts.brandId, brandId), eq(posts.status, 'published')))
+    .orderBy(desc(posts.publishedAt), desc(posts.updatedAt))
+    .limit(5);
+
+  return rows.map((row) => {
+    const excerpt = String(row.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 180);
+    const publishedLabel = row.publishedAt ? new Date(row.publishedAt).toISOString().slice(0, 10) : 'recently';
+    return `${row.title} (${publishedLabel})${excerpt ? ` — ${excerpt}` : ''}`;
+  });
 }
 
 async function getTargetForWorkspace(workspaceId: string, targetId: string) {
@@ -107,7 +145,19 @@ function requiredString(formData: FormData, key: string) {
 }
 
 function parseCount(formData: FormData) {
-  return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 6));
+  return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 12));
+}
+
+function parseCampaignWindowDays(formData: FormData) {
+  return Math.max(7, Math.min(Number(requiredString(formData, 'campaignWindowDays') || '30'), 180));
+}
+
+function parseCsvField(raw: string) {
+  return raw
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(', ');
 }
 
 async function persistSavedCampaign(formData: FormData) {
@@ -122,10 +172,15 @@ async function persistSavedCampaign(formData: FormData) {
     brandId,
     brief,
     commercialGoal: requiredString(formData, 'commercialGoal'),
-    postFormat: requiredString(formData, 'postFormat') || 'text',
+    postFormat: requiredString(formData, 'postFormat') || 'auto',
     count: parseCount(formData),
     cadence: requiredString(formData, 'cadence') || 'weekly',
     preferredTimeOfDay: requiredString(formData, 'preferredTimeOfDay') || 'morning',
+    campaignWindowDays: parseCampaignWindowDays(formData),
+    sourceMaterial: requiredString(formData, 'sourceMaterial'),
+    voiceNotes: requiredString(formData, 'voiceNotes'),
+    blockedTerms: parseCsvField(requiredString(formData, 'blockedTerms')),
+    targetPlatforms: parseCsvField(requiredString(formData, 'targetPlatforms') || 'linkedin'),
     savedAt: new Date().toISOString(),
   };
 
@@ -278,12 +333,14 @@ function buildGeneratedDraftRows(args: {
   workspaceId: string;
   brandId: string;
   authorId: string;
-  postFormat: string;
   brief: string;
   cadence: string;
   preferredTimeOfDay: string;
+  generationArgs: GenerateContentDraftsArgs;
   drafts: ContentDraft[];
 }) {
+  const schedule = buildSuggestedSchedule(args.generationArgs);
+
   return args.drafts.map((draft, index) => ({
     workspaceId: args.workspaceId,
     brandId: args.brandId,
@@ -291,7 +348,7 @@ function buildGeneratedDraftRows(args: {
     title: draft.title,
     body: draft.body,
     status: 'draft' as const,
-    postType: (args.postFormat || 'text') as 'text' | 'image' | 'multi_image' | 'video' | 'link',
+    postType: draft.postFormat,
     metadata: {
       source: 'ai-generated',
       brief: args.brief,
@@ -301,6 +358,14 @@ function buildGeneratedDraftRows(args: {
       callToAction: draft.callToAction,
       hashtags: draft.hashtags,
       draftNumber: index + 1,
+      postFormat: draft.postFormat,
+      angle: draft.angle,
+      funnelStage: draft.funnelStage,
+      proofPoint: draft.proofPoint,
+      reasoning: draft.reasoning,
+      assetPlan: draft.assetPlan,
+      suggestedSchedule: schedule[index] ?? null,
+      aiReview: buildAiReview(args.generationArgs, draft, index + 1),
     },
   }));
 }
@@ -371,13 +436,15 @@ export async function requestApproval(formData: FormData) {
     .where(and(eq(approvalRequests.postId, post.id), eq(approvalRequests.workspaceId, post.workspaceId)))
     .limit(1);
 
+  const approvalNote = requiredString(formData, 'approvalOwner') || null;
+
   if (existingApproval[0]?.id) {
     await db
       .update(approvalRequests)
-      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null, updatedAt: new Date() })
+      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote, updatedAt: new Date() })
       .where(eq(approvalRequests.id, existingApproval[0].id));
   } else {
-    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: requiredString(formData, 'approvalOwner') || null });
+    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote });
   }
 
   await refreshWorkflowPages();
@@ -418,9 +485,21 @@ export async function generateAiDrafts(formData: FormData) {
   const brief = requiredString(formData, 'brief');
   const count = parseCount(formData);
   const commercialGoal = requiredString(formData, 'commercialGoal');
-  const postFormat = requiredString(formData, 'postFormat');
+  const postFormat: GenerateContentDraftsArgs['postFormat'] =
+    (requiredString(formData, 'postFormat') || 'auto') as GenerateContentDraftsArgs['postFormat'];
   const cadence = requiredString(formData, 'cadence') || 'weekly';
   const preferredTimeOfDay = requiredString(formData, 'preferredTimeOfDay') || 'morning';
+  const campaignWindowDays = parseCampaignWindowDays(formData);
+  const sourceMaterial = requiredString(formData, 'sourceMaterial') || null;
+  const voiceNotes = requiredString(formData, 'voiceNotes') || null;
+  const blockedTerms = requiredString(formData, 'blockedTerms')
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const targetPlatforms = requiredString(formData, 'targetPlatforms')
+    .split(/[\n,]/)
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
 
   if (!workspaceId || !authorId || !brandId || !brief) {
     redirect(buildContentPath({ error: 'invalid' }, 'campaign-planner') as Route);
@@ -430,12 +509,49 @@ export async function generateAiDrafts(formData: FormData) {
     redirect(buildContentPath({ error: 'generate-failed-save' }, 'campaign-planner') as Route);
   }
 
-  const brand = await getBrand(workspaceId, brandId);
+  const [brand, performanceContext] = await Promise.all([
+    getBrand(workspaceId, brandId),
+    getBrandPerformanceContext(workspaceId, brandId),
+  ]);
+
   if (!brand) {
     redirect(buildContentPath({ error: 'missing-brand' }, 'campaign-planner') as Route);
   }
 
   await persistSavedCampaign(formData);
+
+  const brandIntelligence = await buildBrandIntelligence({
+    brandName: brand.name,
+    website: brand.website,
+    audience: brand.audience,
+    defaultTone: brand.defaultTone,
+    primaryCta: brand.primaryCta,
+    secondaryCta: brand.secondaryCta,
+    linkedinProfileUrl: brand.linkedinProfileUrl,
+    linkedinCompanyUrl: brand.linkedinCompanyUrl,
+    metadata: brand.metadata,
+  });
+
+  const aiProfile = (brand.metadata && typeof brand.metadata === 'object'
+    ? (brand.metadata as Record<string, unknown>).aiProfile
+    : null) as Record<string, unknown> | null;
+
+  const mergedVoiceNotes = [String(aiProfile?.voiceNotes ?? ''), voiceNotes].filter(Boolean).join(' | ') || null;
+  const mergedBlockedTerms = [String(aiProfile?.blockedTerms ?? ''), ...blockedTerms]
+    .join(',')
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const mergedComplianceRules = [String(aiProfile?.complianceRules ?? ''), ...(brandIntelligence.restrictedClaims ?? [])]
+    .join(',')
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  const mergedProofPoints = [String(aiProfile?.proofPoints ?? ''), ...(brandIntelligence.proofPoints ?? [])]
+    .join('\n')
+    .split(/[\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
   const generationArgs: GenerateContentDraftsArgs = {
     brandName: brand.name,
@@ -447,9 +563,19 @@ export async function generateAiDrafts(formData: FormData) {
     brief,
     count,
     commercialGoal,
-    postFormat,
+    postFormat: postFormat as GenerateContentDraftsArgs['postFormat'],
     cadence,
     preferredTimeOfDay,
+    campaignWindowDays,
+    sourceMaterial,
+    voiceNotes: mergedVoiceNotes,
+    blockedTerms: mergedBlockedTerms,
+    targetPlatforms: targetPlatforms.length ? targetPlatforms : ['linkedin'],
+    performanceContext,
+    complianceRules: mergedComplianceRules,
+    websiteSummary: brandIntelligence.websiteSummary,
+    websiteEvidence: brandIntelligence.websiteEvidence,
+    proofPoints: mergedProofPoints,
   };
 
   let drafts: ContentDraft[];
@@ -465,10 +591,10 @@ export async function generateAiDrafts(formData: FormData) {
       workspaceId,
       brandId,
       authorId,
-      postFormat,
       brief,
       cadence,
       preferredTimeOfDay,
+      generationArgs,
       drafts: draftBatch,
     })).returning({ id: posts.id });
   };
@@ -479,7 +605,6 @@ export async function generateAiDrafts(formData: FormData) {
     inserted = await tryInsert(drafts);
   } catch (error) {
     console.error('generateAiDrafts: initial draft save failed, retrying with fallback drafts', error);
-
     try {
       const fallbackDrafts = buildFallbackContentDrafts(generationArgs);
       inserted = await tryInsert(fallbackDrafts);

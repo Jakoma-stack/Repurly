@@ -14,7 +14,7 @@ export const plans = {
 } as const;
 
 export type StripePlanKey = keyof typeof plans;
-export type StripeSelfServePlanKey = Extract<StripePlanKey, 'core' | 'growth'>;
+export type StripeSelfServePlanKey = StripePlanKey;
 
 export function isStripeConfigured() {
   return Boolean(stripeSecretKey);
@@ -24,10 +24,11 @@ export function getCheckoutPriceId(plan: StripeSelfServePlanKey): string | null 
   const priceId = plans[plan] ?? null;
 
   if (!priceId) {
-    console.error('[billing.stripe] Missing price id for self-serve plan', {
+    console.error('[billing.stripe] Missing price id for checkout plan', {
       plan,
       hasCore: Boolean(plans.core),
       hasGrowth: Boolean(plans.growth),
+      hasScale: Boolean(plans.scale),
     });
   }
 

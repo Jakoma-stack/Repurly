@@ -8,6 +8,13 @@ import { workspaceMemberships, workspaces } from '../../../drizzle/schema';
 
 const WORKSPACE_COOKIE = 'repurly_workspace';
 
+const LOCAL_SETUP_WORKSPACE = {
+  id: '__local_setup__',
+  name: 'Workspace setup needed',
+  slug: 'local-setup',
+  role: 'owner',
+} as const;
+
 type ClerkUser = NonNullable<Awaited<ReturnType<typeof currentUser>>>;
 
 type AccessibleWorkspace = {
@@ -245,6 +252,24 @@ async function createStarterWorkspaceForUser(args: {
   throw new Error('Workspace setup failed');
 }
 
+function toWorkspaceSession(userId: string, selected: { id: string; name: string; slug: string; role: string }, available: AccessibleWorkspace[]): WorkspaceSession {
+  return {
+    userId,
+    workspaceId: selected.id,
+    workspaceName: selected.name,
+    workspaceSlug: selected.slug,
+    role: selected.role,
+    availableWorkspaces: available.length
+      ? available.map((item) => ({
+          id: item.id,
+          name: item.name,
+          slug: item.slug,
+          role: item.role,
+        }))
+      : [LOCAL_SETUP_WORKSPACE],
+  };
+}
+
 export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
   const [{ userId, orgId }, user] = await Promise.all([auth(), currentUser()]);
 
@@ -255,13 +280,21 @@ export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
   let available = await listAccessibleWorkspaces(userId);
 
   if (!available.length) {
-    const createdWorkspace = await createStarterWorkspaceForUser({
-      userId,
-      orgId: orgId ?? null,
-      user,
-    });
+    try {
+      const createdWorkspace = await createStarterWorkspaceForUser({
+        userId,
+        orgId: orgId ?? null,
+        user,
+      });
 
-    available = [createdWorkspace];
+      available = [createdWorkspace];
+    } catch (error) {
+      console.error('Workspace session bootstrap failed', {
+        userId,
+        orgId,
+        error: serializeError(error),
+      });
+    }
   }
 
   const cookieStore = await cookies();
@@ -276,19 +309,11 @@ export async function requireWorkspaceSession(): Promise<WorkspaceSession> {
     matchingOrg ??
     available[0];
 
-  return {
-    userId,
-    workspaceId: selected.id,
-    workspaceName: selected.name,
-    workspaceSlug: selected.slug,
-    role: selected.role,
-    availableWorkspaces: available.map((item) => ({
-      id: item.id,
-      name: item.name,
-      slug: item.slug,
-      role: item.role,
-    })),
-  };
+  if (!selected) {
+    return toWorkspaceSession(userId, LOCAL_SETUP_WORKSPACE, []);
+  }
+
+  return toWorkspaceSession(userId, selected, available);
 }
 
 export async function assertWorkspaceAccess(userId: string, workspaceId: string) {
