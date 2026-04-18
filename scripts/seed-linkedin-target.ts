@@ -48,7 +48,7 @@ async function main() {
   }
 
   const { db } = await import("../lib/db/client");
-  const { integrations, platformAccounts, workspaceMemberships, workspaces } = await import("../drizzle/schema");
+  const { integrations, platformAccounts, workspaceMemberships, workspaces } = await import("../../drizzle/schema");
 
   const membership = await db
     .select({

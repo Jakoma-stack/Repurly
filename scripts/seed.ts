@@ -54,7 +54,7 @@ async function main() {
   }
 
   const { db } = await import('../lib/db/client');
-  const { brands, engagementComments, leadPipeline, workspaceMemberships, workspaces } = await import('../drizzle/schema');
+  const { brands, engagementComments, leadPipeline, workspaceMemberships, workspaces } = await import('../../drizzle/schema');
 
   const existingMembership = await db
     .select({ workspaceId: workspaceMemberships.workspaceId, workspaceName: workspaces.name })
