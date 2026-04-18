@@ -84,6 +84,38 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
   };
 }
 
+export async function getPendingApprovalQueue(workspaceId: string) {
+  const rows = await db
+    .select({
+      approvalRequestId: approvalRequests.id,
+      postId: posts.id,
+      title: posts.title,
+      body: posts.body,
+      brandName: brands.name,
+      requestedAt: approvalRequests.requestedAt,
+      requestedById: approvalRequests.requestedById,
+      approvalOwner: approvalRequests.note,
+      scheduledFor: posts.scheduledFor,
+      targetDisplayName: platformAccounts.displayName,
+      targetHandle: platformAccounts.handle,
+      targetType: platformAccounts.targetType,
+    })
+    .from(approvalRequests)
+    .innerJoin(posts, eq(posts.id, approvalRequests.postId))
+    .innerJoin(brands, eq(brands.id, posts.brandId))
+    .leftJoin(postTargets, eq(postTargets.postId, posts.id))
+    .leftJoin(platformAccounts, eq(platformAccounts.id, postTargets.platformAccountId))
+    .where(and(eq(approvalRequests.workspaceId, workspaceId), eq(approvalRequests.status, 'pending')))
+    .orderBy(desc(approvalRequests.requestedAt))
+    .limit(8);
+
+  return rows.map((row) => ({
+    ...row,
+    excerpt: row.body.length > 200 ? `${row.body.slice(0, 197).trim()}...` : row.body,
+    scheduledForIso: row.scheduledFor ? new Date(row.scheduledFor).toISOString() : null,
+  }));
+}
+
 export async function getRecentDrafts(workspaceId: string, brandId?: string | null) {
   const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
 

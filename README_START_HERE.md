@@ -21,6 +21,29 @@ Not as:
 - a broad all-network social suite
 - a mini-Sprout clone
 
+## Current product truth
+
+The codebase already supports a real premium LinkedIn workflow, but the product story must stay tightly aligned to what is actually wired today.
+
+### Safe claims
+
+- LinkedIn is the primary launch channel
+- teams can connect a personal profile and, when permissions allow, company pages
+- teams can draft, request approval, approve/reject/request changes, schedule, queue, and publish content
+- workspaces, brands, roles, billing, and reliability views are present
+- engagement is **manual-first** today, not a full synced inbox
+- the planner is grounded in stored brand context and supplied source material
+- queue and activity screens support operator visibility, but the richest delivery forensics are still being completed
+
+### Claims to avoid until they are fully true in product
+
+- advanced multi-step approvals beyond the current single-step response loop
+- full synced social inbox
+- social listening
+- deep cross-channel analytics
+- a drag-and-drop calendar planner
+- true website crawling / website grounding
+
 ## Best way to use this folder
 
 ### For GitHub
@@ -38,8 +61,8 @@ Start with these files:
 2. `docs/architecture.md`
 3. `docs/platform-status-matrix.md`
 4. `docs/environment-reference.md`
-5. `docs/decision/Repurly_revised_launch_decision_memo.docx`
-6. `docs/decision/Repurly_revised_go_no_go_checklist.docx`
+5. `docs/product-surface-reference.md`
+6. `docs/product-market-assessment-2026-04-18.md`
 7. `docs/qa/deep-dive-qa-2026-04-15.md`
 
 ## Recommended operating stance
@@ -61,6 +84,17 @@ Start with these files:
 
 ## First actions
 1. Review `README.md` and `docs/platform-status-matrix.md` together.
-2. Configure env vars from `.env.example`.
-3. Run migrations and seed a local workspace.
-4. Keep execution aligned to the premium LinkedIn-first story even though the adapter layer is broader.
+2. Review `docs/product-surface-reference.md` before changing marketing or pricing copy.
+3. Configure env vars from `.env.example`.
+4. Run migrations and seed a local workspace.
+5. Keep execution aligned to the premium LinkedIn-first story even though the adapter layer is broader.
+## E2E testing now wired in
+
+The repo now includes both Playwright and Cypress scaffolding for smoke coverage against the marketing surface.
+
+Useful commands:
+- `npm run test:e2e:playwright`
+- `npm run test:e2e:cypress`
+- `npm run test:e2e:playwright:install`
+- `npm run test:e2e:cypress:install`
+
