@@ -66,7 +66,7 @@ function readLegacyConfigs() {
   }
 
   return Array.from(configs.entries())
-    .map(([key, value]) => {
+    .map<LinkedInConfig | null>(([key, value]) => {
       const clientId = value.clientId?.trim();
       const clientSecret = value.clientSecret?.trim();
       const redirectUri = value.redirectUri?.trim();
@@ -83,10 +83,10 @@ function readLegacyConfigs() {
         redirectUri,
         scope,
         apiVersion: DEFAULT_LINKEDIN_API_VERSION,
-        source: 'legacy-suffixed' as const,
-      } satisfies LinkedInConfig;
+        source: 'legacy-suffixed',
+      };
     })
-    .filter((config): config is LinkedInConfig => Boolean(config));
+    .filter((config): config is LinkedInConfig => config !== null);
 }
 
 function hostFromUrl(url?: string) {
