@@ -1,4 +1,4 @@
-import { getLinkedInRedirectUriForServer } from '@/lib/linkedin/oauth';
+import { getLinkedInApiVersion, getLinkedInConfig } from '@/lib/linkedin/config';
 
 export interface LinkedInTokenResponse {
   access_token: string;
@@ -7,6 +7,12 @@ export interface LinkedInTokenResponse {
   refresh_token_expires_in?: number;
   scope?: string;
 }
+
+export type LinkedInRequestError = Error & {
+  retryable?: boolean;
+  status?: number;
+  body?: string;
+};
 
 const LINKEDIN_OAUTH_TIMEOUT_MS = Number(process.env.LINKEDIN_OAUTH_TIMEOUT_MS ?? 15000);
 const LINKEDIN_API_TIMEOUT_MS = Number(process.env.LINKEDIN_API_TIMEOUT_MS ?? 15000);
@@ -27,7 +33,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 
     throw Object.assign(
       new Error(error instanceof Error ? error.message : `${timeoutLabel} failed`),
-      { retryable: true }
+      { retryable: true },
     );
   } finally {
     clearTimeout(timeout);
@@ -38,46 +44,55 @@ async function readResponseText(response: Response) {
   return response.text().catch(() => '');
 }
 
-export async function exchangeLinkedInCode(code: string): Promise<LinkedInTokenResponse> {
+function buildLinkedInError(timeoutLabel: string, response: Response, body: string): LinkedInRequestError {
+  return Object.assign(
+    new Error(`${timeoutLabel} failed: ${response.status} ${body}`.trim()),
+    {
+      retryable: response.status >= 500 || response.status === 429 || response.status === 408,
+      status: response.status,
+      body,
+    },
+  );
+}
+
+export async function exchangeLinkedInCode(code: string, configKey?: string | null): Promise<LinkedInTokenResponse> {
+  const config = getLinkedInConfig({ configKey });
   const response = await fetchWithTimeout('https://www.linkedin.com/oauth/v2/accessToken', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
-      client_secret: process.env.LINKEDIN_CLIENT_SECRET?.trim() ?? '',
-      redirect_uri: getLinkedInRedirectUriForServer(),
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
+      redirect_uri: config.redirectUri,
     }),
   }, LINKEDIN_OAUTH_TIMEOUT_MS, 'LinkedIn token exchange');
 
   if (!response.ok) {
     const body = await readResponseText(response);
-    throw Object.assign(
-      new Error(`LinkedIn token exchange failed: ${response.status} ${body}`.trim()),
-      { retryable: response.status >= 500 || response.status === 429 || response.status === 408 }
-    );
+    throw buildLinkedInError('LinkedIn token exchange', response, body);
   }
 
   return response.json();
 }
 
-export async function refreshLinkedInToken(refreshToken: string): Promise<LinkedInTokenResponse> {
+export async function refreshLinkedInToken(refreshToken: string, configKey?: string | null): Promise<LinkedInTokenResponse> {
+  const config = getLinkedInConfig({ configKey });
   const response = await fetchWithTimeout('https://www.linkedin.com/oauth/v2/accessToken', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
-      client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
-      client_secret: process.env.LINKEDIN_CLIENT_SECRET?.trim() ?? '',
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
     }),
   }, LINKEDIN_OAUTH_TIMEOUT_MS, 'LinkedIn token refresh');
 
   if (!response.ok) {
     const body = await readResponseText(response);
-    const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
-    throw Object.assign(new Error(`LinkedIn refresh failed: ${response.status} ${body}`.trim()), { retryable });
+    throw buildLinkedInError('LinkedIn token refresh', response, body);
   }
 
   return response.json();
@@ -90,24 +105,26 @@ export async function fetchLinkedInMember(accessToken: string) {
 
   if (!response.ok) {
     const body = await readResponseText(response);
-    throw Object.assign(
-      new Error(`LinkedIn userinfo failed: ${response.status} ${body}`.trim()),
-      { retryable: response.status >= 500 || response.status === 429 || response.status === 408 }
-    );
+    throw buildLinkedInError('LinkedIn userinfo lookup', response, body);
   }
 
   return response.json() as Promise<{ sub: string; name?: string; email?: string }>;
 }
 
-export async function fetchOrganizationAccess(accessToken: string) {
+export async function fetchOrganizationAccess(accessToken: string, _configKey?: string | null) {
+  const apiVersion = getLinkedInApiVersion();
   const response = await fetchWithTimeout('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      'LinkedIn-Version': '202503',
+      'LinkedIn-Version': apiVersion,
       'X-Restli-Protocol-Version': '2.0.0',
     },
   }, LINKEDIN_API_TIMEOUT_MS, 'LinkedIn organization lookup');
 
-  if (!response.ok) return { elements: [] };
+  if (!response.ok) {
+    const body = await readResponseText(response);
+    throw buildLinkedInError('LinkedIn organization lookup', response, body);
+  }
+
   return response.json() as Promise<{ elements: Array<Record<string, unknown>> }>;
 }

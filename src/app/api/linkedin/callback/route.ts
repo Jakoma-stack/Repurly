@@ -14,11 +14,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const payload = parseLinkedInState(state);
-    await connectLinkedInWorkspace(payload.workspaceId, code);
+    const result = await connectLinkedInWorkspace(payload.workspaceId, code, payload.configKey);
+    const redirectUrl = new URL(buildAppUrl('/app/channels?linkedin=connected&setup=review-target#linkedin-onboarding', request.url));
 
-    return NextResponse.redirect(
-      new URL(buildAppUrl('/app/channels?linkedin=connected&setup=review-target#linkedin-onboarding', request.url)),
-    );
+    if (result.organizationSyncWarning) {
+      redirectUrl.searchParams.set('warning', result.organizationSyncWarning);
+    }
+
+    return NextResponse.redirect(redirectUrl);
   } catch {
     return NextResponse.redirect(new URL(buildAppUrl('/app/channels?error=linkedin-connect-failed#linkedin-onboarding', request.url)));
   }

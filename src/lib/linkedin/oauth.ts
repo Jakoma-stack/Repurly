@@ -1,31 +1,32 @@
 import { randomBytes } from 'crypto';
 
-import { buildAppUrl } from '@/lib/app-url';
+import { getLinkedInConfig } from '@/lib/linkedin/config';
 
-function getLinkedInRedirectUri(requestUrl?: string) {
-  return process.env.LINKEDIN_REDIRECT_URI?.trim() || buildAppUrl('/api/linkedin/callback', requestUrl);
-}
+export type LinkedInOAuthState = {
+  workspaceId: string;
+  nonce: string;
+  configKey: string;
+};
 
 export function buildLinkedInAuthUrl(workspaceId: string, requestUrl?: string) {
-  const state = Buffer.from(JSON.stringify({ workspaceId, nonce: randomBytes(8).toString('hex') })).toString('base64url');
+  const config = getLinkedInConfig({ requestUrl });
+  const state = Buffer.from(JSON.stringify({
+    workspaceId,
+    nonce: randomBytes(8).toString('hex'),
+    configKey: config.key,
+  } satisfies LinkedInOAuthState)).toString('base64url');
+
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
-    redirect_uri: getLinkedInRedirectUri(requestUrl),
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri,
     state,
-    scope: process.env.LINKEDIN_SCOPE?.trim() ?? '',
+    scope: config.scope,
   });
 
   return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
 }
 
 export function parseLinkedInState(state: string) {
-  return JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as {
-    workspaceId: string;
-    nonce: string;
-  };
-}
-
-export function getLinkedInRedirectUriForServer(requestUrl?: string) {
-  return getLinkedInRedirectUri(requestUrl);
+  return JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as LinkedInOAuthState;
 }
