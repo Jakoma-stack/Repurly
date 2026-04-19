@@ -7,10 +7,24 @@ export const stripe = new Stripe(stripeSecretKey || 'sk_test_placeholder', {
   typescript: true,
 });
 
+function firstConfigured(...values: Array<string | undefined>) {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return undefined;
+}
+
 export const plans = {
-  core: process.env.STRIPE_PRICE_CORE?.trim(),
-  growth: process.env.STRIPE_PRICE_GROWTH?.trim(),
-  scale: process.env.STRIPE_PRICE_SCALE?.trim(),
+  core: firstConfigured(process.env.STRIPE_PRICE_SOLO, process.env.STRIPE_PRICE_CORE),
+  growth: firstConfigured(process.env.STRIPE_PRICE_TEAM, process.env.STRIPE_PRICE_GROWTH),
+  scale: firstConfigured(process.env.STRIPE_PRICE_AGENCY, process.env.STRIPE_PRICE_SCALE),
+} as const;
+
+export const planEnvKeys = {
+  core: ['STRIPE_PRICE_SOLO', 'STRIPE_PRICE_CORE'],
+  growth: ['STRIPE_PRICE_TEAM', 'STRIPE_PRICE_GROWTH'],
+  scale: ['STRIPE_PRICE_AGENCY', 'STRIPE_PRICE_SCALE'],
 } as const;
 
 export type StripePlanKey = keyof typeof plans;
@@ -26,6 +40,7 @@ export function getCheckoutPriceId(plan: StripeSelfServePlanKey): string | null 
   if (!priceId) {
     console.error('[billing.stripe] Missing price id for checkout plan', {
       plan,
+      acceptedEnvKeys: planEnvKeys[plan],
       hasCore: Boolean(plans.core),
       hasGrowth: Boolean(plans.growth),
       hasScale: Boolean(plans.scale),
