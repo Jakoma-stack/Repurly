@@ -51,7 +51,7 @@ export type UsageSnapshot = {
   channelsConnected: number;
 };
 
-export function normalizePlanKey(plan: PlanInput, fallback: PlanKey = 'growth'): PlanKey {
+export function normalizePlanKey(plan: PlanInput, fallback: PlanKey = 'core'): PlanKey {
   switch ((plan ?? '').toString().trim().toLowerCase()) {
     case 'solo':
     case 'core':
@@ -99,4 +99,12 @@ export function canConsume(plan: PlanInput, feature: keyof PlanLimits, currentVa
   }
 
   return currentValue < limit;
+}
+
+
+export function formatPlanLabel(plan: PlanInput) {
+  const normalized = normalizePlanKey(plan);
+  if (normalized === 'core') return 'Solo';
+  if (normalized === 'growth') return 'Team';
+  return 'Agency';
 }

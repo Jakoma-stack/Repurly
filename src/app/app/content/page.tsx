@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import { ArrowRight, CheckCircle2, ImageIcon, Layers3, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CircleAlert, ImageIcon, Layers3, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,15 +9,14 @@ import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
   clearRecentDrafts,
   clearSavedCampaign,
-  generateAiCarouselAssets,
   generateAiDrafts,
-  generateAiImageAssets,
   requestApproval,
+  respondToApproval,
   saveCampaign,
   saveDraft,
   schedulePost,
 } from '@/server/actions/workflow';
-import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
+import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceApproverOptions, getWorkspaceBrandOptions } from '@/server/queries/workflow';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -113,22 +112,6 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
-  if (ok === 'image-assets') {
-    return {
-      kind: 'success',
-      title: 'AI image generated',
-      body: 'Repurly saved a branded visual preview to the draft so you can test an image-first workflow before approval or scheduling.',
-    };
-  }
-
-  if (ok === 'carousel-assets') {
-    return {
-      kind: 'success',
-      title: 'AI carousel generated',
-      body: 'Repurly saved a full carousel preview to the draft so format selection is visible and testable before publishing.',
-    };
-  }
-
   if (ok === 'campaign-saved') {
     return {
       kind: 'success',
@@ -142,6 +125,30 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
       kind: 'success',
       title: 'Saved campaign cleared',
       body: 'Your planner defaults were removed for this workspace in this browser.',
+    };
+  }
+
+  if (ok === 'approved') {
+    return {
+      kind: 'success',
+      title: 'Approval recorded',
+      body: 'The draft is now clearly approved and ready for scheduling.',
+    };
+  }
+
+  if (ok === 'changes-requested') {
+    return {
+      kind: 'info',
+      title: 'Changes requested',
+      body: 'The draft moved back to draft so the next edit cycle is explicit.',
+    };
+  }
+
+  if (ok === 'rejected') {
+    return {
+      kind: 'error',
+      title: 'Approval rejected',
+      body: 'The draft is no longer in review. Update it and request approval again when ready.',
     };
   }
 
@@ -185,19 +192,19 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (error === 'media-brief-required') {
+    return {
+      kind: 'error',
+      title: 'Media posts need visual direction',
+      body: 'Add creative direction before requesting approval or scheduling image, carousel, or video posts.',
+    };
+  }
+
   if (error === 'generate-failed-save') {
     return {
       kind: 'error',
       title: 'Draft generation could not be saved',
       body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check the database connection and brand setup.',
-    };
-  }
-
-  if (error === 'missing-assets') {
-    return {
-      kind: 'error',
-      title: 'Generate the assets first',
-      body: 'Image and carousel posts now require visible AI-generated or uploaded assets before approval or scheduling. No silent text fallback.',
     };
   }
 
@@ -244,55 +251,6 @@ function describeTargetType(targetType: string) {
   return targetType;
 }
 
-function readAiAssets(editingPost: Awaited<ReturnType<typeof getPostForEditing>>) {
-  const raw = editingPost?.aiAssets;
-  if (!raw || typeof raw !== 'object') return null;
-  return raw as {
-    generatedAt?: string;
-    image?: { title?: string; caption?: string; prompt?: string; dataUri?: string };
-    carousel?: { title?: string; prompt?: string; slides?: Array<{ index?: number; heading?: string; body?: string; dataUri?: string }> };
-  };
-}
-
-function AssetPreview({ editingPost }: { editingPost: Awaited<ReturnType<typeof getPostForEditing>> }) {
-  const assets = readAiAssets(editingPost);
-  if (!assets?.image && !assets?.carousel) {
-    return (
-      <div className="rounded-[1.35rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-muted-foreground">
-        No AI visuals yet. Use the buttons below to generate a branded image or a full carousel preview from this draft.
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      {assets.image ? (
-        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI image preview</div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.image.title || 'Generated image'}</div>
-          {assets.image.caption ? <div className="mt-1 text-sm text-muted-foreground">{assets.image.caption}</div> : null}
-          {assets.image.dataUri ? <img src={assets.image.dataUri} alt={assets.image.title || 'AI image preview'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100" /> : null}
-        </div>
-      ) : null}
-      {assets.carousel ? (
-        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
-          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI carousel preview</div>
-          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.carousel.title || 'Generated carousel'}</div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {(assets.carousel.slides || []).map((slide, index) => (
-              <div key={`${slide.index || index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                {slide.dataUri ? <img src={slide.dataUri} alt={slide.heading || `Slide ${index + 1}`} className="w-full rounded-xl border border-slate-200 bg-white" /> : null}
-                <div className="mt-3 text-sm font-semibold text-slate-900">{slide.heading || `Slide ${index + 1}`}</div>
-                {slide.body ? <div className="mt-1 text-xs leading-6 text-muted-foreground">{slide.body}</div> : null}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
 export default async function ContentPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
   const params = await searchParams;
@@ -307,10 +265,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     .map((value) => value.trim())
     .filter(Boolean);
 
-  const [targets, brandOptions, editingPost] = await Promise.all([
+  const [targets, brandOptions, editingPost, approverOptions] = await Promise.all([
     getLinkedInTargets(session.workspaceId),
     getWorkspaceBrandOptions(session.workspaceId),
     getPostForEditing(session.workspaceId, postId ?? null),
+    getWorkspaceApproverOptions(session.workspaceId),
   ]);
 
   const selectedBrandId =
@@ -333,6 +292,10 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
   const plannerWindowDays = savedCampaign?.campaignWindowDays ?? 30;
   const plannerSourceMaterial = savedCampaign?.sourceMaterial ?? '';
+  const canRespondToApproval = ['owner', 'admin', 'approver'].includes(session.role);
+  const companyPageTargets = targets.filter((target) => target.targetType === 'organization' || target.targetType === 'page');
+  const personalTargets = targets.filter((target) => target.targetType === 'member' || target.targetType === 'profile');
+  const selectedApproverValue = editingPost?.approvalOwner ?? approverOptions[0]?.value ?? 'Client lead';
   const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
   const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
   const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
@@ -617,7 +580,13 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-slate-900">Approval owner (optional)</label>
-                    <input name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.approvalOwner ?? 'Client lead'} />
+                    <select name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={selectedApproverValue}>
+                      {approverOptions.map((option) => (
+                        <option key={`${option.source}-${option.value}`} value={option.value}>{option.label} · {option.role}</option>
+                      ))}
+                      <option value="Client lead">Client lead</option>
+                    </select>
+                    <div className="mt-2 text-xs text-muted-foreground">{approverOptions.length ? `Approval can be tested with ${approverOptions.length} visible approver-capable member(s) or invite(s).` : 'No approver-capable members found yet. Add an owner, admin, or approver in Settings to test this flow.'}</div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
@@ -645,24 +614,49 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 </div>
               </div>
 
+              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Approval visibility</div>
+                    <div className="mt-1 text-xs leading-6 text-muted-foreground">Make the reviewer and current approval state obvious before queueing the post.</div>
+                  </div>
+                  {editingPost?.approvalStatus ? <span className="rounded-full border border-border bg-white px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-slate-700">{editingPost.approvalStatus.replace('_', ' ')}</span> : null}
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Approver</div>
+                    <div className="mt-1 font-medium text-slate-900">{editingPost?.approvalOwner || selectedApproverValue || 'Needs owner'}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Latest response</div>
+                    <div className="mt-1 font-medium text-slate-900">{editingPost?.latestResponseStatus ? editingPost.latestResponseStatus.replace('_', ' ') : 'No reviewer action yet'}</div>
+                    {editingPost?.latestResponderId ? <div className="mt-1 text-xs text-muted-foreground">by {editingPost.latestResponderId}</div> : null}
+                  </div>
+                </div>
+                {editingPost?.approvalRequestId && canRespondToApproval ? (
+                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-950"><CheckCircle2 className="size-4" /> Approver test controls</div>
+                    <div className="mt-1 text-xs leading-6 text-emerald-900/80">Use these to test the approver perspective without leaving the composer.</div>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <input type="hidden" name="approvalRequestId" value={editingPost.approvalRequestId ?? ''} />
+                      <input type="hidden" name="responderId" value={session.userId} />
+                      <input name="approvalResponseNote" className="min-w-[260px] flex-1 rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm" placeholder="Optional reviewer note" defaultValue={editingPost?.latestResponseNote ?? ''} />
+                      <Button formAction={respondToApproval} name="response" value="approve">Approve</Button>
+                      <Button formAction={respondToApproval} name="response" value="changes_requested" variant="outline">Request changes</Button>
+                      <Button formAction={respondToApproval} name="response" value="reject" variant="ghost">Reject</Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+
               <div className="flex flex-wrap gap-3">
                 <Button formAction={saveDraft}>Save draft</Button>
-                <Button formAction={generateAiImageAssets} variant="outline"><ImageIcon className="mr-2 size-4" />Generate AI image</Button>
-                <Button formAction={generateAiCarouselAssets} variant="outline"><Layers3 className="mr-2 size-4" />Generate AI carousel</Button>
                 <Button formAction={requestApproval} variant="outline">Request approval</Button>
                 <Button formAction={schedulePost} variant="outline">Schedule post</Button>
               </div>
             </div>
 
             <div className="space-y-5">
-              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
-                <div className="eyebrow">AI asset studio</div>
-                <h3 className="mt-2 text-xl font-semibold">Generate visible image and carousel assets before queueing</h3>
-                <p className="mt-2 text-sm text-muted-foreground">These previews are saved to the draft so you can test the format directly in the composer. Image and carousel posts now require visible assets before approval or scheduling.</p>
-                <div className="mt-4">
-                  <AssetPreview editingPost={editingPost} />
-                </div>
-              </div>
               <div id="target-selection" className="rounded-[1.75rem] border border-slate-200/80 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -695,6 +689,27 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     );
                   }) : <div className="rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">No LinkedIn targets connected yet. Go to Channels setup first.</div>}
                 </div>
+              </div>
+
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">Publishing diagnostics</div>
+                <h3 className="mt-2 text-xl font-semibold">Make hidden workflow state visible</h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-slate-50 px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Personal targets</div>
+                    <div className="mt-1 font-medium text-slate-900">{personalTargets.length}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-slate-50 px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Company page targets</div>
+                    <div className="mt-1 font-medium text-slate-900">{companyPageTargets.length}</div>
+                  </div>
+                </div>
+                {companyPageTargets.length === 0 ? (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                    <div className="flex items-center gap-2 font-medium"><CircleAlert className="size-4" /> No company pages are visible to this workspace yet</div>
+                    <div className="mt-1 text-amber-900/80">Reconnect LinkedIn from Channels and confirm the signed-in member is an admin of the intended page.</div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-[1.75rem] border border-slate-200/80 p-5">

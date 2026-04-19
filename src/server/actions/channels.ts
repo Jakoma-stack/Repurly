@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { platformAccounts } from '../../../drizzle/schema';
+import { integrations, platformAccounts } from '../../../drizzle/schema';
 
 function requiredString(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
@@ -63,4 +63,18 @@ export async function setDefaultLinkedInTarget(formData: FormData) {
   }
 
   redirect('/app/channels?linkedin=connected&setup=target-confirmed#linkedin-onboarding' as Route);
+}
+
+
+export async function disconnectLinkedInWorkspace(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  if (!workspaceId || !process.env.DATABASE_URL) {
+    redirect('/app/channels?error=missing-workspace' as Route);
+  }
+
+  await db.delete(platformAccounts).where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin')));
+  await db.delete(integrations).where(and(eq(integrations.workspaceId, workspaceId), eq(integrations.provider, 'linkedin')));
+
+  await refreshChannelPages();
+  redirect('/app/channels?linkedin=disconnected' as Route);
 }

@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { formatPlanLabel } from '@/lib/billing/plans';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
 import { getBillingSnapshot } from '@/server/queries/billing';
 
@@ -129,8 +130,10 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <CardHeader>
           <h3 className="text-lg font-semibold">Current access state</h3>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Workspace plan: <strong className="text-slate-950">{billingAccess?.plan ?? 'core'}</strong>
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
+          <div>Workspace plan: <strong className="text-slate-950">{formatPlanLabel(billingAccess?.plan ?? 'core')}</strong></div>
+          <div>Raw billing key: <strong className="text-slate-950">{billingAccess?.plan ?? 'core'}</strong></div>
+          <div>Stripe state: <strong className="text-slate-950">{billingAccess?.stripeSubscriptionStatus ?? (billingAccess?.hasPaidAccess ? 'subscription-linked' : 'payment-required')}</strong></div>
         </CardContent>
       </Card>
     </div>

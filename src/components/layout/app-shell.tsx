@@ -17,6 +17,7 @@ import {
 import { UserButton } from '@clerk/nextjs';
 
 import type { WorkspaceSession } from '@/lib/auth/workspace';
+import { formatPlanLabel } from '@/lib/billing/plans';
 
 type BillingAccessState = {
   hasPaidAccess: boolean;
@@ -113,7 +114,7 @@ export function AppShell({
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950">{session.workspaceName}</h1>
                 <p className="text-sm text-muted-foreground">
                   {session.role} • {session.availableWorkspaces.length} workspace access
-                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? (billingAccess.plan === 'core' ? 'Solo' : billingAccess.plan === 'growth' ? 'Team' : 'Agency') : 'payment required'}` : ''}
+                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? formatPlanLabel(billingAccess.plan) : 'payment required'}` : ''}
                 </p>
               </div>
             </div>
