@@ -9,6 +9,7 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { inngest } from '@/lib/inngest/client';
 import { buildBrandIntelligence } from '@/lib/ai/brand-context';
+import { generateVisualAssets } from '@/lib/ai/visual-assets';
 import {
   buildAiReview,
   buildFallbackContentDrafts,
@@ -148,6 +149,39 @@ function parseCount(formData: FormData) {
   return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 12));
 }
 
+function mergePostMetadata(existing: Record<string, unknown> | null, incoming: Record<string, unknown>) {
+  const current = (existing ?? {}) as Record<string, unknown>;
+  const next = { ...current, ...incoming } as Record<string, unknown>;
+  if (current.aiAssets && !incoming.aiAssets) next.aiAssets = current.aiAssets;
+  if (current.assetGeneration && !incoming.assetGeneration) next.assetGeneration = current.assetGeneration;
+  return next;
+}
+
+async function getExistingPostMetadata(workspaceId: string, postId: string) {
+  if (!postId) return null;
+  const rows = await db
+    .select({ metadata: posts.metadata })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
+    .limit(1);
+  return (rows[0]?.metadata ?? null) as Record<string, unknown> | null;
+}
+
+function postNeedsVisualAssets(postType: string) {
+  return postType === 'image' || postType === 'multi_image' || postType === 'video';
+}
+
+function postHasRenderableAssets(postType: string, metadata: Record<string, unknown> | null | undefined) {
+  if (!postNeedsVisualAssets(postType)) return true;
+  const aiAssets = metadata && typeof metadata === 'object' ? (metadata.aiAssets as Record<string, unknown> | undefined) : undefined;
+  const image = aiAssets?.image as Record<string, unknown> | undefined;
+  const carousel = aiAssets?.carousel as Record<string, unknown> | undefined;
+  const slides = Array.isArray(carousel?.slides) ? carousel?.slides : [];
+  if (postType === 'image') return Boolean(image?.dataUri);
+  if (postType === 'multi_image') return slides.length >= 2;
+  return false;
+}
+
 function parseCampaignWindowDays(formData: FormData) {
   return Math.max(7, Math.min(Number(requiredString(formData, 'campaignWindowDays') || '30'), 180));
 }
@@ -221,6 +255,8 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
   const scheduledFor = parseScheduledFor(formData);
   const brandId = await resolveBrandId(formData, workspaceId);
   if (!brandId) return { error: 'missing-brand' as const, post: null };
+  const existingMetadata = postId ? await getExistingPostMetadata(workspaceId, postId) : null;
+  const mergedMetadata = mergePostMetadata(existingMetadata, { source: 'manual', brief });
 
   if (postId) {
     const updated = await db
@@ -233,7 +269,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
         status,
         scheduledFor,
         postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-        metadata: { source: 'manual', brief },
+        metadata: mergedMetadata,
         updatedAt: new Date(),
       })
       .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
@@ -253,7 +289,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
       status,
       scheduledFor,
       postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-      metadata: { source: 'manual', brief },
+      metadata: mergedMetadata,
     })
     .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
 
@@ -433,6 +469,8 @@ export async function requestApproval(formData: FormData) {
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
   if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
+  const metadata = await getExistingPostMetadata(post.workspaceId, post.id);
+  if (!postHasRenderableAssets(requiredString(formData, 'postType') || 'text', metadata)) redirect(buildContentPath({ error: 'missing-assets', postId: post.id }, 'composer') as Route);
 
   const existingApproval = await db
     .select({ id: approvalRequests.id })
@@ -518,6 +556,8 @@ export async function schedulePost(formData: FormData) {
 
   const target = await attachTarget(post.id, post.workspaceId, formData);
   if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
+  const metadata = await getExistingPostMetadata(post.workspaceId, post.id);
+  if (!postHasRenderableAssets(requiredString(formData, 'postType') || 'text', metadata)) redirect(buildContentPath({ error: 'missing-assets', postId: post.id }, 'composer') as Route);
 
   const publishJobId = await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
 
@@ -530,6 +570,76 @@ export async function schedulePost(formData: FormData) {
 
   await refreshWorkflowPages();
   redirect(buildContentPath({ ok: 'scheduled', postId: post.id }, 'target-selection') as Route);
+}
+
+async function generateAiVisualDraft(formData: FormData, format: 'image' | 'carousel') {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const authorId = requiredString(formData, 'authorId');
+  const brandId = await resolveBrandId(formData, workspaceId);
+  const title = requiredString(formData, 'title') || 'AI-generated visual';
+  const body = requiredString(formData, 'body');
+  const brief = requiredString(formData, 'brief') || body || title;
+
+  if (!workspaceId || !authorId || !brandId || !title) {
+    redirect(buildContentPath({ error: 'invalid' }, 'composer') as Route);
+  }
+
+  const brand = await getBrand(workspaceId, brandId!);
+  if (!brand) {
+    redirect(buildContentPath({ error: 'missing-brand' }, 'composer') as Route);
+  }
+
+  const desiredPostType = format === 'image' ? 'image' : 'multi_image';
+  const baseResult = await createOrUpdateBasePost(formData, 'draft');
+  if (baseResult.error || !baseResult.post) {
+    redirect(buildContentPath({ error: baseResult.error ?? 'invalid' }, 'composer') as Route);
+  }
+
+  const visualAssets = await generateVisualAssets({
+    brandName: brand.name,
+    brief,
+    postTitle: title,
+    body,
+    tone: brand.defaultTone,
+    audience: brand.audience,
+    primaryCta: brand.primaryCta,
+    format,
+  });
+
+  const existingMetadata = await getExistingPostMetadata(workspaceId, baseResult.post.id);
+  const metadata = mergePostMetadata(existingMetadata, {
+    brief,
+    assetGeneration: {
+      latestMode: format,
+      generatedAt: new Date().toISOString(),
+    },
+    aiAssets: {
+      ...(existingMetadata?.aiAssets && typeof existingMetadata.aiAssets === 'object' ? existingMetadata.aiAssets as Record<string, unknown> : {}),
+      ...(visualAssets.image ? { image: visualAssets.image } : {}),
+      ...(visualAssets.carousel ? { carousel: visualAssets.carousel } : {}),
+      generatedAt: visualAssets.generatedAt,
+    },
+  });
+
+  await db
+    .update(posts)
+    .set({
+      postType: desiredPostType as 'image' | 'multi_image',
+      metadata,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(posts.id, baseResult.post.id), eq(posts.workspaceId, workspaceId)));
+
+  await refreshWorkflowPages();
+  redirect(buildContentPath({ ok: format === 'image' ? 'image-assets' : 'carousel-assets', postId: baseResult.post.id }, 'composer') as Route);
+}
+
+export async function generateAiImageAssets(formData: FormData) {
+  await generateAiVisualDraft(formData, 'image');
+}
+
+export async function generateAiCarouselAssets(formData: FormData) {
+  await generateAiVisualDraft(formData, 'carousel');
 }
 
 export async function generateAiDrafts(formData: FormData) {

@@ -105,6 +105,8 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
     brandId: post.brandId,
     postType: post.postType,
     brief: String(post.metadata?.brief ?? ''),
+    metadata: post.metadata ?? null,
+    aiAssets: (post.metadata && typeof post.metadata === 'object' ? (post.metadata as Record<string, unknown>).aiAssets : null) ?? null,
   };
 }
 

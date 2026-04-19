@@ -9,7 +9,9 @@ import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
   clearRecentDrafts,
   clearSavedCampaign,
+  generateAiCarouselAssets,
   generateAiDrafts,
+  generateAiImageAssets,
   requestApproval,
   respondToApproval,
   saveCampaign,
@@ -112,6 +114,22 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (ok === 'image-assets') {
+    return {
+      kind: 'success',
+      title: 'AI image generated',
+      body: 'Repurly saved a publishable image preview to the draft so you can test an image-first workflow before approval or scheduling.',
+    };
+  }
+
+  if (ok === 'carousel-assets') {
+    return {
+      kind: 'success',
+      title: 'AI carousel generated',
+      body: 'Repurly saved a full carousel preview to the draft so the selected format is visible, testable, and ready for LinkedIn upload.',
+    };
+  }
+
   if (ok === 'campaign-saved') {
     return {
       kind: 'success',
@@ -208,6 +226,14 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (error === 'missing-assets') {
+    return {
+      kind: 'error',
+      title: 'Generate the assets first',
+      body: 'Image and carousel posts now require visible AI-generated or uploaded assets before approval or scheduling. No silent text fallback.',
+    };
+  }
+
   if (error === 'generate-failed') {
     return {
       kind: 'error',
@@ -249,6 +275,55 @@ function describeTargetType(targetType: string) {
   if (targetType === 'member' || targetType === 'profile') return 'Personal profile';
   if (targetType === 'organization' || targetType === 'page') return 'Company page';
   return targetType;
+}
+
+function readAiAssets(editingPost: Awaited<ReturnType<typeof getPostForEditing>>) {
+  const raw = editingPost?.aiAssets;
+  if (!raw || typeof raw !== 'object') return null;
+  return raw as {
+    generatedAt?: string;
+    image?: { title?: string; caption?: string; prompt?: string; dataUri?: string };
+    carousel?: { title?: string; prompt?: string; slides?: Array<{ index?: number; heading?: string; body?: string; dataUri?: string }> };
+  };
+}
+
+function AssetPreview({ editingPost }: { editingPost: Awaited<ReturnType<typeof getPostForEditing>> }) {
+  const assets = readAiAssets(editingPost);
+  if (!assets?.image && !assets?.carousel) {
+    return (
+      <div className="rounded-[1.35rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-muted-foreground">
+        No AI visuals yet. Use the buttons below to generate a branded image or a full carousel preview from this draft.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {assets.image ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI image preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.image.title || 'Generated image'}</div>
+          {assets.image.caption ? <div className="mt-1 text-sm text-muted-foreground">{assets.image.caption}</div> : null}
+          {assets.image.dataUri ? <img src={assets.image.dataUri} alt={assets.image.title || 'AI image preview'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100" /> : null}
+        </div>
+      ) : null}
+      {assets.carousel ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI carousel preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.carousel.title || 'Generated carousel'}</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(assets.carousel.slides || []).map((slide, index) => (
+              <div key={`${slide.index || index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                {slide.dataUri ? <img src={slide.dataUri} alt={slide.heading || `Slide ${index + 1}`} className="w-full rounded-xl border border-slate-200 bg-white" /> : null}
+                <div className="mt-3 text-sm font-semibold text-slate-900">{slide.heading || `Slide ${index + 1}`}</div>
+                {slide.body ? <div className="mt-1 text-xs leading-6 text-muted-foreground">{slide.body}</div> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default async function ContentPage({ searchParams }: { searchParams: SearchParams }) {
@@ -651,12 +726,22 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
 
               <div className="flex flex-wrap gap-3">
                 <Button formAction={saveDraft}>Save draft</Button>
+                <Button formAction={generateAiImageAssets} variant="outline"><ImageIcon className="mr-2 size-4" />Generate AI image</Button>
+                <Button formAction={generateAiCarouselAssets} variant="outline"><Layers3 className="mr-2 size-4" />Generate AI carousel</Button>
                 <Button formAction={requestApproval} variant="outline">Request approval</Button>
                 <Button formAction={schedulePost} variant="outline">Schedule post</Button>
               </div>
             </div>
 
             <div className="space-y-5">
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">AI asset studio</div>
+                <h3 className="mt-2 text-xl font-semibold">Generate visible image and carousel assets before queueing</h3>
+                <p className="mt-2 text-sm text-muted-foreground">These previews are saved to the draft so you can test the format directly in the composer. Image and carousel posts now require visible assets before approval or scheduling.</p>
+                <div className="mt-4">
+                  <AssetPreview editingPost={editingPost} />
+                </div>
+              </div>
               <div id="target-selection" className="rounded-[1.75rem] border border-slate-200/80 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
