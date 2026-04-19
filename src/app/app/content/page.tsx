@@ -370,7 +370,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const canRespondToApproval = ['owner', 'admin', 'approver'].includes(session.role);
   const companyPageTargets = targets.filter((target) => target.targetType === 'organization' || target.targetType === 'page');
   const personalTargets = targets.filter((target) => target.targetType === 'member' || target.targetType === 'profile');
-  const selectedApproverValue = editingPost?.approvalOwner ?? approverOptions[0]?.value ?? 'Client lead';
+  const selectedApproverValue = editingPost?.approvalOwner ?? approverOptions[0]?.value ?? (canRespondToApproval ? session.userId : 'Client lead');
   const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
   const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
   const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
@@ -382,10 +382,25 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     <div className="space-y-6">
       {notice ? <FloatingNotice {...notice} /> : null}
 
+      <Card className="border-slate-200/80">
+        <CardHeader>
+          <div className="eyebrow">QA readiness</div>
+          <h2 className="mt-2 text-xl font-semibold">Everything needed for the next proof pass should be visible here</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Use this strip to verify that the deployed build is the advanced studio version rather than the older basic composer.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">Approval controls</div><div className="mt-1 text-muted-foreground">Approver picker and in-composer reviewer controls are visible when a draft is loaded.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">AI image</div><div className="mt-1 text-muted-foreground">Generate AI image button should appear beside save / approval / schedule actions.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">AI carousel</div><div className="mt-1 text-muted-foreground">Generate AI carousel button should appear and save slide previews to the draft.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">Media guardrails</div><div className="mt-1 text-muted-foreground">Image and carousel posts should block approval or scheduling when no assets exist.</div></div>
+        </CardContent>
+      </Card>
+
       <section className="premium-dark overflow-hidden p-7">
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-center">
           <div>
             <div className="eyebrow !text-white/50">Studio</div>
+            <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">Polish+AI build active</div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">
               Premium creative workflow, built for approval control and publish confidence.
             </h1>
@@ -656,6 +671,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                   <div>
                     <label className="text-sm font-medium text-slate-900">Approval owner (optional)</label>
                     <select name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={selectedApproverValue}>
+                      {canRespondToApproval ? <option value={session.userId}>Me (current user) · {session.role}</option> : null}
                       {approverOptions.map((option) => (
                         <option key={`${option.source}-${option.value}`} value={option.value}>{option.label} · {option.role}</option>
                       ))}

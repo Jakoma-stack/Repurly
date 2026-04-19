@@ -217,6 +217,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
             </p>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
+            <Link href="/app/billing" className="block font-medium text-primary">Open in-app billing</Link>
             {canManageBilling ? <Link href="/api/billing/portal" className="block font-medium text-primary">Open billing portal</Link> : null}
             <Link href="/app/billing" className="block font-medium text-primary">Review plan usage</Link>
             <Link href="/app/reliability" className="block font-medium text-primary">Open reliability console</Link>

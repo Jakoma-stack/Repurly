@@ -74,6 +74,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
                   LinkedIn connected
                 </div>
                 <h2 className="text-2xl font-semibold">Finish the post-connect setup in Channels</h2>
+                <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-800">Polish+AI build active</div>
                 <p className="text-sm text-slate-600">
                   Keep the flow workspace-aware: LinkedIn will not show a company-page picker during sign-in, so Repurly discovers any admin-managed company pages after connect and lets you set the default target here.
                 </p>
@@ -197,6 +198,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
           <h3 className="text-lg font-semibold">LinkedIn diagnostics</h3>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">This view should now expose personal-vs-company counts, default target type, and a disconnect control for recovery testing. If those are missing in production, the old Channels build is still deployed.</div>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="rounded-2xl border border-border p-4 text-sm">
               <div className="text-xs uppercase tracking-wide text-slate-500">Personal profiles</div>

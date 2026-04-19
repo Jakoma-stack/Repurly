@@ -19,6 +19,8 @@ import { UserButton } from '@clerk/nextjs';
 import type { WorkspaceSession } from '@/lib/auth/workspace';
 import { formatPlanLabel } from '@/lib/billing/plans';
 
+const BUILD_MARKER = 'Polish+AI build';
+
 type BillingAccessState = {
   hasPaidAccess: boolean;
   plan: 'core' | 'growth' | 'scale';
@@ -116,6 +118,12 @@ export function AppShell({
                   {session.role} • {session.availableWorkspaces.length} workspace access
                   {billingAccess ? ` • ${billingAccess.hasPaidAccess ? formatPlanLabel(billingAccess.plan) : 'payment required'}` : ''}
                 </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                  <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">{BUILD_MARKER}</span>
+                  <a href="/app/billing" className="font-medium text-primary">Billing</a>
+                  <a href="/app/channels" className="font-medium text-primary">Channels</a>
+                  <a href="/app/content" className="font-medium text-primary">Studio</a>
+                </div>
               </div>
             </div>
             <UserButton afterSignOutUrl="/" />
