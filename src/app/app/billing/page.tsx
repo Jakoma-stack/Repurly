@@ -3,13 +3,54 @@ import type { ReactNode } from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { formatPlanLabel } from '@/lib/billing/plans';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
 import { getBillingSnapshot } from '@/server/queries/billing';
-import { PLAN_CATALOG, PLAN_ORDER } from '@/lib/billing/catalog';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 type SelfServePlan = 'core' | 'growth' | 'scale';
+
+type PlanCard = {
+  key: SelfServePlan;
+  name: string;
+  priceLabel: string;
+  summary: string;
+  bullets: string[];
+  ctaLabel: string;
+  checkoutPlan?: SelfServePlan;
+  ctaHref?: string;
+};
+
+const PLAN_CARDS: PlanCard[] = [
+  {
+    key: 'core',
+    name: 'Solo',
+    priceLabel: '£59/mo',
+    summary: 'For one-brand LinkedIn workflows with a smaller team and reliable publishing fundamentals.',
+    bullets: ['Up to 2 workspace members', '1 brand', '120 posts per month'],
+    ctaLabel: 'Activate Solo',
+    checkoutPlan: 'core',
+  },
+  {
+    key: 'growth',
+    name: 'Team',
+    priceLabel: '£199/mo',
+    summary: 'For agencies and B2B teams that need approvals, stronger operational capacity, and multi-brand workflow control.',
+    bullets: ['Up to 5 workspace members', 'Up to 3 brands', 'Approval flows included'],
+    ctaLabel: 'Activate Team',
+    checkoutPlan: 'growth',
+  },
+  {
+    key: 'scale',
+    name: 'Agency',
+    priceLabel: '£499/mo',
+    summary: 'For multi-brand client operations that need higher limits, stronger support, and commercial onboarding help.',
+    bullets: ['Up to 15 workspace members', 'Up to 10 brands', 'Priority support included'],
+    ctaLabel: 'Activate Agency',
+    checkoutPlan: 'scale',
+  },
+];
 
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -44,19 +85,14 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
   return (
     <div className="space-y-6">
       {billingState === 'checkout-created' ? <Banner kind="success">Checkout opened successfully.</Banner> : null}
-      {billingState === 'checkout-unavailable' ? (
-        <Banner kind="error">
-          Checkout is not available for that plan yet. Configure the Stripe price IDs using STRIPE_PRICE_SOLO / TEAM / AGENCY
-          or keep the older CORE / GROWTH / SCALE aliases.
-        </Banner>
-      ) : null}
+      {billingState === 'checkout-unavailable' ? <Banner kind="error">Checkout is not available for that plan yet. Check the configured Stripe price IDs.</Banner> : null}
       {billingState === 'portal-unavailable' ? <Banner kind="warning">Billing portal is not available yet for this workspace.</Banner> : null}
 
       <Card>
         <CardHeader>
           <h2 className="text-2xl font-semibold">Billing and plan usage</h2>
           <p className="text-sm text-muted-foreground">
-            Stripe is the commercial source of truth. Repurly self-serve pricing should match Solo (£59), Team (£199), and Agency (£499).
+            Repurly is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
           </p>
         </CardHeader>
         <CardContent>
@@ -65,30 +101,29 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
       </Card>
 
       <section className="grid gap-4 lg:grid-cols-3">
-        {PLAN_ORDER.map((key) => {
-          const plan = PLAN_CATALOG[key];
-          return (
-            <Card key={plan.key} className={selectedPlan === plan.key ? 'border-slate-950 shadow-sm' : ''}>
-              <CardHeader>
-                <div className="text-sm font-medium text-primary">{plan.name}</div>
-                <div className="mt-2 text-3xl font-semibold">{plan.priceLabel}</div>
-                <p className="mt-2 text-sm text-muted-foreground">{plan.summary}</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  {plan.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
-                </ul>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  Stripe mapping: <strong className="text-slate-900">{plan.stripeEnvKey}</strong>
-                  <span className="text-slate-500"> (legacy alias: {plan.stripeLegacyEnvKey})</span>
-                </div>
+        {PLAN_CARDS.map((plan) => (
+          <Card key={plan.key} className={selectedPlan === plan.key ? 'border-slate-950 shadow-sm' : ''}>
+            <CardHeader>
+              <div className="text-sm font-medium text-primary">{plan.name}</div>
+              <div className="mt-2 text-3xl font-semibold">{plan.priceLabel}</div>
+              <p className="mt-2 text-sm text-muted-foreground">{plan.summary}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                {plan.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
+              </ul>
+              {plan.checkoutPlan ? (
+                <a href={`/api/billing/checkout?plan=${plan.key}`} className="inline-flex rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
+                  {plan.ctaLabel}
+                </a>
+              ) : plan.ctaHref ? (
                 <a href={plan.ctaHref} className="inline-flex rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">
                   {plan.ctaLabel}
                 </a>
-              </CardContent>
-            </Card>
-          );
-        })}
+              ) : null}
+            </CardContent>
+          </Card>
+        ))}
       </section>
 
       <Card>
@@ -96,14 +131,9 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
           <h3 className="text-lg font-semibold">Current access state</h3>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <div>
-            Workspace plan:{' '}
-            <strong className="text-slate-950">{billingAccess ? PLAN_CATALOG[billingAccess.plan].name : 'Solo'}</strong>
-          </div>
-          <div>
-            Commercial keys in use: <strong className="text-slate-950">STRIPE_PRICE_SOLO / TEAM / AGENCY</strong>
-            <span className="text-slate-500"> with backward compatibility for CORE / GROWTH / SCALE.</span>
-          </div>
+          <div>Workspace plan: <strong className="text-slate-950">{formatPlanLabel(billingAccess?.plan ?? 'core')}</strong></div>
+          <div>Raw billing key: <strong className="text-slate-950">{billingAccess?.plan ?? 'core'}</strong></div>
+          <div>Stripe state: <strong className="text-slate-950">{billingAccess?.stripeSubscriptionStatus ?? (billingAccess?.hasPaidAccess ? 'subscription-linked' : 'payment-required')}</strong></div>
         </CardContent>
       </Card>
     </div>
