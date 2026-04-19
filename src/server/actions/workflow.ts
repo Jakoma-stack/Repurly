@@ -9,9 +9,7 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { inngest } from '@/lib/inngest/client';
 import { buildBrandIntelligence } from '@/lib/ai/brand-context';
-import { requireWorkspaceSession } from '@/lib/auth/workspace';
-import { getPlanLimits, normalizePlanKey } from '@/lib/billing/plans';
-import { getWorkspaceBillingRecord } from '@/lib/billing/workspace-billing';
+import { generateVisualAssets } from '@/lib/ai/visual-assets';
 import {
   buildAiReview,
   buildFallbackContentDrafts,
@@ -20,7 +18,7 @@ import {
   type ContentDraft,
   type GenerateContentDraftsArgs,
 } from '@/lib/ai/content';
-import { approvalRequests, approvalResponses, auditEvents, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
+import { approvalRequests, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
 
@@ -42,9 +40,6 @@ type SavedCampaign = {
 };
 
 const IMMEDIATE_PUBLISH_WINDOW_MS = 60 * 1000;
-const APPROVER_ROLES = new Set(['owner', 'admin', 'approver']);
-const APPROVAL_DECISIONS = new Set(['approved', 'rejected', 'changes_requested']);
-
 
 function parseScheduledFor(formData: FormData) {
   const rawValue = requiredString(formData, 'scheduledFor');
@@ -72,7 +67,7 @@ function parseScheduledFor(formData: FormData) {
 
 function buildContentPath(
   params: Record<string, string | undefined>,
-  hash?: 'campaign-planner' | 'generated-drafts' | 'composer' | 'target-selection' | 'recent-drafts' | 'approval-queue',
+  hash?: 'campaign-planner' | 'generated-drafts' | 'composer' | 'target-selection' | 'recent-drafts',
 ) {
   const search = new URLSearchParams();
 
@@ -150,24 +145,42 @@ function requiredString(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
 }
 
-function canRespondToApprovals(role: string) {
-  return APPROVER_ROLES.has(role);
-}
-
-async function logWorkflowAudit(workspaceId: string, actorId: string | null, eventType: string, entityId: string, payload?: Record<string, unknown>) {
-  await db.insert(auditEvents).values({
-    workspaceId,
-    actorId,
-    eventType,
-    entityType: 'workflow',
-    entityId,
-    payload,
-  });
-}
-
 function parseCount(formData: FormData) {
   return Math.max(1, Math.min(Number(requiredString(formData, 'count') || '3'), 12));
 }
+function mergePostMetadata(existing: Record<string, unknown> | null, incoming: Record<string, unknown>) {
+  const current = (existing ?? {}) as Record<string, unknown>;
+  const next = { ...current, ...incoming } as Record<string, unknown>;
+  if (current.aiAssets && !incoming.aiAssets) next.aiAssets = current.aiAssets;
+  if (current.assetGeneration && !incoming.assetGeneration) next.assetGeneration = current.assetGeneration;
+  return next;
+}
+
+async function getExistingPostMetadata(workspaceId: string, postId: string) {
+  if (!postId) return null;
+  const rows = await db
+    .select({ metadata: posts.metadata })
+    .from(posts)
+    .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
+    .limit(1);
+  return (rows[0]?.metadata ?? null) as Record<string, unknown> | null;
+}
+
+function postNeedsVisualAssets(postType: string) {
+  return postType === 'image' || postType === 'multi_image' || postType === 'video';
+}
+
+function postHasRenderableAssets(postType: string, metadata: Record<string, unknown> | null | undefined) {
+  if (!postNeedsVisualAssets(postType)) return true;
+  const aiAssets = metadata && typeof metadata === 'object' ? (metadata.aiAssets as Record<string, unknown> | undefined) : undefined;
+  const image = aiAssets?.image as Record<string, unknown> | undefined;
+  const carousel = aiAssets?.carousel as Record<string, unknown> | undefined;
+  const slides = Array.isArray(carousel?.slides) ? carousel?.slides : [];
+  if (postType === 'image') return Boolean(image?.dataUri);
+  if (postType === 'multi_image') return slides.length >= 2;
+  return false;
+}
+
 
 function parseCampaignWindowDays(formData: FormData) {
   return Math.max(7, Math.min(Number(requiredString(formData, 'campaignWindowDays') || '30'), 180));
@@ -238,6 +251,8 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
   const scheduledFor = parseScheduledFor(formData);
   const brandId = await resolveBrandId(formData, workspaceId);
   if (!brandId) return { error: 'missing-brand' as const, post: null };
+  const existingMetadata = postId ? await getExistingPostMetadata(workspaceId, postId) : null;
+  const mergedMetadata = mergePostMetadata(existingMetadata, { source: 'manual', brief });
 
   if (postId) {
     const updated = await db
@@ -250,7 +265,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
         status,
         scheduledFor,
         postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-        metadata: { source: 'manual', brief },
+        metadata: mergedMetadata,
         updatedAt: new Date(),
       })
       .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
@@ -270,7 +285,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
       status,
       scheduledFor,
       postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
-      metadata: { source: 'manual', brief },
+      metadata: mergedMetadata,
     })
     .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
 
@@ -445,23 +460,13 @@ export async function saveDraft(formData: FormData) {
 }
 
 export async function requestApproval(formData: FormData) {
-  const workspaceId = requiredString(formData, 'workspaceId');
-  const billingRecord = workspaceId ? await getWorkspaceBillingRecord(workspaceId) : null;
+  const { error, post } = await createOrUpdateBasePost(formData, 'in_review');
+  if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 
-  if (billingRecord && !getPlanLimits(normalizePlanKey(billingRecord.plan)).approvalFlows) {
-    redirect(buildContentPath({ error: 'approval-plan', postId: requiredString(formData, 'postId') || undefined }, 'composer') as Route);
-  }
-
-  const creation = await createOrUpdateBasePost(formData, 'in_review');
-  if (creation.error || !creation.post) {
-    redirect(buildContentPath({ error: creation.error ?? 'invalid' }, 'composer') as Route);
-  }
-
-  const post = creation.post;
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) {
-    redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
-  }
+  if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
+  const metadata = await getExistingPostMetadata(post.workspaceId, post.id);
+  if (!postHasRenderableAssets(requiredString(formData, 'postType') || 'text', metadata)) redirect(buildContentPath({ error: 'missing-assets', postId: post.id }, 'composer') as Route);
 
   const existingApproval = await db
     .select({ id: approvalRequests.id })
@@ -477,18 +482,8 @@ export async function requestApproval(formData: FormData) {
       .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote, updatedAt: new Date() })
       .where(eq(approvalRequests.id, existingApproval[0].id));
   } else {
-    await db.insert(approvalRequests).values({
-      workspaceId: post.workspaceId,
-      postId: post.id,
-      requestedById: requiredString(formData, 'authorId'),
-      status: 'pending',
-      note: approvalNote,
-    });
+    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote });
   }
-
-  await logWorkflowAudit(post.workspaceId, requiredString(formData, 'authorId') || null, 'approval_requested', post.id, {
-    approvalOwner: approvalNote,
-  });
 
   await refreshWorkflowPages();
   redirect(buildContentPath({ ok: 'approval', postId: post.id }, 'target-selection') as Route);
@@ -502,16 +497,13 @@ export async function schedulePost(formData: FormData) {
     redirect(buildContentPath({ error: 'missing-schedule', postId: postId || undefined }, 'composer') as Route);
   }
 
-  const creation = await createOrUpdateBasePost(formData, 'scheduled');
-  if (creation.error || !creation.post) {
-    redirect(buildContentPath({ error: creation.error ?? 'invalid' }, 'composer') as Route);
-  }
+  const { error, post } = await createOrUpdateBasePost(formData, 'scheduled');
+  if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 
-  const post = creation.post;
   const target = await attachTarget(post.id, post.workspaceId, formData);
-  if (!target) {
-    redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
-  }
+  if (!target) redirect(buildContentPath({ error: 'missing-target', postId: post.id }, 'target-selection') as Route);
+  const metadata = await getExistingPostMetadata(post.workspaceId, post.id);
+  if (!postHasRenderableAssets(requiredString(formData, 'postType') || 'text', metadata)) redirect(buildContentPath({ error: 'missing-assets', postId: post.id }, 'composer') as Route);
 
   const publishJobId = await upsertQueuedPublishJob(post.id, target.id, post.scheduledFor ?? new Date());
 
@@ -524,6 +516,76 @@ export async function schedulePost(formData: FormData) {
 
   await refreshWorkflowPages();
   redirect(buildContentPath({ ok: 'scheduled', postId: post.id }, 'target-selection') as Route);
+}
+
+async function generateAiVisualDraft(formData: FormData, format: 'image' | 'carousel') {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const authorId = requiredString(formData, 'authorId');
+  const brandId = await resolveBrandId(formData, workspaceId);
+  const title = requiredString(formData, 'title') || 'AI-generated visual';
+  const body = requiredString(formData, 'body');
+  const brief = requiredString(formData, 'brief') || body || title;
+
+  if (!workspaceId || !authorId || !brandId || !title) {
+    redirect(buildContentPath({ error: 'invalid' }, 'composer') as Route);
+  }
+
+  const brand = await getBrand(workspaceId, brandId!);
+  if (!brand) {
+    redirect(buildContentPath({ error: 'missing-brand' }, 'composer') as Route);
+  }
+
+  const desiredPostType = format === 'image' ? 'image' : 'multi_image';
+  const baseResult = await createOrUpdateBasePost(formData, 'draft');
+  if (baseResult.error || !baseResult.post) {
+    redirect(buildContentPath({ error: baseResult.error ?? 'invalid' }, 'composer') as Route);
+  }
+
+  const visualAssets = await generateVisualAssets({
+    brandName: brand.name,
+    brief,
+    postTitle: title,
+    body,
+    tone: brand.defaultTone,
+    audience: brand.audience,
+    primaryCta: brand.primaryCta,
+    format,
+  });
+
+  const existingMetadata = await getExistingPostMetadata(workspaceId, baseResult.post.id);
+  const metadata = mergePostMetadata(existingMetadata, {
+    brief,
+    assetGeneration: {
+      latestMode: format,
+      generatedAt: new Date().toISOString(),
+    },
+    aiAssets: {
+      ...(existingMetadata?.aiAssets && typeof existingMetadata.aiAssets === 'object' ? existingMetadata.aiAssets as Record<string, unknown> : {}),
+      ...(visualAssets.image ? { image: visualAssets.image } : {}),
+      ...(visualAssets.carousel ? { carousel: visualAssets.carousel } : {}),
+      generatedAt: visualAssets.generatedAt,
+    },
+  });
+
+  await db
+    .update(posts)
+    .set({
+      postType: desiredPostType as 'image' | 'multi_image',
+      metadata,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(posts.id, baseResult.post.id), eq(posts.workspaceId, workspaceId)));
+
+  await refreshWorkflowPages();
+  redirect(buildContentPath({ ok: format === 'image' ? 'image-assets' : 'carousel-assets', postId: baseResult.post.id }, 'composer') as Route);
+}
+
+export async function generateAiImageAssets(formData: FormData) {
+  await generateAiVisualDraft(formData, 'image');
+}
+
+export async function generateAiCarouselAssets(formData: FormData) {
+  await generateAiVisualDraft(formData, 'carousel');
 }
 
 export async function generateAiDrafts(formData: FormData) {
@@ -647,7 +709,7 @@ export async function generateAiDrafts(formData: FormData) {
     })).returning({ id: posts.id });
   };
 
-  let inserted: Array<{ id: string }> = [];
+  let inserted: Array<{ id: string }>;
 
   try {
     inserted = await tryInsert(drafts);
@@ -665,79 +727,4 @@ export async function generateAiDrafts(formData: FormData) {
   await refreshWorkflowPages();
   const generatedIds = inserted.map((row) => row.id).filter(Boolean).join(',');
   redirect(buildContentPath({ ok: 'generated', postId: inserted[0]?.id ?? '', generatedIds }, 'generated-drafts') as Route);
-}
-
-export async function respondToApproval(formData: FormData) {
-  const session = await requireWorkspaceSession();
-  const approvalRequestId = requiredString(formData, 'approvalRequestId');
-  const decision = requiredString(formData, 'decision');
-  const responseNote = requiredString(formData, 'responseNote') || null;
-
-  if (!approvalRequestId || !APPROVAL_DECISIONS.has(decision)) {
-    redirect(buildContentPath({ error: 'invalid' }, 'approval-queue') as Route);
-  }
-
-  if (!canRespondToApprovals(session.role)) {
-    redirect(buildContentPath({ error: 'approval-permission' }, 'approval-queue') as Route);
-  }
-
-  const approvalRows = await db
-    .select({
-      id: approvalRequests.id,
-      postId: approvalRequests.postId,
-      status: approvalRequests.status,
-    })
-    .from(approvalRequests)
-    .where(and(eq(approvalRequests.id, approvalRequestId), eq(approvalRequests.workspaceId, session.workspaceId)))
-    .limit(1);
-
-  const approval = approvalRows[0];
-
-  if (!approval || approval.status !== 'pending') {
-    redirect(buildContentPath({ error: 'approval-stale', postId: approval?.postId }, 'approval-queue') as Route);
-  }
-
-  const nextPostStatus = decision === 'approved' ? 'approved' : 'draft';
-  const now = new Date();
-
-  await db.transaction(async (tx) => {
-    await tx.insert(approvalResponses).values({
-      approvalRequestId,
-      responderId: session.userId,
-      status: decision as 'approved' | 'rejected' | 'changes_requested',
-      note: responseNote,
-      respondedAt: now,
-    });
-
-    await tx
-      .update(approvalRequests)
-      .set({
-        status: decision as 'approved' | 'rejected' | 'changes_requested',
-        updatedAt: now,
-      })
-      .where(eq(approvalRequests.id, approvalRequestId));
-
-    await tx
-      .update(posts)
-      .set({
-        status: nextPostStatus,
-        updatedAt: now,
-      })
-      .where(and(eq(posts.id, approval.postId), eq(posts.workspaceId, session.workspaceId)));
-  });
-
-  await logWorkflowAudit(session.workspaceId, session.userId, `approval_${decision}`, approval.postId, {
-    approvalRequestId,
-    responseNote,
-  });
-
-  await refreshWorkflowPages();
-
-  const ok = decision === 'approved'
-    ? 'approval-approved'
-    : decision === 'changes_requested'
-      ? 'approval-changes-requested'
-      : 'approval-rejected';
-
-  redirect(buildContentPath({ ok, postId: approval.postId }, 'approval-queue') as Route);
 }

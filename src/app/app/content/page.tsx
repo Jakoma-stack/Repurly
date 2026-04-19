@@ -2,8 +2,6 @@ import { cookies } from 'next/headers';
 import { ArrowRight, CheckCircle2, ImageIcon, Layers3, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { getPlanLimits } from '@/lib/billing/plans';
-import { getWorkspaceBillingRecord } from '@/lib/billing/workspace-billing';
 import { Button } from '@/components/ui/button';
 import { LocalDateTimeInput } from '@/components/workflow/local-datetime-input';
 import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
@@ -11,14 +9,15 @@ import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
   clearRecentDrafts,
   clearSavedCampaign,
+  generateAiCarouselAssets,
   generateAiDrafts,
+  generateAiImageAssets,
   requestApproval,
-  respondToApproval,
   saveCampaign,
   saveDraft,
   schedulePost,
 } from '@/server/actions/workflow';
-import { getLinkedInTargets, getPendingApprovalQueue, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
+import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -114,6 +113,22 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (ok === 'image-assets') {
+    return {
+      kind: 'success',
+      title: 'AI image generated',
+      body: 'Repurly saved a branded visual preview to the draft so you can test an image-first workflow before approval or scheduling.',
+    };
+  }
+
+  if (ok === 'carousel-assets') {
+    return {
+      kind: 'success',
+      title: 'AI carousel generated',
+      body: 'Repurly saved a full carousel preview to the draft so format selection is visible and testable before publishing.',
+    };
+  }
+
   if (ok === 'campaign-saved') {
     return {
       kind: 'success',
@@ -146,54 +161,6 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
-  if (ok === 'approval-approved') {
-    return {
-      kind: 'success',
-      title: 'Approval recorded',
-      body: 'The post is now marked approved and ready for scheduling when the operator is ready to queue it.',
-    };
-  }
-
-  if (ok === 'approval-changes-requested') {
-    return {
-      kind: 'info',
-      title: 'Changes requested',
-      body: 'The post has been moved back to draft so the creator can tighten the copy before another review pass.',
-    };
-  }
-
-  if (ok === 'approval-rejected') {
-    return {
-      kind: 'info',
-      title: 'Approval rejected',
-      body: 'The post is back in draft so the team can rewrite or retire the idea without leaving review state hanging.',
-    };
-  }
-
-  if (error === 'approval-plan') {
-    return {
-      kind: 'error',
-      title: 'Approval workflow is not enabled on this plan',
-      body: 'Upgrade the workspace to a plan with approvals before routing posts into review.',
-    };
-  }
-
-  if (error === 'approval-permission') {
-    return {
-      kind: 'error',
-      title: 'Only approvers can respond',
-      body: 'Owners, admins, and approvers can respond to approval requests. Editors and viewers can still open the draft.',
-    };
-  }
-
-  if (error === 'approval-stale') {
-    return {
-      kind: 'info',
-      title: 'Approval queue already changed',
-      body: 'That request was already handled in another session, so Repurly refreshed the queue instead of recording a duplicate response.',
-    };
-  }
-
   if (error === 'missing-brand') {
     return {
       kind: 'error',
@@ -223,6 +190,14 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
       kind: 'error',
       title: 'Draft generation could not be saved',
       body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check the database connection and brand setup.',
+    };
+  }
+
+  if (error === 'missing-assets') {
+    return {
+      kind: 'error',
+      title: 'Generate the assets first',
+      body: 'Image and carousel posts now require visible AI-generated or uploaded assets before approval or scheduling. No silent text fallback.',
     };
   }
 
@@ -269,18 +244,53 @@ function describeTargetType(targetType: string) {
   return targetType;
 }
 
-function formatWorkflowDate(isoValue?: string | null) {
-  if (!isoValue) return 'No schedule set';
+function readAiAssets(editingPost: Awaited<ReturnType<typeof getPostForEditing>>) {
+  const raw = editingPost?.aiAssets;
+  if (!raw || typeof raw !== 'object') return null;
+  return raw as {
+    generatedAt?: string;
+    image?: { title?: string; caption?: string; prompt?: string; dataUri?: string };
+    carousel?: { title?: string; prompt?: string; slides?: Array<{ index?: number; heading?: string; body?: string; dataUri?: string }> };
+  };
+}
 
-  const parsed = new Date(isoValue);
-  if (Number.isNaN(parsed.getTime())) return 'Schedule unavailable';
+function AssetPreview({ editingPost }: { editingPost: Awaited<ReturnType<typeof getPostForEditing>> }) {
+  const assets = readAiAssets(editingPost);
+  if (!assets?.image && !assets?.carousel) {
+    return (
+      <div className="rounded-[1.35rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-muted-foreground">
+        No AI visuals yet. Use the buttons below to generate a branded image or a full carousel preview from this draft.
+      </div>
+    );
+  }
 
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(parsed);
+  return (
+    <div className="space-y-4">
+      {assets.image ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI image preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.image.title || 'Generated image'}</div>
+          {assets.image.caption ? <div className="mt-1 text-sm text-muted-foreground">{assets.image.caption}</div> : null}
+          {assets.image.dataUri ? <img src={assets.image.dataUri} alt={assets.image.title || 'AI image preview'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100" /> : null}
+        </div>
+      ) : null}
+      {assets.carousel ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI carousel preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.carousel.title || 'Generated carousel'}</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(assets.carousel.slides || []).map((slide, index) => (
+              <div key={`${slide.index || index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                {slide.dataUri ? <img src={slide.dataUri} alt={slide.heading || `Slide ${index + 1}`} className="w-full rounded-xl border border-slate-200 bg-white" /> : null}
+                <div className="mt-3 text-sm font-semibold text-slate-900">{slide.heading || `Slide ${index + 1}`}</div>
+                {slide.body ? <div className="mt-1 text-xs leading-6 text-muted-foreground">{slide.body}</div> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export default async function ContentPage({ searchParams }: { searchParams: SearchParams }) {
@@ -297,12 +307,10 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     .map((value) => value.trim())
     .filter(Boolean);
 
-  const [targets, brandOptions, editingPost, billingRecord, pendingApprovalQueue] = await Promise.all([
+  const [targets, brandOptions, editingPost] = await Promise.all([
     getLinkedInTargets(session.workspaceId),
     getWorkspaceBrandOptions(session.workspaceId),
     getPostForEditing(session.workspaceId, postId ?? null),
-    getWorkspaceBillingRecord(session.workspaceId),
-    getPendingApprovalQueue(session.workspaceId),
   ]);
 
   const selectedBrandId =
@@ -330,8 +338,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
   const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
-  const approvalFlowsEnabled = billingRecord ? getPlanLimits(billingRecord.plan).approvalFlows : false;
-  const canRespondToApproval = ['owner', 'admin', 'approver'].includes(session.role);
+  const activeBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? brandOptions[0] ?? null;
 
   return (
     <div className="space-y-6">
@@ -371,8 +378,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
             </div>
             <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
               <ShieldCheck className="size-5 text-indigo-300" />
-              <div className="mt-4 text-2xl font-semibold text-white">{approvalFlowsEnabled ? pendingApprovalQueue.length : 'Locked'}</div>
-              <div className="mt-1 text-sm text-white/70">{approvalFlowsEnabled ? 'Approval items waiting for a reviewer response' : 'Approval workflow unlocks on growth and scale plans'}</div>
+              <div className="mt-4 text-2xl font-semibold text-white">{activeBrand ? 'Ready' : 'Setup'}</div>
+              <div className="mt-1 text-sm text-white/70">Brand context applied to planning, tone, and CTA</div>
             </div>
           </div>
         </div>
@@ -550,70 +557,6 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
         </Card>
       ) : null}
 
-      <Card id="approval-queue" className="scroll-mt-24">
-        <CardHeader>
-          <div className="eyebrow">Approval queue</div>
-          <h2 className="mt-2 text-2xl font-semibold">Respond to approvals without losing the draft context</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Keep the reviewer decision, note, schedule, and target in the same view so posts do not stall between creation and queueing.</p>
-        </CardHeader>
-        <CardContent>
-          {!approvalFlowsEnabled ? (
-            <div className="rounded-[1.5rem] border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-950">
-              Approval routing is currently disabled for this workspace plan. Growth and scale plans unlock reviewer responses, queue-ready approvals, and clearer client handoff.
-            </div>
-          ) : pendingApprovalQueue.length ? (
-            <div className="grid gap-4 lg:grid-cols-2">
-              {pendingApprovalQueue.map((item) => (
-                <div key={item.approvalRequestId} className="rounded-[1.5rem] border border-slate-200/80 p-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Pending approval</div>
-                      <div className="mt-2 text-lg font-semibold text-slate-950">{item.title}</div>
-                    </div>
-                    <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600">
-                      {item.brandName}
-                    </div>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.excerpt}</p>
-                  <div className="mt-4 grid gap-3 text-sm text-slate-600 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Destination</div>
-                      <div className="mt-1 font-medium text-slate-900">{item.targetDisplayName || item.targetHandle || 'LinkedIn target'}</div>
-                      <div className="text-xs text-slate-500">{describeTargetType(item.targetType || 'profile')}</div>
-                    </div>
-                    <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                      <div className="text-xs uppercase tracking-wide text-slate-500">Review details</div>
-                      <div className="mt-1 font-medium text-slate-900">{item.approvalOwner || 'Approval owner not set'}</div>
-                      <div className="text-xs text-slate-500">Requested {formatWorkflowDate(new Date(item.requestedAt).toISOString())}</div>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-xs leading-6 text-slate-500">Scheduled: {formatWorkflowDate(item.scheduledForIso)} · Requested by {item.requestedById}</div>
-                  <form action={respondToApproval} className="mt-4 space-y-3">
-                    <input type="hidden" name="approvalRequestId" value={item.approvalRequestId} />
-                    <textarea
-                      name="responseNote"
-                      className="min-h-[92px] w-full rounded-2xl border border-border px-4 py-3 text-sm"
-                      placeholder="Leave a reviewer note, requested edits, or decision context"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" name="decision" value="approved" disabled={!canRespondToApproval}>Approve</Button>
-                      <Button size="sm" name="decision" value="changes_requested" variant="outline" disabled={!canRespondToApproval}>Request changes</Button>
-                      <Button size="sm" name="decision" value="rejected" variant="ghost" disabled={!canRespondToApproval}>Reject</Button>
-                      <a href={`/app/content?postId=${item.postId}#composer`} className="inline-flex h-9 items-center rounded-2xl border border-slate-200 px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50">Open post</a>
-                    </div>
-                    {!canRespondToApproval ? <div className="text-xs text-slate-500">Your current role is <span className="font-medium text-slate-900">{session.role}</span>. Owners, admins, and approvers can respond.</div> : null}
-                  </form>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-[1.5rem] border border-dashed border-border px-5 py-6 text-sm text-muted-foreground">
-              No approval items are waiting right now. Posts will appear here once a creator routes them into review.
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       <Card id="composer" className="scroll-mt-24">
         <CardHeader>
           <div className="eyebrow">Studio editor</div>
@@ -704,17 +647,22 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
 
               <div className="flex flex-wrap gap-3">
                 <Button formAction={saveDraft}>Save draft</Button>
-                <Button formAction={requestApproval} variant="outline" disabled={!approvalFlowsEnabled}>Request approval</Button>
+                <Button formAction={generateAiImageAssets} variant="outline"><ImageIcon className="mr-2 size-4" />Generate AI image</Button>
+                <Button formAction={generateAiCarouselAssets} variant="outline"><Layers3 className="mr-2 size-4" />Generate AI carousel</Button>
+                <Button formAction={requestApproval} variant="outline">Request approval</Button>
                 <Button formAction={schedulePost} variant="outline">Schedule post</Button>
               </div>
-              {!approvalFlowsEnabled ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                  This workspace is on the <span className="font-semibold">{billingRecord?.plan ?? 'core'}</span> plan, so approval routing is disabled. Drafts and scheduled posts still work, but review responses require a higher plan.
-                </div>
-              ) : null}
             </div>
 
             <div className="space-y-5">
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">AI asset studio</div>
+                <h3 className="mt-2 text-xl font-semibold">Generate visible image and carousel assets before queueing</h3>
+                <p className="mt-2 text-sm text-muted-foreground">These previews are saved to the draft so you can test the format directly in the composer. Image and carousel posts now require visible assets before approval or scheduling.</p>
+                <div className="mt-4">
+                  <AssetPreview editingPost={editingPost} />
+                </div>
+              </div>
               <div id="target-selection" className="rounded-[1.75rem] border border-slate-200/80 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
