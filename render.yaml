@@ -3,7 +3,7 @@ services:
     name: repurly
     env: node
     plan: starter
-    buildCommand: rm -f tsconfig.tsbuildinfo && npm ci && npm run build
+    buildCommand: rm -f tsconfig.tsbuildinfo && CYPRESS_INSTALL_BINARY=0 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci && npm run build
     startCommand: npm run start
     autoDeploy: true
     envVars:
