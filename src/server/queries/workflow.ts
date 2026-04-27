@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { approvalRequests, brands, engagementComments, leadPipeline, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
+import { approvalRequests, approvalResponses, brands, engagementComments, leadPipeline, platformAccounts, postTargets, posts, publishJobs, workspaceInvites, workspaceMemberships } from '../../../drizzle/schema';
 
 export async function getLinkedInTargets(workspaceId: string) {
   return db
@@ -64,11 +64,29 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
   const targetRows = await db.select({ targetId: postTargets.platformAccountId }).from(postTargets).where(eq(postTargets.postId, post.id)).limit(1);
 
   const approvalRows = await db
-    .select({ approvalOwner: approvalRequests.note })
+    .select({
+      approvalRequestId: approvalRequests.id,
+      approvalOwner: approvalRequests.note,
+      approvalStatus: approvalRequests.status,
+      requestedAt: approvalRequests.requestedAt,
+    })
     .from(approvalRequests)
     .where(and(eq(approvalRequests.postId, post.id), eq(approvalRequests.workspaceId, workspaceId)))
     .orderBy(desc(approvalRequests.createdAt))
     .limit(1);
+
+  const latestResponseRows = approvalRows[0]?.approvalRequestId
+    ? await db
+        .select({
+          latestResponseStatus: approvalResponses.status,
+          latestResponseNote: approvalResponses.note,
+          latestResponderId: approvalResponses.responderId,
+        })
+        .from(approvalResponses)
+        .where(eq(approvalResponses.approvalRequestId, approvalRows[0].approvalRequestId))
+        .orderBy(desc(approvalResponses.respondedAt))
+        .limit(1)
+    : [];
 
   return {
     id: post.id,
@@ -77,10 +95,18 @@ export async function getPostForEditing(workspaceId: string, postId?: string | n
     scheduledForIso: post.scheduledFor ? new Date(post.scheduledFor).toISOString() : '',
     targetId: targetRows[0]?.targetId ?? null,
     approvalOwner: approvalRows[0]?.approvalOwner ?? '',
+    approvalRequestId: approvalRows[0]?.approvalRequestId ?? null,
+    approvalStatus: approvalRows[0]?.approvalStatus ?? null,
+    approvalRequestedAt: approvalRows[0]?.requestedAt ? new Date(approvalRows[0].requestedAt).toISOString() : null,
+    latestResponseStatus: latestResponseRows[0]?.latestResponseStatus ?? null,
+    latestResponseNote: latestResponseRows[0]?.latestResponseNote ?? '',
+    latestResponderId: latestResponseRows[0]?.latestResponderId ?? '',
     status: post.status,
     brandId: post.brandId,
     postType: post.postType,
     brief: String(post.metadata?.brief ?? ''),
+    metadata: post.metadata ?? null,
+    aiAssets: (post.metadata && typeof post.metadata === 'object' ? (post.metadata as Record<string, unknown>).aiAssets : null) ?? null,
   };
 }
 
@@ -203,4 +229,30 @@ export async function getWorkflowMetrics(workspaceId: string) {
     hotLeads: Number(hotLeads[0]?.count ?? 0),
     brandCount: Number(brandCount[0]?.count ?? 0),
   };
+}
+
+
+export async function getWorkspaceApproverOptions(workspaceId: string) {
+  const [members, invites] = await Promise.all([
+    db
+      .select({
+        value: workspaceMemberships.clerkUserId,
+        label: workspaceMemberships.clerkUserId,
+        role: workspaceMemberships.role,
+        source: sql<string>`'member'`,
+      })
+      .from(workspaceMemberships)
+      .where(and(eq(workspaceMemberships.workspaceId, workspaceId), inArray(workspaceMemberships.role, ['owner', 'admin', 'approver']))),
+    db
+      .select({
+        value: workspaceInvites.email,
+        label: workspaceInvites.email,
+        role: workspaceInvites.role,
+        source: sql<string>`'invite'`,
+      })
+      .from(workspaceInvites)
+      .where(and(eq(workspaceInvites.workspaceId, workspaceId), inArray(workspaceInvites.role, ['owner', 'admin', 'approver']), eq(workspaceInvites.status, 'pending'))),
+  ]);
+
+  return [...members, ...invites];
 }

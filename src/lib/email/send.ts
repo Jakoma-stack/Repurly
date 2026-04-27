@@ -1,8 +1,8 @@
 import { WelcomeEmail } from "@/emails/welcome-email";
-import { resend } from "@/lib/email/client";
+import { getResendClient } from "@/lib/email/client";
 
 export async function sendWelcomeEmail(input: { to: string; name: string; workspaceName: string }) {
-  return resend.emails.send({
+  return getResendClient().emails.send({
     from: process.env.EMAIL_FROM ?? "Repurly <hello@repurly.io>",
     to: input.to,
     subject: `Welcome to ${input.workspaceName}`,

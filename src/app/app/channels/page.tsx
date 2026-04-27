@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowRight, CheckCircle2, CircleAlert } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CircleAlert, ShieldCheck, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -8,7 +8,7 @@ import { ReconnectNudges } from '@/components/channels/reconnect-nudges';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getWorkspaceSetupState } from '@/lib/onboarding/setup';
-import { setDefaultLinkedInTarget } from '@/server/actions/channels';
+import { disconnectLinkedInWorkspace, setDefaultLinkedInTarget } from '@/server/actions/channels';
 import { getLinkedInTargets } from '@/server/queries/workflow';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -28,6 +28,12 @@ function targetTone(isDefault: boolean) {
     : 'border-border bg-white';
 }
 
+function friendlyTargetType(targetType: string) {
+  if (targetType === 'member' || targetType === 'profile') return 'Personal profile';
+  if (targetType === 'organization' || targetType === 'page') return 'Company page';
+  return targetType;
+}
+
 export default async function ChannelsPage({ searchParams }: { searchParams?: SearchParams }) {
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
@@ -37,7 +43,10 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
   const linkedInState = firstParam(params.linkedin);
   const setupState = firstParam(params.setup);
   const error = firstParam(params.error);
+  const warning = firstParam(params.warning);
   const currentDefaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
+  const companyPageTargets = targets.filter((target) => target.targetType === 'organization' || target.targetType === 'page');
+  const personalTargets = targets.filter((target) => target.targetType === 'member' || target.targetType === 'profile');
   const showLinkedInOnboarding = linkedInState === 'connected' || setupState === 'review-target' || setupState === 'target-confirmed';
 
   return (
@@ -48,7 +57,12 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
       {error === 'missing-workspace' ? <Banner kind="error">Repurly could not tell which workspace should reconnect LinkedIn. Reopen the connection from this screen so the active workspace is passed through correctly.</Banner> : null}
       {error === 'linkedin-missing-oauth' ? <Banner kind="error">LinkedIn returned without the expected OAuth details. Start the connection again from this workspace so Repurly can finish setup safely.</Banner> : null}
       {error === 'linkedin-connect-failed' ? <Banner kind="error">LinkedIn authentication completed, but Repurly could not finish syncing the workspace targets. Retry the connection from this screen.</Banner> : null}
+      {linkedInState === 'disconnected' ? <Banner kind="success">LinkedIn was disconnected for this workspace. Reconnect when you are ready to re-test recovery and target sync.</Banner> : null}
       {error === 'invalid-target' ? <Banner kind="error">Repurly could not confirm that LinkedIn target for this workspace. Pick a visible target below and try again.</Banner> : null}
+      {warning === 'linkedin-company-pages-missing-scopes' ? <Banner kind="error">LinkedIn connected the member profile, but company pages could not be synced because the granted scopes do not include organization access. Update the app scopes to include company-page permissions, then reconnect.</Banner> : null}
+      {warning === 'linkedin-company-pages-forbidden' ? <Banner kind="error">LinkedIn connected the member profile, but company pages were denied during organization lookup. Confirm this LinkedIn app has approved organization permissions and that the signed-in member is an admin of the company page.</Banner> : null}
+      {warning === 'linkedin-company-pages-unauthorized' ? <Banner kind="error">LinkedIn connected the member profile, but organization lookup was not authorised. Reconnect LinkedIn and accept the full company-page permission set for the correct workspace.</Banner> : null}
+      {warning === 'linkedin-company-pages-unavailable' || warning === 'linkedin-company-pages-sync-failed' ? <Banner kind="error">LinkedIn connected the member profile, but Repurly could not sync company pages for this workspace. Reconnect after confirming the LinkedIn app has company-page access and the signed-in account administers the page.</Banner> : null}
 
       {showLinkedInOnboarding ? (
         <Card id="linkedin-onboarding" className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
@@ -60,8 +74,9 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
                   LinkedIn connected
                 </div>
                 <h2 className="text-2xl font-semibold">Finish the post-connect setup in Channels</h2>
+                <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-800">Polish+AI build active</div>
                 <p className="text-sm text-slate-600">
-                  Keep the flow workspace-aware: review the discovered LinkedIn destinations, confirm the default posting target, then continue into composer.
+                  Keep the flow workspace-aware: LinkedIn will not show a company-page picker during sign-in, so Repurly discovers any admin-managed company pages after connect and lets you set the default target here.
                 </p>
               </div>
               <div className="grid min-w-[220px] gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -80,7 +95,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">1. Review discovered destinations</div>
-                <div className="mt-1 text-slate-600">Make sure the profile or company page shown here matches the real workspace that should publish first.</div>
+                <div className="mt-1 text-slate-600">LinkedIn sign-in only handles consent. Check that Repurly discovered the correct personal profile and any company pages you administer.</div>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">2. Confirm the default target</div>
@@ -104,10 +119,10 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <div className="font-medium text-slate-950">{target.displayName}</div>
-                          <div className="mt-1 text-sm text-slate-600">{target.handle || 'LinkedIn target'} · {target.targetType}</div>
+                          <div className="mt-1 text-sm text-slate-600">{target.handle || 'LinkedIn target'} · {friendlyTargetType(target.targetType)}</div>
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs">
-                          <span className="rounded-full border border-border bg-white px-2.5 py-1 uppercase tracking-wide text-slate-500">{target.targetType}</span>
+                          <span className="rounded-full border border-border bg-white px-2.5 py-1 uppercase tracking-wide text-slate-500">{friendlyTargetType(target.targetType)}</span>
                           {target.isDefault ? <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 font-medium uppercase tracking-wide text-emerald-800">Default</span> : null}
                         </div>
                       </div>
@@ -138,7 +153,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-sm text-slate-600">
-                LinkedIn connected, but no publishable destinations were synced yet. Open the connection again after confirming the account has the right profile or company-page permissions.
+                LinkedIn connected, but no publishable destinations were synced yet. LinkedIn does not offer a company-page picker during OAuth, so Repurly has to discover company pages after connect. Reconnect after confirming the app has approved company-page permissions and the signed-in member administers the page.
               </div>
             )}
           </CardContent>
@@ -175,6 +190,49 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
             )}
             <Link href="/app/reliability"><Button variant="outline">Open reliability</Button></Link>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <h3 className="text-lg font-semibold">LinkedIn diagnostics</h3>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">This view should now expose personal-vs-company counts, default target type, and a disconnect control for recovery testing. If those are missing in production, the old Channels build is still deployed.</div>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-2xl border border-border p-4 text-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Personal profiles</div>
+              <div className="mt-1 font-medium text-slate-950">{personalTargets.length}</div>
+            </div>
+            <div className="rounded-2xl border border-border p-4 text-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Company pages</div>
+              <div className="mt-1 font-medium text-slate-950">{companyPageTargets.length}</div>
+            </div>
+            <div className="rounded-2xl border border-border p-4 text-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Default target type</div>
+              <div className="mt-1 font-medium text-slate-950">{currentDefaultTarget ? friendlyTargetType(currentDefaultTarget.targetType) : 'Needs confirmation'}</div>
+            </div>
+            <div className="rounded-2xl border border-border p-4 text-sm">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Recovery test</div>
+              <div className="mt-1 font-medium text-slate-950">Visible from this screen</div>
+            </div>
+          </div>
+          {companyPageTargets.length === 0 ? (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <div className="flex items-center gap-2 font-medium"><CircleAlert className="size-4" /> Company pages are not visible yet</div>
+              <div className="mt-1 text-amber-900/80">That usually means either the signed-in member is not a page admin or the LinkedIn app scopes were too narrow during connect.</div>
+            </div>
+          ) : null}
+          {setup.linkedInConnected ? (
+            <form action={disconnectLinkedInWorkspace} className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <input type="hidden" name="workspaceId" value={session.workspaceId} />
+              <div className="flex-1 text-sm text-slate-700">
+                <div className="font-medium text-slate-950">Disconnect LinkedIn to test recovery</div>
+                <div className="mt-1 text-xs text-muted-foreground">This clears the workspace LinkedIn integration and makes reconnect guidance visible for the next test pass.</div>
+              </div>
+              <Button variant="outline"><Unplug className="mr-2 size-4" />Disconnect LinkedIn</Button>
+            </form>
+          ) : null}
         </CardContent>
       </Card>
 

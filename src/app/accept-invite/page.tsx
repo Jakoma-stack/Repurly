@@ -16,7 +16,9 @@ export default async function AcceptInvitePage({ searchParams }: { searchParams?
           {token ? (
             <form action={acceptWorkspaceInvite} className="space-y-4">
               <input type="hidden" name="token" value={token} />
-              <div className="rounded-2xl border border-border bg-slate-50 p-4 text-sm text-slate-700">You will be added to the workspace after sign-in if the invite email matches your current account email.</div>
+              <div className="rounded-2xl border border-border bg-slate-50 p-4 text-sm text-slate-700">
+                You will be added to the workspace after sign-in if the invite email matches your current account email.
+              </div>
               <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Accept invite</button>
             </form>
           ) : (

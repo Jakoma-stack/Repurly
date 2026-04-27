@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+
 import { db } from "@/lib/db/client";
 import { decryptSecret, encryptSecret } from "@/lib/security";
 import { integrations, platformAccounts } from "../../../drizzle/schema";
@@ -15,6 +16,11 @@ export type IntegrationUpsertInput = {
   scopes?: string[];
   metadata?: Record<string, unknown>;
   status?: string;
+};
+
+export type SyncPlatformAccountsOptions = {
+  preferredDefaultHandle?: string | null;
+  replaceDefaultWhenAvailable?: boolean;
 };
 
 const ACCESS_TOKEN_REFRESH_WINDOW_MS = 1000 * 60 * 15;
@@ -77,14 +83,17 @@ export async function upsertIntegration(input: IntegrationUpsertInput) {
 export async function getValidAccessToken(
   workspaceId: string,
   provider: PlatformKey,
-  refresh: (refreshToken: string) => Promise<{
+  refresh: (
+    refreshToken: string,
+    integration: NonNullable<Awaited<ReturnType<typeof getIntegration>>>,
+  ) => Promise<{
     accessToken: string;
     refreshToken?: string | null;
     accessTokenExpiresAt?: Date | null;
     refreshTokenExpiresAt?: Date | null;
     scopes?: string[];
     metadata?: Record<string, unknown>;
-  }>
+  }>,
 ) {
   const integration = await getIntegration(workspaceId, provider);
   if (!integration?.encryptedAccessToken) {
@@ -120,7 +129,7 @@ export async function getValidAccessToken(
     }
 
     const decryptedRefreshToken = decryptSecret(latestIntegration.encryptedRefreshToken);
-    const refreshed = await refresh(decryptedRefreshToken);
+    const refreshed = await refresh(decryptedRefreshToken, latestIntegration);
     await upsertIntegration({
       workspaceId,
       provider,
@@ -150,7 +159,8 @@ export async function syncPlatformAccounts(
   workspaceId: string,
   integrationId: string,
   provider: PlatformKey,
-  accounts: PlatformAccountSummary[]
+  accounts: PlatformAccountSummary[],
+  options: SyncPlatformAccountsOptions = {},
 ) {
   const existing = await db
     .select()
@@ -163,6 +173,7 @@ export async function syncPlatformAccounts(
       await db
         .update(platformAccounts)
         .set({
+          integrationId,
           displayName: account.displayName,
           handle: account.handle,
           targetType: account.targetType,
@@ -185,4 +196,42 @@ export async function syncPlatformAccounts(
       });
     }
   }
+
+  const refreshedAccounts = await db
+    .select({
+      id: platformAccounts.id,
+      handle: platformAccounts.handle,
+      isDefault: platformAccounts.isDefault,
+      publishEnabled: platformAccounts.publishEnabled,
+    })
+    .from(platformAccounts)
+    .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
+
+  const publishableAccounts = refreshedAccounts.filter((account) => account.publishEnabled);
+  if (!publishableAccounts.length) {
+    return;
+  }
+
+  const currentDefault = publishableAccounts.find((account) => account.isDefault) ?? null;
+  const preferredDefault = options.preferredDefaultHandle
+    ? publishableAccounts.find((account) => account.handle === options.preferredDefaultHandle) ?? null
+    : null;
+
+  const nextDefault = options.replaceDefaultWhenAvailable
+    ? preferredDefault ?? currentDefault ?? publishableAccounts[0]
+    : currentDefault ?? preferredDefault ?? publishableAccounts[0];
+
+  if (!nextDefault) {
+    return;
+  }
+
+  await db
+    .update(platformAccounts)
+    .set({ isDefault: false, updatedAt: new Date() })
+    .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
+
+  await db
+    .update(platformAccounts)
+    .set({ isDefault: true, updatedAt: new Date() })
+    .where(eq(platformAccounts.id, nextDefault.id));
 }

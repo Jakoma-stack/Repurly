@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
 import { stripe } from '@/lib/billing/stripe';
+import { normalizePlanKey, type PlanInput, type PlanKey } from '@/lib/billing/plans';
 import { db } from '@/lib/db/client';
 import { workspaces } from '../../../drizzle/schema';
 
@@ -9,10 +10,14 @@ export type WorkspaceBillingRecord = {
   id: string;
   name: string;
   slug: string;
-  plan: 'core' | 'growth' | 'scale';
+  plan: PlanKey;
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeSubscriptionStatus: string | null;
+};
+
+type WorkspaceBillingRow = Omit<WorkspaceBillingRecord, 'plan'> & {
+  plan: PlanInput;
 };
 
 const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
@@ -42,7 +47,16 @@ export async function getWorkspaceBillingRecord(workspaceId: string): Promise<Wo
     .where(eq(workspaces.id, workspaceId))
     .limit(1);
 
-  return rows[0] ?? null;
+  const row = (rows[0] as WorkspaceBillingRow | undefined) ?? null;
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    ...row,
+    plan: normalizePlanKey(row.plan),
+  };
 }
 
 export async function getWorkspaceStripeCustomerId(workspaceId: string) {

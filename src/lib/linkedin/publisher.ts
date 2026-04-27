@@ -1,3 +1,5 @@
+import { getLinkedInApiVersion } from "@/lib/linkedin/config";
+
 export type PublishPayload = {
   authorUrn: string;
   commentary: string;
@@ -9,6 +11,12 @@ export type PublishPayload = {
 const LINKEDIN_PUBLISH_TIMEOUT_MS = Number(process.env.LINKEDIN_PUBLISH_TIMEOUT_MS ?? 25000);
 
 export async function publishLinkedInPost(accessToken: string, payload: PublishPayload) {
+  const apiVersion = getLinkedInApiVersion();
+
+  if ((payload.postType === 'image' || payload.postType === 'multi_image' || payload.postType === 'video') && !payload.media?.length) {
+    throw Object.assign(new Error('LinkedIn media publish needs uploaded media assets. Generate or upload assets before queueing this format.'), { retryable: false });
+  }
+
   const body: Record<string, unknown> = {
     author: payload.authorUrn,
     commentary: payload.commentary,
@@ -51,7 +59,7 @@ export async function publishLinkedInPost(accessToken: string, payload: PublishP
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        "LinkedIn-Version": "202503",
+        "LinkedIn-Version": apiVersion,
         "X-Restli-Protocol-Version": "2.0.0",
       },
       body: JSON.stringify(body),

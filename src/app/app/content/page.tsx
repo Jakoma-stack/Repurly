@@ -1,19 +1,24 @@
 import { cookies } from 'next/headers';
+import { ArrowRight, CheckCircle2, CircleAlert, ImageIcon, Layers3, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { LocalDateTimeInput } from '@/components/workflow/local-datetime-input';
 import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import {
   clearRecentDrafts,
   clearSavedCampaign,
+  generateAiCarouselAssets,
   generateAiDrafts,
+  generateAiImageAssets,
   requestApproval,
+  respondToApproval,
   saveCampaign,
   saveDraft,
   schedulePost,
 } from '@/server/actions/workflow';
-import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceBrandOptions } from '@/server/queries/workflow';
+import { getLinkedInTargets, getPostForEditing, getPostsByIds, getRecentDrafts, getWorkspaceApproverOptions, getWorkspaceBrandOptions } from '@/server/queries/workflow';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -26,6 +31,11 @@ type SavedCampaign = {
   count: number;
   cadence: string;
   preferredTimeOfDay: string;
+  campaignWindowDays: number;
+  sourceMaterial: string;
+  voiceNotes: string;
+  blockedTerms: string;
+  targetPlatforms: string;
   savedAt: string;
 };
 
@@ -55,10 +65,15 @@ function parseSavedCampaign(rawValue: string | undefined, workspaceId: string): 
       brandId: parsed.brandId ?? '',
       brief: parsed.brief ?? '',
       commercialGoal: parsed.commercialGoal ?? '',
-      postFormat: parsed.postFormat ?? 'text',
+      postFormat: parsed.postFormat ?? 'auto',
       count: Number(parsed.count ?? 3),
       cadence: parsed.cadence ?? 'weekly',
       preferredTimeOfDay: parsed.preferredTimeOfDay ?? 'morning',
+      campaignWindowDays: Number(parsed.campaignWindowDays ?? 30),
+      sourceMaterial: parsed.sourceMaterial ?? '',
+      voiceNotes: parsed.voiceNotes ?? '',
+      blockedTerms: parsed.blockedTerms ?? '',
+      targetPlatforms: parsed.targetPlatforms ?? 'linkedin',
       savedAt: parsed.savedAt ?? new Date(0).toISOString(),
     };
   } catch {
@@ -71,7 +86,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Draft saved',
-      body: 'You are still anchored on publish destination so you can keep moving into approval or scheduling.',
+      body: 'The creative is still grounded in a real destination, so the next action can be approval or scheduling instead of rework.',
     };
   }
 
@@ -79,7 +94,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Approval request created',
-      body: 'Destination selection stayed in view so you can confirm the right LinkedIn profile or company page.',
+      body: 'Repurly kept the target in view so the reviewer can validate the exact destination, not just the copy.',
     };
   }
 
@@ -87,7 +102,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Post added to the queue',
-      body: 'Repurly saved the schedule and target selection. If it stays queued, check that your background publish worker is hitting /api/inngest on schedule.',
+      body: 'The item is now scheduled against the selected target. Queue and reliability views will keep operators ahead of exceptions.',
     };
   }
 
@@ -95,7 +110,23 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Draft batch created',
-      body: 'Review the generated ideas below, then open the strongest one in the composer.',
+      body: 'Use the draft shortlist below to pick the strongest angle, then refine it in the studio.',
+    };
+  }
+
+  if (ok === 'image-assets') {
+    return {
+      kind: 'success',
+      title: 'AI image generated',
+      body: 'Repurly saved a publishable image preview to the draft so you can test an image-first workflow before approval or scheduling.',
+    };
+  }
+
+  if (ok === 'carousel-assets') {
+    return {
+      kind: 'success',
+      title: 'AI carousel generated',
+      body: 'Repurly saved a full carousel preview to the draft so the selected format is visible, testable, and ready for LinkedIn upload.',
     };
   }
 
@@ -103,7 +134,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Campaign saved',
-      body: 'These planner defaults are now stored for this workspace in this browser.',
+      body: 'Planner defaults are now saved for this workspace in this browser.',
     };
   }
 
@@ -115,11 +146,35 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (ok === 'approved') {
+    return {
+      kind: 'success',
+      title: 'Approval recorded',
+      body: 'The draft is now clearly approved and ready for scheduling.',
+    };
+  }
+
+  if (ok === 'changes-requested') {
+    return {
+      kind: 'info',
+      title: 'Changes requested',
+      body: 'The draft moved back to draft so the next edit cycle is explicit.',
+    };
+  }
+
+  if (ok === 'rejected') {
+    return {
+      kind: 'error',
+      title: 'Approval rejected',
+      body: 'The draft is no longer in review. Update it and request approval again when ready.',
+    };
+  }
+
   if (ok === 'drafts-cleared') {
     return {
       kind: 'success',
       title: 'Recent drafts cleared',
-      body: 'Only draft posts for the selected brand were removed. Scheduled and in-review items were left alone.',
+      body: 'Only draft posts for the selected brand were removed. In-review and scheduled items stayed intact.',
     };
   }
 
@@ -142,7 +197,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
   if (error === 'missing-target') {
     return {
       kind: 'error',
-      title: 'Choose a LinkedIn destination first',
+      title: 'Choose a publish destination first',
       body: 'Connect LinkedIn and pick a personal profile or company page before requesting approval or scheduling.',
     };
   }
@@ -155,11 +210,27 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
+  if (error === 'media-brief-required') {
+    return {
+      kind: 'error',
+      title: 'Media posts need visual direction',
+      body: 'Add creative direction before requesting approval or scheduling image, carousel, or video posts.',
+    };
+  }
+
   if (error === 'generate-failed-save') {
     return {
       kind: 'error',
       title: 'Draft generation could not be saved',
-      body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check your database connection and brand setup.',
+      body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check the database connection and brand setup.',
+    };
+  }
+
+  if (error === 'missing-assets') {
+    return {
+      kind: 'error',
+      title: 'Generate the assets first',
+      body: 'Image and carousel posts now require visible AI-generated or uploaded assets before approval or scheduling. No silent text fallback.',
     };
   }
 
@@ -206,6 +277,55 @@ function describeTargetType(targetType: string) {
   return targetType;
 }
 
+function readAiAssets(editingPost: Awaited<ReturnType<typeof getPostForEditing>>) {
+  const raw = editingPost?.aiAssets;
+  if (!raw || typeof raw !== 'object') return null;
+  return raw as {
+    generatedAt?: string;
+    image?: { title?: string; caption?: string; prompt?: string; dataUri?: string };
+    carousel?: { title?: string; prompt?: string; slides?: Array<{ index?: number; heading?: string; body?: string; dataUri?: string }> };
+  };
+}
+
+function AssetPreview({ editingPost }: { editingPost: Awaited<ReturnType<typeof getPostForEditing>> }) {
+  const assets = readAiAssets(editingPost);
+  if (!assets?.image && !assets?.carousel) {
+    return (
+      <div className="rounded-[1.35rem] border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-muted-foreground">
+        No AI visuals yet. Use the buttons below to generate a branded image or a full carousel preview from this draft.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {assets.image ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI image preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.image.title || 'Generated image'}</div>
+          {assets.image.caption ? <div className="mt-1 text-sm text-muted-foreground">{assets.image.caption}</div> : null}
+          {assets.image.dataUri ? <img src={assets.image.dataUri} alt={assets.image.title || 'AI image preview'} className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-100" /> : null}
+        </div>
+      ) : null}
+      {assets.carousel ? (
+        <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4">
+          <div className="text-xs uppercase tracking-[0.24em] text-slate-500">AI carousel preview</div>
+          <div className="mt-2 text-lg font-semibold text-slate-900">{assets.carousel.title || 'Generated carousel'}</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {(assets.carousel.slides || []).map((slide, index) => (
+              <div key={`${slide.index || index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                {slide.dataUri ? <img src={slide.dataUri} alt={slide.heading || `Slide ${index + 1}`} className="w-full rounded-xl border border-slate-200 bg-white" /> : null}
+                <div className="mt-3 text-sm font-semibold text-slate-900">{slide.heading || `Slide ${index + 1}`}</div>
+                {slide.body ? <div className="mt-1 text-xs leading-6 text-muted-foreground">{slide.body}</div> : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export default async function ContentPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireWorkspaceSession();
   const params = await searchParams;
@@ -220,10 +340,11 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     .map((value) => value.trim())
     .filter(Boolean);
 
-  const [targets, brandOptions, editingPost] = await Promise.all([
+  const [targets, brandOptions, editingPost, approverOptions] = await Promise.all([
     getLinkedInTargets(session.workspaceId),
     getWorkspaceBrandOptions(session.workspaceId),
     getPostForEditing(session.workspaceId, postId ?? null),
+    getWorkspaceApproverOptions(session.workspaceId),
   ]);
 
   const selectedBrandId =
@@ -238,31 +359,99 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     generatedIds.length ? getPostsByIds(session.workspaceId, generatedIds) : Promise.resolve([]),
   ]);
 
-  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows on LinkedIn.';
+  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows.';
   const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
   const plannerCount = savedCampaign?.count ?? 3;
-  const plannerFormat = savedCampaign?.postFormat ?? 'text';
+  const plannerFormat = savedCampaign?.postFormat ?? 'auto';
   const plannerCadence = savedCampaign?.cadence ?? 'weekly';
   const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
+  const plannerWindowDays = savedCampaign?.campaignWindowDays ?? 30;
+  const plannerSourceMaterial = savedCampaign?.sourceMaterial ?? '';
+  const canRespondToApproval = ['owner', 'admin', 'approver'].includes(session.role);
+  const companyPageTargets = targets.filter((target) => target.targetType === 'organization' || target.targetType === 'page');
+  const personalTargets = targets.filter((target) => target.targetType === 'member' || target.targetType === 'profile');
+  const selectedApproverValue = editingPost?.approvalOwner ?? approverOptions[0]?.value ?? (canRespondToApproval ? session.userId : 'Client lead');
+  const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
+  const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
+  const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
+  const activeBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? brandOptions[0] ?? null;
 
   return (
     <div className="space-y-6">
       {notice ? <FloatingNotice {...notice} /> : null}
 
+      <Card className="border-slate-200/80">
+        <CardHeader>
+          <div className="eyebrow">QA readiness</div>
+          <h2 className="mt-2 text-xl font-semibold">Everything needed for the next proof pass should be visible here</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Use this strip to verify that the deployed build is the advanced studio version rather than the older basic composer.</p>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 text-sm">
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">Approval controls</div><div className="mt-1 text-muted-foreground">Approver picker and in-composer reviewer controls are visible when a draft is loaded.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">AI image</div><div className="mt-1 text-muted-foreground">Generate AI image button should appear beside save / approval / schedule actions.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">AI carousel</div><div className="mt-1 text-muted-foreground">Generate AI carousel button should appear and save slide previews to the draft.</div></div>
+          <div className="rounded-2xl border border-border bg-slate-50 p-4"><div className="font-medium text-slate-900">Media guardrails</div><div className="mt-1 text-muted-foreground">Image and carousel posts should block approval or scheduling when no assets exist.</div></div>
+        </CardContent>
+      </Card>
+
+      <section className="premium-dark overflow-hidden p-7">
+        <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-center">
+          <div>
+            <div className="eyebrow !text-white/50">Studio</div>
+            <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">Polish+AI build active</div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white md:text-4xl">
+              Premium creative workflow, built for approval control and publish confidence.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/72 md:text-base">
+              Plan campaigns, generate strong starting points, shape the final post, and move it into approval or queue without leaving the same workflow surface.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3 text-sm text-white/68">
+              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">AI drafting</div>
+              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Carousel-ready planning</div>
+              <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5">Approval and queue handoff</div>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <Sparkles className="size-5 text-violet-300" />
+              <div className="mt-4 text-2xl font-semibold text-white">{recentDrafts.length}</div>
+              <div className="mt-1 text-sm text-white/70">Recent draft items for the active brand</div>
+            </div>
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <CheckCircle2 className="size-5 text-emerald-300" />
+              <div className="mt-4 text-2xl font-semibold text-white">{targets.length}</div>
+              <div className="mt-1 text-sm text-white/70">Connected publish destinations currently available</div>
+            </div>
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <Layers3 className="size-5 text-cyan-300" />
+              <div className="mt-4 text-2xl font-semibold text-white">{generatedBatch.length}</div>
+              <div className="mt-1 text-sm text-white/70">AI-generated options in the current review pass</div>
+            </div>
+            <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
+              <ShieldCheck className="size-5 text-indigo-300" />
+              <div className="mt-4 text-2xl font-semibold text-white">{activeBrand ? 'Ready' : 'Setup'}</div>
+              <div className="mt-1 text-sm text-white/70">Brand context applied to planning, tone, and CTA</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Card id="campaign-planner" className="scroll-mt-24">
         <CardHeader>
-          <h2 className="text-xl font-semibold">AI campaign planner</h2>
-          <p className="text-sm text-muted-foreground">
-            Save a reusable campaign brief, generate LinkedIn-first drafts, and keep the workflow grounded in real approval and scheduling control.
+          <div className="eyebrow">Campaign planner</div>
+          <h2 className="mt-2 text-2xl font-semibold">Generate premium starting points, not generic filler</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            The planner now uses brand memory, website grounding, source material, compliance constraints, and format selection to build a better campaign batch before you refine the final post.
           </p>
         </CardHeader>
         <CardContent>
-          <form action={generateAiDrafts} className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+          <form action={generateAiDrafts} className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
             <input type="hidden" name="workspaceId" value={session.workspaceId} />
             <input type="hidden" name="authorId" value={session.userId} />
-            <div className="space-y-4 rounded-3xl border border-border p-5">
+
+            <div className="space-y-4 rounded-[1.75rem] border border-slate-200/80 p-5">
               <div>
                 <label className="text-sm font-medium text-slate-900">Brand</label>
                 <select name="brandId" defaultValue={selectedBrandId} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
@@ -270,61 +459,104 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option key={brand.id} value={brand.id}>{brand.name}</option>
                   ))}
                 </select>
-                <p className="mt-2 text-xs text-muted-foreground">One workspace can hold multiple brands. Audience context is inherited from the selected brand, so you do not need a separate target-audience field for every post.</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Tone, audience, CTA direction, hashtags, and brand website context are inherited from the selected brand.
+                </p>
               </div>
+
               <div>
                 <label className="text-sm font-medium text-slate-900">Campaign brief</label>
-                <textarea name="brief" className="mt-2 min-h-[140px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBrief} required />
+                <textarea name="brief" className="mt-2 min-h-[180px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBrief} required />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Commercial goal</label>
+                  <input name="commercialGoal" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerGoal} required />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Cadence</label>
+                  <select name="cadence" defaultValue={plannerCadence} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="twice-weekly">Twice weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Campaign window (days)</label>
+                  <input name="campaignWindowDays" type="number" min={7} max={180} defaultValue={plannerWindowDays} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Target platforms</label>
+                  <input name="targetPlatforms" defaultValue={plannerTargetPlatforms} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" placeholder="linkedin" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-900">Source material to repurpose</label>
+                <textarea name="sourceMaterial" className="mt-2 min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerSourceMaterial} placeholder="Paste notes, transcript sections, newsletter copy, case study details, or a webinar summary" />
               </div>
             </div>
-            <div className="space-y-4 rounded-3xl border border-border p-5">
-              <div>
-                <label className="text-sm font-medium text-slate-900">Commercial goal</label>
-                <input name="commercialGoal" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerGoal} />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Draft count</label>
-                  <input name="count" type="number" min={1} max={6} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
-                </div>
+
+            <div className="space-y-4 rounded-[1.75rem] border border-slate-200/80 p-5">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-slate-900">Format</label>
                   <select name="postFormat" defaultValue={plannerFormat} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    <option value="auto">Auto-select best format</option>
                     <option value="text">Text post</option>
-                    <option value="link">Link-led post</option>
+                    <option value="link">Link post</option>
                     <option value="image">Single image</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Posting frequency</label>
-                  <select name="cadence" defaultValue={plannerCadence} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
-                    <option value="daily">Daily</option>
-                    <option value="weekdays">Weekdays</option>
-                    <option value="twice-weekly">Twice weekly</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="ad-hoc">Ad hoc</option>
+                    <option value="multi_image">Carousel / multi-image</option>
+                    <option value="video">Video</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-slate-900">Preferred time of day</label>
-                  <select name="preferredTimeOfDay" defaultValue={plannerPreferredTime} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
-                    <option value="early-morning">Early morning</option>
-                    <option value="morning">Morning</option>
-                    <option value="midday">Midday</option>
-                    <option value="afternoon">Afternoon</option>
-                    <option value="evening">Evening</option>
-                    <option value="varied">Varied</option>
-                  </select>
+                  <label className="text-sm font-medium text-slate-900">Draft count</label>
+                  <input name="count" type="number" min={1} max={12} defaultValue={plannerCount} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
               </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-900">Preferred publishing window</label>
+                <select name="preferredTimeOfDay" defaultValue={plannerPreferredTime} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                  <option value="early-morning">Early morning</option>
+                  <option value="morning">Morning</option>
+                  <option value="midday">Midday</option>
+                  <option value="afternoon">Afternoon</option>
+                  <option value="evening">Evening</option>
+                </select>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Voice notes</label>
+                  <textarea name="voiceNotes" className="mt-2 min-h-[110px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerVoiceNotes} placeholder="Senior, practical, premium, no hype, clear point of view" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-900">Blocked terms</label>
+                  <textarea name="blockedTerms" className="mt-2 min-h-[110px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={plannerBlockedTerms} placeholder="revolutionary, guaranteed, market-leading" />
+                </div>
+              </div>
+
+              <div className="rounded-[1.5rem] border border-violet-100 bg-violet-50/60 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-violet-950"><Wand2 className="size-4" /> Top-tier campaign guardrails</div>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-violet-900/80">
+                  <li>• Use the selected brand, website, and source material to ground the draft.</li>
+                  <li>• Plan the batch across different angles, funnel stages, and formats.</li>
+                  <li>• Generate asset direction for carousel, image, and video ideas instead of text alone.</li>
+                </ul>
+              </div>
+
               <div className="flex flex-wrap gap-3">
-                <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Generate AI drafts</button>
-                <button formAction={saveCampaign} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Save campaign for later</button>
-                <button formAction={clearSavedCampaign} formNoValidate className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Clear saved campaign</button>
+                <Button formAction={generateAiDrafts}><Sparkles className="mr-2 size-4" />Generate drafts</Button>
+                <Button formAction={saveCampaign} variant="outline">Save campaign defaults</Button>
+                <Button formAction={clearSavedCampaign} variant="ghost" formNoValidate>Clear saved defaults</Button>
               </div>
-              <p className="text-xs text-muted-foreground">Cadence and time-of-day shape the draft planning only. Repurly still requires you to confirm each final schedule manually.</p>
             </div>
           </form>
         </CardContent>
@@ -333,42 +565,67 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
       {generatedBatch.length ? (
         <Card id="generated-drafts" className="scroll-mt-24">
           <CardHeader>
-            <h2 className="text-xl font-semibold">Generated draft batch</h2>
-            <p className="text-sm text-muted-foreground">Review each draft before opening it in the composer. This keeps the AI planner useful without hiding the batch behind a single editor view.</p>
+            <div className="eyebrow">Generated shortlist</div>
+            <h2 className="mt-2 text-2xl font-semibold">Pick the strongest angle, then bring it into the studio</h2>
           </CardHeader>
-          <CardContent className="grid gap-4 lg:grid-cols-2">
-            {generatedBatch.map((draft) => (
-              <div key={draft.id} className="rounded-3xl border border-border p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Draft {draft.draftNumber || '?'}</div>
-                    <div className="mt-1 text-lg font-semibold text-slate-950">{draft.title}</div>
+          <CardContent className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            {generatedBatch.map((item) => {
+              const metadata = (item.metadata as Record<string, unknown> | null) ?? null;
+              const assetPlan = metadata?.assetPlan as Record<string, unknown> | undefined;
+              const aiReview = metadata?.aiReview as Record<string, unknown> | undefined;
+              return (
+                <a key={item.id} href={`/app/content?postId=${item.id}#composer`} className="block rounded-[1.5rem] border border-slate-200/80 p-5 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_20px_44px_rgba(15,23,42,0.08)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Draft {item.draftNumber || '—'}</div>
+                    <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{item.postType.replace('_', ' ')}</div>
                   </div>
-                  <a href={`/app/content?postId=${draft.id}#composer`} className="rounded-2xl border border-border px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                    Open in composer
-                  </a>
-                </div>
-                <div className="mt-3 text-sm text-muted-foreground">{draft.brandName} · {draft.status}{draft.titleHint ? ` · ${draft.titleHint}` : ''}</div>
-                <p className="mt-4 whitespace-pre-line text-sm leading-6 text-slate-700">{draft.excerpt}</p>
-                {draft.callToAction ? <div className="mt-4 text-sm font-medium text-primary">CTA: {draft.callToAction}</div> : null}
-              </div>
-            ))}
+                  <div className="mt-3 text-lg font-semibold text-slate-950">{item.title}</div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+                    {metadata?.angle ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{String(metadata.angle)}</span> : null}
+                    {metadata?.funnelStage ? <span className="rounded-full bg-slate-100 px-2.5 py-1">{String(metadata.funnelStage)}</span> : null}
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted-foreground">{item.excerpt}</p>
+                  {assetPlan ? (
+                    <div className="mt-4 rounded-2xl bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+                      <div className="font-semibold text-slate-900">Asset direction</div>
+                      <div>Format: {String(assetPlan.format ?? item.postType).replace('_', ' ')}</div>
+                      {assetPlan.carouselTitle ? <div>Carousel: {String(assetPlan.carouselTitle)}</div> : null}
+                      {Array.isArray(assetPlan.carouselSlides) ? <div>Slides: {assetPlan.carouselSlides.length}</div> : null}
+                      {assetPlan.videoHook ? <div>Video hook: {String(assetPlan.videoHook)}</div> : null}
+                    </div>
+                  ) : null}
+                  {aiReview ? (
+                    <div className="mt-4 text-xs leading-6 text-slate-500">
+                      Fit: {String(aiReview.performanceFitScore ?? 'n/a')}/100 · Compliance: {String(aiReview.complianceRisk ?? 'none')}
+                    </div>
+                  ) : null}
+                  <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{item.brandName}</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-primary">Open draft <ArrowRight className="size-4" /></span>
+                  </div>
+                </a>
+              );
+            })}
           </CardContent>
         </Card>
       ) : null}
 
       <Card id="composer" className="scroll-mt-24">
         <CardHeader>
-          <h2 className="text-xl font-semibold">LinkedIn composer</h2>
-          <p className="text-sm text-muted-foreground">Finish the core workflow: choose a brand, draft the post, pick the LinkedIn destination, request approval if needed, then schedule.</p>
+          <div className="eyebrow">Studio editor</div>
+          <h2 className="mt-2 text-2xl font-semibold">Shape the final post for approval, scheduling, and reliable delivery</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This surface should feel premium to the creator while still keeping workflow, destination, and publish risk visible.
+          </p>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+          <form className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <input type="hidden" name="workspaceId" value={session.workspaceId} />
             <input type="hidden" name="authorId" value={session.userId} />
-            <input type="hidden" name="postId" value={postId ?? ''} />
+            <input type="hidden" name="postId" value={editingPost?.id ?? ''} />
             <TimezoneOffsetField />
-            <div className="space-y-4 rounded-3xl border border-border p-5">
+
+            <div className="space-y-5 rounded-[1.75rem] border border-slate-200/80 p-5">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="text-sm font-medium text-slate-900">Brand</label>
@@ -384,6 +641,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     <option value="text">Text</option>
                     <option value="link">Link</option>
                     <option value="image">Image</option>
+                    <option value="multi_image">Carousel / multi-image</option>
                     <option value="video">Video</option>
                   </select>
                 </div>
@@ -398,48 +656,114 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 <label className="text-sm font-medium text-slate-900">LinkedIn post copy</label>
                 <textarea
                   name="body"
-                  className="mt-2 min-h-[220px] w-full rounded-2xl border border-border px-4 py-3 text-sm"
+                  className="mt-2 min-h-[260px] w-full rounded-2xl border border-border px-4 py-3 text-sm leading-7"
                   defaultValue={editingPost?.body ?? 'A strong LinkedIn workflow is less about posting everywhere and more about getting the right post approved, scheduled, and recovered when something breaks.'}
                   required
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium text-slate-900">Brief or angle (optional)</label>
-                <textarea name="brief" className="mt-2 min-h-[90px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.brief ?? ''} />
-                <p className="mt-2 text-xs text-muted-foreground">This is internal working context for the drafter or approver. It is not published as part of the final post.</p>
-              </div>
-
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="text-sm font-medium text-slate-900">Approval owner (optional)</label>
-                  <input name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.approvalOwner ?? 'Client lead'} />
-                  <p className="mt-2 text-xs text-muted-foreground">Skip this if you are posting directly and do not need an approval step.</p>
+                  <label className="text-sm font-medium text-slate-900">Creative direction</label>
+                  <textarea name="brief" className="mt-2 min-h-[120px] w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={editingPost?.brief ?? ''} placeholder="Hook, proof point, CTA, visual direction, or client notes" />
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
-                  <LocalDateTimeInput
-                    name="scheduledFor"
-                    isoValue={editingPost?.scheduledForIso ?? ''}
-                    className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm"
-                  />
-                  <p className="mt-2 text-xs text-muted-foreground">Queued posts only publish automatically when the background worker is live and reaching /api/inngest on schedule.</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-slate-900">Approval owner (optional)</label>
+                    <select name="approvalOwner" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" defaultValue={selectedApproverValue}>
+                      {canRespondToApproval ? <option value={session.userId}>Me (current user) · {session.role}</option> : null}
+                      {approverOptions.map((option) => (
+                        <option key={`${option.source}-${option.value}`} value={option.value}>{option.label} · {option.role}</option>
+                      ))}
+                      <option value="Client lead">Client lead</option>
+                    </select>
+                    <div className="mt-2 text-xs text-muted-foreground">{approverOptions.length ? `Approval can be tested with ${approverOptions.length} visible approver-capable member(s) or invite(s).` : 'No approver-capable members found yet. Add an owner, admin, or approver in Settings to test this flow.'}</div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-900">Scheduled publish time</label>
+                    <LocalDateTimeInput
+                      name="scheduledFor"
+                      isoValue={editingPost?.scheduledForIso ?? ''}
+                      className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm"
+                    />
+                  </div>
                 </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-sm font-medium text-slate-900">Hook quality</div>
+                  <div className="mt-2 text-xs leading-6 text-muted-foreground">Lead with tension, surprise, or a commercially useful insight.</div>
+                </div>
+                <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-sm font-medium text-slate-900">Carousel readiness</div>
+                  <div className="mt-2 text-xs leading-6 text-muted-foreground">Use multi-image when the idea works better as a stepwise narrative.</div>
+                </div>
+                <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                  <div className="text-sm font-medium text-slate-900">Operator handoff</div>
+                  <div className="mt-2 text-xs leading-6 text-muted-foreground">Keep the target, schedule, and approval owner obvious before queueing.</div>
+                </div>
+              </div>
+
+              <div className="rounded-[1.35rem] border border-slate-200 bg-slate-50 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-900">Approval visibility</div>
+                    <div className="mt-1 text-xs leading-6 text-muted-foreground">Make the reviewer and current approval state obvious before queueing the post.</div>
+                  </div>
+                  {editingPost?.approvalStatus ? <span className="rounded-full border border-border bg-white px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-slate-700">{editingPost.approvalStatus.replace('_', ' ')}</span> : null}
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Approver</div>
+                    <div className="mt-1 font-medium text-slate-900">{editingPost?.approvalOwner || selectedApproverValue || 'Needs owner'}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Latest response</div>
+                    <div className="mt-1 font-medium text-slate-900">{editingPost?.latestResponseStatus ? editingPost.latestResponseStatus.replace('_', ' ') : 'No reviewer action yet'}</div>
+                    {editingPost?.latestResponderId ? <div className="mt-1 text-xs text-muted-foreground">by {editingPost.latestResponderId}</div> : null}
+                  </div>
+                </div>
+                {editingPost?.approvalRequestId && canRespondToApproval ? (
+                  <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-medium text-emerald-950"><CheckCircle2 className="size-4" /> Approver test controls</div>
+                    <div className="mt-1 text-xs leading-6 text-emerald-900/80">Use these to test the approver perspective without leaving the composer.</div>
+                    <div className="mt-3 flex flex-wrap gap-3">
+                      <input type="hidden" name="approvalRequestId" value={editingPost.approvalRequestId ?? ''} />
+                      <input type="hidden" name="responderId" value={session.userId} />
+                      <input name="approvalResponseNote" className="min-w-[260px] flex-1 rounded-2xl border border-emerald-200 bg-white px-4 py-2 text-sm" placeholder="Optional reviewer note" defaultValue={editingPost?.latestResponseNote ?? ''} />
+                      <Button formAction={respondToApproval} name="response" value="approve">Approve</Button>
+                      <Button formAction={respondToApproval} name="response" value="changes_requested" variant="outline">Request changes</Button>
+                      <Button formAction={respondToApproval} name="response" value="reject" variant="ghost">Reject</Button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap gap-3">
-                <button formAction={saveDraft} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Save draft</button>
-                <button formAction={requestApproval} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Request approval</button>
-                <button formAction={schedulePost} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700">Schedule post</button>
+                <Button formAction={saveDraft}>Save draft</Button>
+                <Button formAction={generateAiImageAssets} variant="outline"><ImageIcon className="mr-2 size-4" />Generate AI image</Button>
+                <Button formAction={generateAiCarouselAssets} variant="outline"><Layers3 className="mr-2 size-4" />Generate AI carousel</Button>
+                <Button formAction={requestApproval} variant="outline">Request approval</Button>
+                <Button formAction={schedulePost} variant="outline">Schedule post</Button>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div id="target-selection" className="scroll-mt-24 rounded-3xl border border-border p-5">
+            <div className="space-y-5">
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">AI asset studio</div>
+                <h3 className="mt-2 text-xl font-semibold">Generate visible image and carousel assets before queueing</h3>
+                <p className="mt-2 text-sm text-muted-foreground">These previews are saved to the draft so you can test the format directly in the composer. Image and carousel posts now require visible assets before approval or scheduling.</p>
+                <div className="mt-4">
+                  <AssetPreview editingPost={editingPost} />
+                </div>
+              </div>
+              <div id="target-selection" className="rounded-[1.75rem] border border-slate-200/80 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-lg font-semibold">Publish destination</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">Repurly defaults to the workspace default target. Switch between your personal profile and company page here before saving, approving, or scheduling.</p>
+                    <div className="eyebrow">Publish destination</div>
+                    <h3 className="mt-2 text-xl font-semibold">Make the target explicit before approval or queueing</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">Switch between your personal profile and company page here. The workspace default is preselected.</p>
                   </div>
                   {defaultTarget ? (
                     <div className="rounded-2xl border border-border bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -452,7 +776,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                     const typeLabel = describeTargetType(target.targetType);
                     const isDefault = target.isDefault;
                     return (
-                      <label key={target.id} className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm">
+                      <label key={target.id} className="flex items-start gap-3 rounded-2xl border border-border px-4 py-3 text-sm transition hover:border-primary/30 hover:bg-slate-50">
                         <input type="radio" name="targetId" value={target.id} defaultChecked={editingPost?.targetId === target.id || (!editingPost?.targetId && target.isDefault)} className="mt-1" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
@@ -468,17 +792,58 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
                 </div>
               </div>
 
-              <div id="recent-drafts" className="scroll-mt-24 rounded-3xl border border-border p-5">
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">Publishing diagnostics</div>
+                <h3 className="mt-2 text-xl font-semibold">Make hidden workflow state visible</h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-border bg-slate-50 px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Personal targets</div>
+                    <div className="mt-1 font-medium text-slate-900">{personalTargets.length}</div>
+                  </div>
+                  <div className="rounded-2xl border border-border bg-slate-50 px-4 py-3 text-sm">
+                    <div className="text-xs uppercase tracking-wide text-slate-500">Company page targets</div>
+                    <div className="mt-1 font-medium text-slate-900">{companyPageTargets.length}</div>
+                  </div>
+                </div>
+                {companyPageTargets.length === 0 ? (
+                  <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                    <div className="flex items-center gap-2 font-medium"><CircleAlert className="size-4" /> No company pages are visible to this workspace yet</div>
+                    <div className="mt-1 text-amber-900/80">Reconnect LinkedIn from Channels and confirm the signed-in member is an admin of the intended page.</div>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-[1.75rem] border border-slate-200/80 p-5">
+                <div className="eyebrow">Creative parity roadmap inside the product</div>
+                <h3 className="mt-2 text-xl font-semibold">What a premium post workflow should support</h3>
+                <div className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center gap-2 font-medium text-slate-900"><ImageIcon className="size-4" /> Visual system</div>
+                    <div className="mt-1">Single image, carousel, and brand-consistent asset workflows should feel native, not bolted on.</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center gap-2 font-medium text-slate-900"><Layers3 className="size-4" /> Workflow system</div>
+                    <div className="mt-1">Approval, destination, queue state, and reliability should remain visible while the creator works.</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center gap-2 font-medium text-slate-900"><Sparkles className="size-4" /> Quality system</div>
+                    <div className="mt-1">Hooks, CTA strength, clarity, and platform fit need to be reviewed before publishing, not after underperformance.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div id="recent-drafts" className="rounded-[1.75rem] border border-slate-200/80 p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <h3 className="text-lg font-semibold">Recent drafts</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">This list only shows draft posts for the selected brand. Clearing it will not touch scheduled or in-review posts.</p>
+                    <div className="eyebrow">Recent drafts</div>
+                    <h3 className="mt-2 text-xl font-semibold">Fast access to in-flight work</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">This list only shows draft posts for the selected brand.</p>
                   </div>
-                  <button formAction={clearRecentDrafts} formNoValidate disabled={!recentDrafts.length} className="rounded-2xl border border-border bg-white px-4 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">Clear recent drafts</button>
+                  <Button formAction={clearRecentDrafts} formNoValidate disabled={!recentDrafts.length} variant="outline">Clear recent drafts</Button>
                 </div>
                 <div className="mt-4 space-y-3">
                   {recentDrafts.length ? recentDrafts.map((item) => (
-                    <a key={item.id} href={`/app/content?postId=${item.id}#composer`} className="block rounded-2xl border border-border px-4 py-3 text-sm hover:bg-slate-50">
+                    <a key={item.id} href={`/app/content?postId=${item.id}#composer`} className="block rounded-2xl border border-border px-4 py-3 text-sm transition hover:border-primary/30 hover:bg-slate-50">
                       <div className="font-medium text-slate-900">{item.title}</div>
                       <div className="mt-1 text-muted-foreground">{item.brandName} · {item.status}</div>
                     </a>

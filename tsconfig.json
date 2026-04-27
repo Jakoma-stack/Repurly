@@ -27,7 +27,12 @@
       "@/*": [
         "./src/*"
       ]
-    }
+    },
+    "types": [
+      "node",
+      "react",
+      "react-dom"
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -37,6 +42,18 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "cypress",
+    "playwright",
+    "tests",
+    "e2e",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.cy.ts",
+    "**/*.cy.tsx",
+    "playwright.config.ts",
+    "cypress.config.ts"
   ]
 }
