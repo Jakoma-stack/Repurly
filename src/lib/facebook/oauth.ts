@@ -1,17 +1,21 @@
-import { randomBytes } from "crypto";
+import { createOAuthState, verifyOAuthState } from '@/lib/oauth/state';
 
-export function buildFacebookAuthUrl(workspaceId: string) {
-  const state = Buffer.from(JSON.stringify({ workspaceId, nonce: randomBytes(8).toString("hex") })).toString("base64url");
+export type FacebookOAuthState = { workspaceId: string; userId: string };
+
+export function buildFacebookAuthUrl(workspaceId: string, userId: string) {
+  const state = createOAuthState({ workspaceId, userId } satisfies FacebookOAuthState);
   const params = new URLSearchParams({
-    client_id: process.env.META_APP_ID ?? "",
-    redirect_uri: process.env.FACEBOOK_REDIRECT_URI ?? "",
+    client_id: process.env.META_APP_ID ?? '',
+    redirect_uri: process.env.FACEBOOK_REDIRECT_URI ?? '',
     state,
-    scope: process.env.FACEBOOK_SCOPE ?? "pages_show_list,pages_manage_posts,pages_read_engagement,business_management",
-    response_type: "code",
+    scope: process.env.FACEBOOK_SCOPE ?? 'pages_show_list,pages_manage_posts,pages_read_engagement,business_management',
+    response_type: 'code',
   });
   return `https://www.facebook.com/v22.0/dialog/oauth?${params.toString()}`;
 }
 
 export function parseFacebookState(state: string) {
-  return JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as { workspaceId: string; nonce: string };
+  const payload = verifyOAuthState<FacebookOAuthState>(state);
+  if (!payload.workspaceId || !payload.userId) throw new Error('Invalid Facebook OAuth state');
+  return payload;
 }

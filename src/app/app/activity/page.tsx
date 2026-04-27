@@ -16,7 +16,7 @@ export default async function ActivityPage({
   const provider = typeof params.provider === 'string' ? params.provider : 'all';
   const q = typeof params.q === 'string' ? params.q : '';
 
-  const data = await getPublishActivity({
+  const data = await getPublishActivity(session.workspaceId, {
     status: status as never,
     provider: provider as never,
     q,

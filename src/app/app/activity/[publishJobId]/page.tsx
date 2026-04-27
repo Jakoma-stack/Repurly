@@ -13,11 +13,11 @@ export default async function PublishJobDetailPage({
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
   const { publishJobId } = await params;
-  const detail = await getPublishActivityDetail(publishJobId);
+  const detail = await getPublishActivityDetail(session.workspaceId, publishJobId);
 
   if (!detail) {
     notFound();
   }
 
-  return <ActivityDetail detail={detail} />;
+  return <ActivityDetail detail={detail as NonNullable<typeof detail>} />;
 }

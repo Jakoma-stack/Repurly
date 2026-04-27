@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { integrations, platformAccounts } from '../../../drizzle/schema';
 
 function requiredString(formData: FormData, key: string) {
@@ -27,6 +28,7 @@ export async function setDefaultLinkedInTarget(formData: FormData) {
   if (!workspaceId || !platformAccountId || !process.env.DATABASE_URL) {
     redirect('/app/channels?error=invalid-target#linkedin-onboarding' as Route);
   }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin']);
 
   const targetRows = await db
     .select({ id: platformAccounts.id })
@@ -71,6 +73,7 @@ export async function disconnectLinkedInWorkspace(formData: FormData) {
   if (!workspaceId || !process.env.DATABASE_URL) {
     redirect('/app/channels?error=missing-workspace' as Route);
   }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin']);
 
   await db.delete(platformAccounts).where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, 'linkedin')));
   await db.delete(integrations).where(and(eq(integrations.workspaceId, workspaceId), eq(integrations.provider, 'linkedin')));

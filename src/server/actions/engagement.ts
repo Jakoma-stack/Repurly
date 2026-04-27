@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { buildReplyOptions, scoreCommentIntent } from '@/lib/ai/engagement';
 import { brands, engagementComments, engagementReplyDrafts, leadPipeline } from '../../../drizzle/schema';
 
@@ -66,6 +67,7 @@ export async function saveEngagementComment(formData: FormData) {
   if (!workspaceId || !commenterName || !commentText) {
     redirect('/app/engagement?error=invalid' as Route);
   }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   const intent = scoreCommentIntent(commentText);
 
@@ -105,6 +107,7 @@ export async function generateEngagementReply(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
   const commentId = requiredString(formData, 'commentId');
   if (!workspaceId || !commentId) redirect('/app/engagement?error=invalid' as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   const rows = await db
     .select({
@@ -171,6 +174,7 @@ export async function markReplySent(formData: FormData) {
   const dmRequested = requiredString(formData, 'sendDm') === 'yes';
 
   if (!workspaceId || !commentId || !replyText) redirect('/app/engagement?error=invalid' as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   const rows = await db
     .select({
@@ -246,6 +250,7 @@ export async function updateLeadStage(formData: FormData) {
   const notes = requiredString(formData, 'notes') || null;
 
   if (!workspaceId || !leadId || !stage) redirect('/app/leads?error=invalid' as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   await db
     .update(leadPipeline)

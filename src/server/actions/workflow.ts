@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { inngest } from '@/lib/inngest/client';
 import { buildBrandIntelligence } from '@/lib/ai/brand-context';
 import { generateVisualAssets } from '@/lib/ai/visual-assets';
@@ -18,7 +19,7 @@ import {
   type ContentDraft,
   type GenerateContentDraftsArgs,
 } from '@/lib/ai/content';
-import { approvalRequests, approvalResponses, brands, platformAccounts, postTargets, posts, publishJobs, workspaceMemberships } from '../../../drizzle/schema';
+import { approvalRequests, approvalResponses, brands, platformAccounts, postTargets, posts, publishJobs } from '../../../drizzle/schema';
 
 const SAVED_CAMPAIGN_COOKIE = 'repurly_saved_campaign';
 
@@ -200,6 +201,9 @@ async function persistSavedCampaign(formData: FormData) {
   const brief = requiredString(formData, 'brief');
 
   if (!workspaceId || !brandId || !brief) return false;
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  const brand = await getBrand(workspaceId, brandId);
+  if (!brand) return false;
 
   const payload: SavedCampaign = {
     workspaceId,
@@ -237,7 +241,8 @@ async function resolveBrandId(formData: FormData, workspaceId: string) {
 
 async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_review' | 'scheduled') {
   const workspaceId = requiredString(formData, 'workspaceId');
-  const authorId = requiredString(formData, 'authorId');
+  const access = workspaceId ? await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']) : null;
+  const authorId = access?.userId ?? '';
   const postId = requiredString(formData, 'postId');
   const title = requiredString(formData, 'title');
   const body = requiredString(formData, 'body');
@@ -255,6 +260,8 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
   const scheduledFor = parseScheduledFor(formData);
   const brandId = await resolveBrandId(formData, workspaceId);
   if (!brandId) return { error: 'missing-brand' as const, post: null };
+  const brand = await getBrand(workspaceId, brandId);
+  if (!brand) return { error: 'missing-brand' as const, post: null };
   const existingMetadata = postId ? await getExistingPostMetadata(workspaceId, postId) : null;
   const mergedMetadata = mergePostMetadata(existingMetadata, { source: 'manual', brief });
 
@@ -273,7 +280,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
         updatedAt: new Date(),
       })
       .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)))
-      .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
+      .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor, authorId: posts.authorId });
 
     if (updated[0]) return { error: null, post: updated[0] };
   }
@@ -291,7 +298,7 @@ async function createOrUpdateBasePost(formData: FormData, status: 'draft' | 'in_
       postType: postType as 'text' | 'image' | 'multi_image' | 'video' | 'link',
       metadata: mergedMetadata,
     })
-    .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor });
+    .returning({ id: posts.id, workspaceId: posts.workspaceId, scheduledFor: posts.scheduledFor, authorId: posts.authorId });
 
   return { error: null, post: inserted[0] ?? null };
 }
@@ -438,6 +445,7 @@ export async function clearRecentDrafts(formData: FormData) {
   const currentPostId = requiredString(formData, 'postId');
 
   if (!workspaceId) redirect(buildContentPath({ error: 'invalid' }, 'recent-drafts') as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   const filters = [eq(posts.workspaceId, workspaceId), eq(posts.status, 'draft')];
   if (brandId) filters.push(eq(posts.brandId, brandId));
@@ -483,10 +491,10 @@ export async function requestApproval(formData: FormData) {
   if (existingApproval[0]?.id) {
     await db
       .update(approvalRequests)
-      .set({ requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote, updatedAt: new Date() })
+      .set({ requestedById: post.authorId, status: 'pending', note: approvalNote, updatedAt: new Date() })
       .where(eq(approvalRequests.id, existingApproval[0].id));
   } else {
-    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: requiredString(formData, 'authorId'), status: 'pending', note: approvalNote });
+    await db.insert(approvalRequests).values({ workspaceId: post.workspaceId, postId: post.id, requestedById: post.authorId, status: 'pending', note: approvalNote });
   }
 
   await refreshWorkflowPages();
@@ -498,45 +506,30 @@ export async function respondToApproval(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
   const approvalRequestId = requiredString(formData, 'approvalRequestId');
   const postId = requiredString(formData, 'postId');
-  const responderId = requiredString(formData, 'responderId');
   const response = requiredString(formData, 'response');
   const note = requiredString(formData, 'approvalResponseNote') || null;
 
-  if (!workspaceId || !approvalRequestId || !postId || !responderId || !response) {
+  if (!workspaceId || !approvalRequestId || !postId || !response) {
     redirect(buildContentPath({ error: 'invalid', postId: postId || undefined }, 'composer') as Route);
   }
 
-  const allowedMembership = await db
-    .select({ role: workspaceMemberships.role })
-    .from(workspaceMemberships)
-    .where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.clerkUserId, responderId)))
+  const access = await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'approver']);
+  const requestRows = await db
+    .select({ approvalRequestId: approvalRequests.id, postId: posts.id })
+    .from(approvalRequests)
+    .innerJoin(posts, eq(posts.id, approvalRequests.postId))
+    .where(and(eq(approvalRequests.id, approvalRequestId), eq(approvalRequests.postId, postId), eq(approvalRequests.workspaceId, workspaceId), eq(posts.workspaceId, workspaceId)))
     .limit(1);
 
-  const role = allowedMembership[0]?.role;
-  if (!role || !['owner', 'admin', 'approver'].includes(role)) {
-    redirect(buildContentPath({ error: 'invalid', postId }, 'composer') as Route);
-  }
+  if (!requestRows[0]) redirect(buildContentPath({ error: 'invalid', postId }, 'composer') as Route);
 
   const status = response === 'approve' ? 'approved' : response === 'changes_requested' ? 'changes_requested' : 'rejected';
   const postStatus = status === 'approved' ? 'approved' : 'draft';
 
   await db.transaction(async (tx) => {
-    await tx
-      .update(approvalRequests)
-.set({ status, updatedAt: new Date() })
-      .where(and(eq(approvalRequests.id, approvalRequestId), eq(approvalRequests.workspaceId, workspaceId)));
-
-    await tx.insert(approvalResponses).values({
-      approvalRequestId,
-      responderId,
-      status,
-      note,
-    });
-
-    await tx
-      .update(posts)
-      .set({ status: postStatus, updatedAt: new Date() })
-      .where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)));
+    await tx.update(approvalRequests).set({ status, updatedAt: new Date() }).where(and(eq(approvalRequests.id, approvalRequestId), eq(approvalRequests.workspaceId, workspaceId), eq(approvalRequests.postId, postId)));
+    await tx.insert(approvalResponses).values({ approvalRequestId, responderId: access.userId, status, note });
+    await tx.update(posts).set({ status: postStatus, updatedAt: new Date() }).where(and(eq(posts.id, postId), eq(posts.workspaceId, workspaceId)));
   });
 
   await refreshWorkflowPages();
@@ -574,7 +567,8 @@ export async function schedulePost(formData: FormData) {
 
 async function generateAiVisualDraft(formData: FormData, format: 'image' | 'carousel') {
   const workspaceId = requiredString(formData, 'workspaceId');
-  const authorId = requiredString(formData, 'authorId');
+  const access = workspaceId ? await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']) : null;
+  const authorId = access?.userId ?? '';
   const brandId = await resolveBrandId(formData, workspaceId);
   const title = requiredString(formData, 'title') || 'AI-generated visual';
   const body = requiredString(formData, 'body');
@@ -644,7 +638,8 @@ export async function generateAiCarouselAssets(formData: FormData) {
 
 export async function generateAiDrafts(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
-  const authorId = requiredString(formData, 'authorId');
+  const access = workspaceId ? await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']) : null;
+  const authorId = access?.userId ?? '';
   const brandId = requiredString(formData, 'brandId');
   const brief = requiredString(formData, 'brief');
   const count = parseCount(formData);
@@ -763,7 +758,7 @@ export async function generateAiDrafts(formData: FormData) {
     })).returning({ id: posts.id });
   };
 
-  let inserted: Array<{ id: string }>;
+  let inserted: Array<{ id: string }> = [];
 
   try {
     inserted = await tryInsert(drafts);

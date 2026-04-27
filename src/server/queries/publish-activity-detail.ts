@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { formatDistanceToNowStrict } from 'date-fns';
 
 import { db } from '@/lib/db/client';
@@ -143,8 +143,8 @@ function deriveRetryGuidance(status: ActivityStatus, provider: Provider, lastErr
   ];
 }
 
-export async function getPublishActivityDetail(publishJobId: string): Promise<PublishActivityDetail | null> {
-  if (!process.env.DATABASE_URL || !publishJobId) {
+export async function getPublishActivityDetail(workspaceId: string, publishJobId: string): Promise<PublishActivityDetail | null> {
+  if (!process.env.DATABASE_URL || !workspaceId || !publishJobId) {
     return null;
   }
 
@@ -175,7 +175,7 @@ export async function getPublishActivityDetail(publishJobId: string): Promise<Pu
     .innerJoin(postTargets, eq(postTargets.id, publishJobs.postTargetId))
     .innerJoin(posts, eq(posts.id, publishJobs.postId))
     .innerJoin(platformAccounts, eq(platformAccounts.id, postTargets.platformAccountId))
-    .where(eq(publishJobs.id, publishJobId))
+    .where(and(eq(publishJobs.id, publishJobId), eq(posts.workspaceId, workspaceId)))
     .limit(1);
 
   const row = rows[0];

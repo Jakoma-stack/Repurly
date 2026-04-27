@@ -1,20 +1,15 @@
-import { randomBytes } from 'crypto';
-
 import { getLinkedInConfig } from '@/lib/linkedin/config';
+import { createOAuthState, verifyOAuthState } from '@/lib/oauth/state';
 
 export type LinkedInOAuthState = {
   workspaceId: string;
-  nonce: string;
+  userId: string;
   configKey: string;
 };
 
-export function buildLinkedInAuthUrl(workspaceId: string, requestUrl?: string) {
+export function buildLinkedInAuthUrl(workspaceId: string, userId: string, requestUrl?: string) {
   const config = getLinkedInConfig({ requestUrl });
-  const state = Buffer.from(JSON.stringify({
-    workspaceId,
-    nonce: randomBytes(8).toString('hex'),
-    configKey: config.key,
-  } satisfies LinkedInOAuthState)).toString('base64url');
+  const state = createOAuthState({ workspaceId, userId, configKey: config.key } satisfies LinkedInOAuthState);
 
   const params = new URLSearchParams({
     response_type: 'code',
@@ -28,5 +23,7 @@ export function buildLinkedInAuthUrl(workspaceId: string, requestUrl?: string) {
 }
 
 export function parseLinkedInState(state: string) {
-  return JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as LinkedInOAuthState;
+  const payload = verifyOAuthState<LinkedInOAuthState>(state);
+  if (!payload.workspaceId || !payload.userId || !payload.configKey) throw new Error('Invalid LinkedIn OAuth state');
+  return payload;
 }

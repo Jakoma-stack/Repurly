@@ -3,6 +3,7 @@
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/client';
+import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { notificationPreferences } from '../../../drizzle/schema';
 
 export async function saveNotificationPreference(formData: FormData) {
@@ -17,6 +18,7 @@ export async function saveNotificationPreference(formData: FormData) {
     revalidatePath('/app/settings/notifications');
     return;
   }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin']);
 
   const existing = await db
     .select({ id: notificationPreferences.id })

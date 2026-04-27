@@ -1,10 +1,22 @@
 import crypto from "crypto";
 
 const IV_LENGTH = 16;
+const MIN_SECRET_LENGTH = 32;
+
+function getTokenEncryptionSecret() {
+  const raw = process.env.TOKEN_ENCRYPTION_SECRET;
+
+  if (!raw || raw.length < MIN_SECRET_LENGTH) {
+    throw new Error(
+      `TOKEN_ENCRYPTION_SECRET must be set to at least ${MIN_SECRET_LENGTH} characters before social tokens can be encrypted or decrypted.`,
+    );
+  }
+
+  return raw;
+}
 
 function getKey() {
-  const raw = process.env.TOKEN_ENCRYPTION_SECRET ?? "";
-  return crypto.createHash("sha256").update(raw).digest();
+  return crypto.createHash("sha256").update(getTokenEncryptionSecret()).digest();
 }
 
 export function encryptSecret(value: string) {

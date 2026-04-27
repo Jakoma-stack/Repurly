@@ -325,3 +325,59 @@ export async function assertWorkspaceAccess(userId: string, workspaceId: string)
 
   return Boolean(rows[0]?.id);
 }
+
+
+export type WorkspaceRole = 'owner' | 'admin' | 'editor' | 'approver' | 'viewer';
+
+export type WorkspaceRoleAccess = {
+  userId: string;
+  workspaceId: string;
+  role: WorkspaceRole;
+};
+
+export const ALL_WORKSPACE_ROLES: readonly WorkspaceRole[] = ['owner', 'admin', 'editor', 'approver', 'viewer'] as const;
+
+export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
+  return typeof value === 'string' && (ALL_WORKSPACE_ROLES as readonly string[]).includes(value);
+}
+
+export async function getAuthenticatedWorkspaceRole(workspaceId: string): Promise<WorkspaceRoleAccess | null> {
+  const { userId } = await auth();
+  if (!userId || !workspaceId) return null;
+
+  const rows = await db
+    .select({ role: workspaceMemberships.role })
+    .from(workspaceMemberships)
+    .where(and(eq(workspaceMemberships.clerkUserId, userId), eq(workspaceMemberships.workspaceId, workspaceId)))
+    .limit(1);
+
+  const role = rows[0]?.role;
+  if (!isWorkspaceRole(role)) return null;
+
+  return { userId, workspaceId, role };
+}
+
+export async function requireWorkspaceRole(
+  workspaceId: string,
+  allowedRoles: readonly WorkspaceRole[] = ALL_WORKSPACE_ROLES,
+): Promise<WorkspaceRoleAccess> {
+  const access = await getAuthenticatedWorkspaceRole(workspaceId);
+
+  if (!access) {
+    const { userId } = await auth();
+    if (!userId) redirect('/sign-in');
+    redirect('/app?error=forbidden-workspace');
+    throw new Error('Workspace access denied');
+  }
+
+  if (!allowedRoles.includes(access.role)) {
+    redirect('/app?error=forbidden-workspace-role');
+    throw new Error('Workspace role denied');
+  }
+
+  return access;
+}
+
+export async function requireWorkspaceMember(workspaceId: string) {
+  return requireWorkspaceRole(workspaceId, ALL_WORKSPACE_ROLES);
+}

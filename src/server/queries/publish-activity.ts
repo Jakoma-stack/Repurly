@@ -185,7 +185,7 @@ function buildResponse(
   };
 }
 
-export async function getPublishActivity(filters: Partial<ActivityFilters> = {}): Promise<PublishActivityData> {
+export async function getPublishActivity(workspaceId: string, filters: Partial<ActivityFilters> = {}): Promise<PublishActivityData> {
   const resolvedFilters: ActivityFilters = {
     status: statusOptions.includes((filters.status as ActivityFilters['status']) ?? 'all')
       ? ((filters.status as ActivityFilters['status']) ?? 'all')
@@ -196,12 +196,12 @@ export async function getPublishActivity(filters: Partial<ActivityFilters> = {})
     q: filters.q?.trim() ?? '',
   };
 
-  if (!process.env.DATABASE_URL) {
+  if (!process.env.DATABASE_URL || !workspaceId) {
     return buildResponse([], resolvedFilters, 'unavailable');
   }
 
   try {
-    const conditions = [];
+    const conditions = [eq(posts.workspaceId, workspaceId)];
     if (resolvedFilters.provider !== 'all') {
       conditions.push(eq(postTargets.provider, resolvedFilters.provider));
     }

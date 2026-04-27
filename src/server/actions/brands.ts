@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
+import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { brands } from '../../../drizzle/schema';
 
 function requiredString(formData: FormData, key: string) {
@@ -39,6 +40,7 @@ export async function saveBrand(formData: FormData) {
   if (!workspaceId || !name) {
     redirect('/app/brands?error=invalid' as Route);
   }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   const values = {
     workspaceId,
@@ -74,6 +76,7 @@ export async function archiveBrand(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
   const brandId = requiredString(formData, 'brandId');
   if (!workspaceId || !brandId) redirect('/app/brands?error=invalid' as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   await db
     .update(brands)
@@ -88,6 +91,7 @@ export async function restoreBrand(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
   const brandId = requiredString(formData, 'brandId');
   if (!workspaceId || !brandId) redirect('/app/brands?error=invalid' as Route);
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   await db
     .update(brands)
