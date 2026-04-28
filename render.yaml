@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: repurly
+    env: node
+    plan: starter
+    buildCommand: rm -f tsconfig.tsbuildinfo && CYPRESS_INSTALL_BINARY=0 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.19.5
