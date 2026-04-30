@@ -173,8 +173,11 @@ This is a hard customer-readiness gate.
 Use this for the first three paid pilots:
 
 - Repurly LinkedIn Operations Pilot.
-- £1,500 setup.
+- £950 founder pilot for the first proof customers, or £1,500 standard guided setup.
 - Then £297/month or £697/month depending on usage.
 - Includes workspace setup, brand setup, LinkedIn connection, first content workflow, approval workflow, first scheduled post, and onboarding.
 
 Do not sell all-platform scheduling, automated social inbox, advanced analytics, automatic lead scraping, or hands-off LinkedIn growth until those workflows are proven live.
+
+
+Commercial consistency note: Repurly pricing is Core £297/mo, Growth £697/mo, Scale Custom, with a limited £950 founder pilot and standard guided onboarding from £1,500.

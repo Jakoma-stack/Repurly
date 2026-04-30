@@ -48,3 +48,6 @@
 - [ ] Add richer approval rules per workspace
 - [ ] Add richer activity/audit views
 - [ ] Add customer help center content
+
+
+Commercial consistency note: Repurly pricing is Core £297/mo, Growth £697/mo, Scale Custom, with a limited £950 founder pilot and standard guided onboarding from £1,500.

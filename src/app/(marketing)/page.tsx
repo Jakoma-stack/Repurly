@@ -61,7 +61,7 @@ export default function HomePage() {
             simple: charge for LinkedIn workflow control, multi-brand operations, and operational confidence.
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Guided pilot or onboarding support is available from <strong>£1,500</strong> one-off.
+            A limited founder pilot can be offered from <strong>£950</strong> for early proof customers. Guided onboarding support is available from <strong>£1,500</strong> one-off.
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start with Core or Growth, or talk to us about Scale if you manage higher-volume multi-brand operations.
+              Start with a founder pilot, Core or Growth, or talk to us about Scale if you manage higher-volume multi-brand operations.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

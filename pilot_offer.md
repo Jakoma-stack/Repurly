@@ -10,8 +10,9 @@ Repurly is a **LinkedIn-first content ops system** for boutique agencies and B2B
 **30 days**
 
 ## Suggested pilot pricing
-- **£1,500 one-time pilot fee**
-- **£2,000 pilot with onboarding support**
+- **£950 founder pilot** for the first proof customers only
+- **£1,500 one-time guided pilot fee** as the standard pilot/onboarding route
+- **£2,000 pilot with deeper onboarding support**
 - **£500 setup + £750/week for 4 weeks**
 
 ## Contact
