@@ -531,7 +531,7 @@ Ideal beta users:
 Give them a clear beta offer:
 
 ```text
-Limited founder pilot from £950 for the first proof customers, then standard guided pilot/onboarding from £1,500 in exchange for a tightly supported onboarding and feedback loop.
+Paid pilot from £1,500 in exchange for a tightly supported onboarding and feedback loop.
 Then £297/month or £697/month depending on usage if they keep using it.
 ```
 

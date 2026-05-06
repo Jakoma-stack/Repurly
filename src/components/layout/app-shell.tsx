@@ -13,6 +13,7 @@ import {
   MessageSquareQuote,
   Users,
   ShieldCheck,
+  UserPlus,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
@@ -32,6 +33,7 @@ const fullNav = [
   { href: '/app/brands', label: 'Brands', icon: BriefcaseBusiness },
   { href: '/app/calendar', label: 'Calendar & queue', icon: Send },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
+  { href: '/app/outreach-copilot', label: 'Outreach Copilot', icon: UserPlus },
   { href: '/app/leads', label: 'Leads', icon: Users },
   { href: '/app/channels', label: 'Channels', icon: PanelsTopLeft },
   { href: '/app/activity', label: 'Delivery history', icon: History },
@@ -123,6 +125,7 @@ export function AppShell({
                   <a href="/app/billing" className="font-medium text-primary">Billing</a>
                   <a href="/app/channels" className="font-medium text-primary">Channels</a>
                   <a href="/app/content" className="font-medium text-primary">Studio</a>
+                  <a href="/app/outreach-copilot" className="font-medium text-primary">Outreach Copilot</a>
                 </div>
               </div>
             </div>

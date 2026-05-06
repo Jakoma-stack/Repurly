@@ -116,3 +116,17 @@ Before inviting customers, run:
 3. the manual script in `docs/LIVE_SITE_TEST_SCRIPT.md`
 
 Do not promise broad all-network scheduling, automated inbox, deep analytics, or media publishing until each path has passed live testing.
+
+## Outreach Copilot Edition note
+
+This ZIP includes a new Outreach Copilot surface at `/app/outreach-copilot`.
+
+Use it for manual, human-approved outreach operations:
+
+1. Add a prospect or page manually.
+2. Score the fit.
+3. Review safe draft messages.
+4. Copy/adapt/send manually.
+5. Mark the action done and set the next action date.
+
+Do not use Repurly for scraping, auto-DMs, auto-comments, fake engagement or bulk sending. See `docs/outreach-copilot.md` and `OUTREACH_COPILOT_CHANGELOG.md`.
