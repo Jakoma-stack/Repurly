@@ -1,6 +1,6 @@
 # Repurly
 
-Repurly is a premium **LinkedIn-first content operations platform** for agencies and B2B teams.
+Repurly is a **LinkedIn-led Growth OS** for consultants, agencies, founders, and B2B teams who need campaigns, approvals, CTAs, lead notes, and human-approved follow-up.
 
 This repository contains the current working application, marketing site, billing scaffolding, and workflow surfaces for running Repurly as a focused SaaS product rather than a broad social media suite.
 
@@ -20,7 +20,7 @@ The strongest current workflow is:
 ## What is in this repository today
 
 ### Launch-ready wedge
-- premium LinkedIn-first marketing site and authenticated product shell
+- Growth OS marketing site and authenticated product shell
 - workspace-aware authentication and first-user workspace provisioning
 - multi-brand setup for agencies and multi-brand B2B teams
 - AI-assisted LinkedIn draft generation with reusable campaign defaults
@@ -37,7 +37,7 @@ The strongest current workflow is:
 - shared publish orchestration, provider correlation IDs, delivery logs, and retry posture
 
 ### Important positioning note
-Repurly is still **commercially and operationally LinkedIn-first**. The extra adapters are architecture progress, not a claim that every provider is equally launch-ready.
+Repurly is still **commercially and operationally LinkedIn-led**. The extra adapters are architecture progress, not a claim that every provider is equally launch-ready.
 
 ## Commercial posture
 
@@ -45,7 +45,7 @@ Repurly is deliberately positioned:
 
 - above low-cost schedulers
 - below heavyweight enterprise social suites
-- strongest for premium LinkedIn workflows that need clearer control, brand separation, and operational trust
+- strongest for human-in-the-loop LinkedIn-led revenue workflows that need campaigns, approvals, CTAs, brand separation, lead notes, and operational trust
 
 ## Stack
 

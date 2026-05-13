@@ -26,10 +26,10 @@ Repurly includes both Playwright and Cypress scaffolding so the repo carries lig
 The included specs smoke-check the public marketing page and pricing story:
 
 - premium LinkedIn positioning
-- Core / Growth / Scale plan names
-- Core at £297/mo
-- Growth at £697/mo
-- Scale as Custom
+- Starter / Operator / Studio plan names
+- Starter at £79/mo
+- Operator at £249/mo
+- Studio from £699/mo
 - no legacy low-price plan language on the homepage
 
 That is deliberate. Authenticated workflow coverage should be added after dedicated preview/staging credentials exist for Clerk, Stripe, and LinkedIn.
@@ -53,7 +53,7 @@ The manual live script covers:
 
 ## Recommended next automated coverage
 
-1. billing-plan gating around Core and Growth
+1. billing-plan gating around Starter and Operator
 2. LinkedIn connection setup state
 3. content studio save / request approval / schedule happy path
 4. approval queue response flow

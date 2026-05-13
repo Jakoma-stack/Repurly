@@ -1,44 +1,95 @@
 # Repurly pricing overview
 
-## Positioning
-Repurly is a premium LinkedIn-first workflow product for agencies and B2B teams that need drafting, approvals, scheduling, queue visibility, recovery, engagement workflow, and multi-brand control in one platform.
+Repurly should launch as a **LinkedIn-led Growth OS**, not as a cheap generic social media scheduler.
 
-## Plans
+The product should be used internally first to run campaigns across multiple offers, then sold through paid pilots, assisted onboarding, and only later broader SaaS subscriptions.
 
-### Core — £297/mo
-- Up to 2 workspace members
-- 1 brand
-- 120 posts per month
-- 3 connected channels
-- LinkedIn composer, queue, job detail, and recovery
+## Recommended public pricing
 
-### Growth — £697/mo
-- Up to 5 workspace members
-- Up to 3 brands
-- 1,000 posts per month
-- 10 connected channels
-- Approval flows
-- AI-assisted drafting
-- Engagement workflow, reports, and notifications
+### Starter — £79/mo
 
-### Scale — Custom
-- Custom workspace and brand limits
-- Higher publishing volume
-- 30+ connected-channel capacity by agreement
-- Priority support
-- Commercial onboarding support
+For solo consultants, founders, and one-offer operators.
 
-### Pilot / onboarding — from £1,500 one-off
-- Guided setup
-- Workflow and channel configuration
-- User onboarding
-- Governance and workflow tuning
+Includes:
 
-## Why this pricing exists
-Repurly is priced:
-- above lightweight scheduling tools
-- below heavyweight enterprise social suites
-- around the real value of premium LinkedIn workflow control
+- 1 workspace member
+- 1 brand or offer
+- 60 planned posts per month
+- content ideas and LinkedIn drafts
+- campaign calendar
+- CTA tracking
+- export packs
 
-## Current sales rule
-Sell Core and Growth as self-serve or assisted checkout plans. Treat Scale as a manual sales conversation until the higher-volume onboarding path is proven with live customers.
+### Operator — £249/mo
+
+For serious consultants, small B2B teams, fractional marketers, and multi-offer operators.
+
+Includes:
+
+- up to 3 workspace members
+- up to 4 brands or offers
+- 300 planned posts per month
+- approvals
+- AI drafting
+- campaign calendars
+- lead notes
+- reports and notifications
+
+### Studio — from £699/mo
+
+For agencies, multi-client operators, and done-with-you content operations.
+
+Includes:
+
+- custom workspace and brand limits
+- higher campaign volume
+- priority support
+- onboarding support
+- reporting support
+- optional done-with-you workflow
+
+## Service-led monetisation
+
+### Founder Pilot — £950 one-off
+
+The first external monetisation offer.
+
+Deliver:
+
+- workspace setup
+- offer and audience mapping
+- voice/tone setup
+- CTA library
+- first 30-day campaign structure
+- initial content pack
+- review call
+
+### Implementation — £1,500–£3,000 one-off
+
+For customers who need guided setup, team workflow, campaign templates, and approval process configuration.
+
+### Done-with-you content operations — £750–£2,500/mo
+
+For customers who want Repurly plus operational help.
+
+Deliver:
+
+- monthly campaign plan
+- post draft batches
+- repurposing support
+- lead follow-up workflow
+- weekly or monthly review
+
+## Positioning rule
+
+Do not sell Repurly as:
+
+- a Buffer replacement
+- an autopilot LinkedIn bot
+- a scraping tool
+- automated DM software
+- fake engagement software
+
+Sell Repurly as:
+
+> A human-in-the-loop LinkedIn-led growth operating system for consultants, agencies, founders, and B2B teams who need campaigns, approvals, CTAs, lead notes, and follow-up discipline.

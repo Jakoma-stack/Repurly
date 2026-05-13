@@ -7,8 +7,8 @@ This pack implements the commercial-readiness changes requested after review.
 ## Implemented
 
 - Aligned marketing pricing around Core, Growth, and Scale.
-- Set Core to £297/mo.
-- Set Growth to £697/mo.
+- Set Starter to £79/mo.
+- Set Operator to £249/mo.
 - Set Scale to Custom/manual sales.
 - Removed legacy Solo, Team, and Agency plan names from customer-facing pricing surfaces.
 - Removed legacy low pricing from the checked commercial docs.

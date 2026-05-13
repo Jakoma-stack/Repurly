@@ -19,7 +19,7 @@ Keep the architecture broad but the visible product narrow.
 
 That means:
 - use the richer backend
-- market the product as a premium LinkedIn-first workflow tool
+- market the product as a LinkedIn-led Growth OS
 - avoid broad channel claims until the workflow is excellent
 
 ## Go / no-go lens

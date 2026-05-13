@@ -1,20 +1,44 @@
-# Repurly Pilot Offer
+# Repurly Founder Pilot
 
-## Offer name
-**Repurly LinkedIn Ops Pilot**
+## Offer
 
-## Positioning
-Repurly is a **LinkedIn-first content ops system** for boutique agencies and B2B teams that need a reliable workflow from draft to approval to schedule to recovery.
+**Repurly Founder Pilot — £950 one-off**
 
-## Suggested pilot duration
-**30 days**
+A guided setup for consultants, agencies, founders, and B2B operators who want to turn expertise into LinkedIn-led campaigns, CTAs, and follow-up workflows.
 
-## Suggested pilot pricing
-- **£1,500 one-time pilot fee**
-- **£2,000 pilot with onboarding support**
-- **£500 setup + £750/week for 4 weeks**
+## Who it is for
 
-## Contact
-- Website: https://repurly.org/
-- App: https://app.repurly.org/
-- Support: support@repurly.org
+- consultants with a high-ticket offer
+- boutique agencies
+- fractional marketers
+- B2B founders
+- small teams managing multiple offers
+- operators who need consistency but do not want risky automation
+
+## What is included
+
+- workspace setup
+- brand or offer profile
+- audience/ICP notes
+- CTA library
+- tone and voice setup
+- content pillars
+- first 30-day campaign plan
+- draft content pack
+- export pack
+- review/setup call
+
+## Boundaries
+
+Repurly is human-in-the-loop. The pilot does not include:
+
+- LinkedIn scraping
+- automated DMs
+- fake engagement
+- mass connection requests
+- account-risk browser automation
+- guaranteed leads or booked calls
+
+## Upsell path
+
+Founder Pilot → Operator subscription → implementation support → done-with-you content operations → Studio plan.

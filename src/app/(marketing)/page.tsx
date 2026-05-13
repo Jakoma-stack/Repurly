@@ -6,20 +6,20 @@ import type { PlanKey } from '@/lib/billing/plans';
 
 const features = [
   [
-    'Approval and routing control',
-    'Move one LinkedIn post from draft to approval to scheduled publishing without losing target, timing, or accountability.',
+    'Campaign and approval control',
+    'Move one idea from campaign brief to draft, approval, CTA, scheduled publishing, and follow-up without losing target, timing, or accountability.',
   ],
   [
-    'Multi-brand workspaces',
-    'Run separate brand voice, audience, CTA, and LinkedIn context inside one workspace without turning the product into a broad social suite.',
+    'Multi-brand and multi-offer workspaces',
+    'Run separate brand voice, audience, offer, CTA, and LinkedIn context inside one workspace without turning the product into a broad social suite.',
   ],
   [
-    'AI drafting that stays useful',
-    'Generate brand-aware LinkedIn drafts, review the batch, and tighten the best one inside the same workflow.',
+    'AI drafting that supports revenue workflow',
+    'Generate brand-aware LinkedIn drafts, repurpose them into campaign assets, and keep the commercial CTA visible.',
   ],
   [
-    'Recovery operators can trust',
-    'Use queue visibility, publish history, reconnect nudges, and job detail before missed posts become customer-facing failures.',
+    'Human-in-the-loop safety',
+    'Support responsible campaign execution with approval steps, lead notes, recovery views, and clear boundaries: no scraping, automated DMs, or fake engagement.',
   ],
 ] as const;
 
@@ -54,14 +54,13 @@ export default function HomePage() {
       <section id="pricing" className="space-y-5">
         <div className="max-w-3xl">
           <h2 className="text-3xl font-semibold text-slate-950">
-            Pricing for focused teams that need a premium workflow, not a bloated suite
+            Pricing for operators who need a revenue workflow, not another cheap scheduler
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is priced above lightweight scheduling tools and below heavyweight enterprise social suites. The commercial posture is
-            simple: charge for LinkedIn workflow control, multi-brand operations, and operational confidence.
+            Repurly is priced for LinkedIn-led campaign operations: planning, approvals, CTAs, lead notes, and human-approved follow-up. It should be used internally first, then sold through paid pilots and assisted onboarding.
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Guided pilot or onboarding support is available from <strong>£1,500</strong> one-off.
+            Founder Pilot support is available from <strong>£950</strong> one-off. Implementation and done-with-you content operations can be sold separately once the workflow is proven.
           </p>
         </div>
 
@@ -109,14 +108,14 @@ export default function HomePage() {
       <section className="rounded-[2rem] border border-slate-200 bg-white px-8 py-8 shadow-card lg:px-10">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as your LinkedIn operating system?</h2>
+            <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as a LinkedIn-led Growth OS?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start with Core or Growth, or talk to us about Scale if you manage higher-volume multi-brand operations.
+              Start with Starter or Operator, or apply for Studio if you manage higher-volume multi-brand or done-with-you operations.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/sign-up?plan=growth" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Start with Growth
+              Start with Operator
             </Link>
             <Link href="/sign-in" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Sign in

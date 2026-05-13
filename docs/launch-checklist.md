@@ -2,10 +2,10 @@
 
 ## Before launch
 
-- [ ] Confirm public pricing is Core £297/mo, Growth £697/mo, Scale Custom everywhere
+- [ ] Confirm public pricing is Starter £79/mo, Operator £249/mo, Studio from £699/mo everywhere
 - [ ] Create production Clerk instance and configure domains
 - [ ] Provision managed Postgres and run migrations
-- [ ] Create Stripe products and live prices for Core and Growth
+- [ ] Create Stripe products and live prices for Starter and Operator
 - [ ] Decide whether Scale uses manual invoicing or a private Stripe price
 - [ ] Configure Stripe webhook endpoint
 - [ ] Verify Resend sending domain
@@ -20,8 +20,8 @@
 
 ## Before first customer
 
-- [ ] Run one Core checkout in live mode
-- [ ] Run one Growth checkout in live mode
+- [ ] Run one Starter checkout in live mode
+- [ ] Run one Operator checkout in live mode
 - [ ] Run one billing portal session in live mode
 - [ ] Confirm Stripe webhook unlocks the workspace
 - [ ] Connect one LinkedIn profile

@@ -14,20 +14,20 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   core: {
-    workspaceMembers: 2,
+    workspaceMembers: 1,
     brands: 1,
-    monthlyPosts: 120,
+    monthlyPosts: 60,
     storageGb: 10,
-    connectedChannels: 3,
+    connectedChannels: 2,
     approvalFlows: false,
     prioritySupport: false,
   },
   growth: {
-    workspaceMembers: 5,
-    brands: 3,
-    monthlyPosts: 1000,
+    workspaceMembers: 3,
+    brands: 4,
+    monthlyPosts: 300,
     storageGb: 100,
-    connectedChannels: 10,
+    connectedChannels: 6,
     approvalFlows: true,
     prioritySupport: false,
   },
@@ -104,7 +104,7 @@ export function canConsume(plan: PlanInput, feature: keyof PlanLimits, currentVa
 
 export function formatPlanLabel(plan: PlanInput) {
   const normalized = normalizePlanKey(plan);
-  if (normalized === 'core') return 'Core';
-  if (normalized === 'growth') return 'Growth';
-  return 'Scale';
+  if (normalized === 'core') return 'Starter';
+  if (normalized === 'growth') return 'Operator';
+  return 'Studio';
 }

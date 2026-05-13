@@ -250,8 +250,9 @@ In Stripe live mode:
 Suggested commercial pricing:
 
 ```text
-Core   £297/month
-Growth £697/month
+Starter  £79/month
+Operator £249/month
+Studio   from £699/month
 Scale  Custom
 ```
 
@@ -532,7 +533,7 @@ Give them a clear beta offer:
 
 ```text
 Paid pilot from £1,500 in exchange for a tightly supported onboarding and feedback loop.
-Then £297/month or £697/month depending on usage if they keep using it.
+Then £79/month or £249/month depending on usage if they keep using it.
 ```
 
 Track:

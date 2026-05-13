@@ -13,7 +13,6 @@ import {
   MessageSquareQuote,
   Users,
   ShieldCheck,
-  UserPlus,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
@@ -29,11 +28,11 @@ type BillingAccessState = {
 
 const fullNav = [
   { href: '/app', label: 'Overview', icon: LayoutDashboard },
+  { href: '/app/growth-os', label: 'Growth OS', icon: Sparkles },
   { href: '/app/content', label: 'Studio', icon: PencilLine },
   { href: '/app/brands', label: 'Brands', icon: BriefcaseBusiness },
   { href: '/app/calendar', label: 'Calendar & queue', icon: Send },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
-  { href: '/app/outreach-copilot', label: 'Outreach Copilot', icon: UserPlus },
   { href: '/app/leads', label: 'Leads', icon: Users },
   { href: '/app/channels', label: 'Channels', icon: PanelsTopLeft },
   { href: '/app/activity', label: 'Delivery history', icon: History },
@@ -79,15 +78,15 @@ export function AppShell({
 
           <div className="mb-6 rounded-[1.5rem] border border-indigo-400/20 bg-gradient-to-br from-indigo-500/15 to-cyan-400/10 p-4 text-sm text-white/78">
             <div className="eyebrow !text-white/50">Positioning</div>
-            <div className="mt-2 text-base font-semibold text-white">Premium content operations without feature sacrifice</div>
+            <div className="mt-2 text-base font-semibold text-white">LinkedIn-led Growth OS</div>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              Workflow control, creative parity, and operator confidence in one surface.
+              Campaigns, CTAs, approvals, lead notes, and human-approved follow-up in one surface.
             </p>
           </div>
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Payment is required before this workspace can use the product. Core or Growth unlocks self-serve access; Scale is handled manually.
+              Payment is required before this workspace can use the product. Starter or Operator unlocks self-serve access; Studio is handled manually.
             </div>
           ) : null}
 
@@ -125,7 +124,6 @@ export function AppShell({
                   <a href="/app/billing" className="font-medium text-primary">Billing</a>
                   <a href="/app/channels" className="font-medium text-primary">Channels</a>
                   <a href="/app/content" className="font-medium text-primary">Studio</a>
-                  <a href="/app/outreach-copilot" className="font-medium text-primary">Outreach Copilot</a>
                 </div>
               </div>
             </div>

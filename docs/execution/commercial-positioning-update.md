@@ -2,12 +2,12 @@
 
 ## External positioning now in use
 
-Repurly is now presented externally as a **premium LinkedIn-first content operations platform** for agencies and B2B teams.
+Repurly is now presented externally as a **LinkedIn-led Growth OS** for agencies and B2B teams.
 
 ## What changed in the live product surfaces
 
 - marketing site moved from pilot language to premium SaaS language
-- pricing aligned around Core / Growth / Scale
+- pricing aligned around Starter / Operator / Studio
 - app billing uses the same plan structure as marketing
 - AI drafting flow now supports saved campaigns, draft-batch review, and recent-draft cleanup
 - app shell and workspace copy were tightened to feel more premium and productized

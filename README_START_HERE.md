@@ -13,7 +13,7 @@ This folder is designed to work as the main working repo for both GitHub executi
 
 Repurly should currently be presented as:
 
-**A premium LinkedIn-first content operations platform for agencies and B2B teams**
+**A LinkedIn-led Growth OS for agencies and B2B teams**
 
 Not as:
 
@@ -87,7 +87,7 @@ Start with these files:
 2. Review `docs/product-surface-reference.md` before changing marketing or pricing copy.
 3. Configure env vars from `.env.example`.
 4. Run migrations and seed a local workspace.
-5. Keep execution aligned to the premium LinkedIn-first story even though the adapter layer is broader.
+5. Keep execution aligned to the LinkedIn-led Growth OS story even though the adapter layer is broader.
 ## E2E testing now wired in
 
 The repo now includes both Playwright and Cypress scaffolding for smoke coverage against the marketing surface.
@@ -103,8 +103,8 @@ Useful commands:
 
 This pack aligns the app around the live monetisation posture:
 
-- Core at £297/month
-- Growth at £697/month
+- Starter at £79/month
+- Operator at £249/month
 - Scale as Custom/manual sales
 - paid pilot / onboarding from £1,500
 - LinkedIn text publishing as the first live customer workflow
@@ -116,17 +116,3 @@ Before inviting customers, run:
 3. the manual script in `docs/LIVE_SITE_TEST_SCRIPT.md`
 
 Do not promise broad all-network scheduling, automated inbox, deep analytics, or media publishing until each path has passed live testing.
-
-## Outreach Copilot Edition note
-
-This ZIP includes a new Outreach Copilot surface at `/app/outreach-copilot`.
-
-Use it for manual, human-approved outreach operations:
-
-1. Add a prospect or page manually.
-2. Score the fit.
-3. Review safe draft messages.
-4. Copy/adapt/send manually.
-5. Mark the action done and set the next action date.
-
-Do not use Repurly for scraping, auto-DMs, auto-comments, fake engagement or bulk sending. See `docs/outreach-copilot.md` and `OUTREACH_COPILOT_CHANGELOG.md`.
