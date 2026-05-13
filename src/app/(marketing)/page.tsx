@@ -70,31 +70,27 @@ export default function HomePage() {
               key={plan.name}
               className={
                 plan.featured
-                  ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
-                  : 'border-slate-200/80 bg-white/95'
+                  ? 'border-teal-600 bg-white/95 text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.16)] ring-2 ring-teal-600/20'
+                  : 'border-slate-200/80 bg-white/95 text-slate-950'
               }
             >
               <CardHeader>
-                <div className={plan.featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>
+                <div className={plan.featured ? 'text-sm font-semibold text-teal-700' : 'text-sm font-medium text-primary'}>
                   {plan.name}
                 </div>
-                <div className="mt-2 text-3xl font-semibold">{plan.priceLabel}</div>
+                <div className="mt-2 text-3xl font-semibold text-slate-950">{plan.priceLabel}</div>
               </CardHeader>
               <CardContent>
-                <p className={plan.featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>
+                <p className="text-sm leading-6 text-slate-700">
                   {plan.summary}
                 </p>
-                <ul className={plan.featured ? 'mt-4 space-y-2 text-sm text-slate-300' : 'mt-4 space-y-2 text-sm text-slate-600'}>
+                <ul className="mt-4 space-y-2 text-sm text-slate-700">
                   {plan.bullets.slice(0, 3).map((bullet) => <li key={bullet}>• {bullet}</li>)}
                 </ul>
                 <div className="mt-6">
                   <a
                     href={plan.ctaHref}
-                    className={
-                      plan.featured
-                        ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
-                        : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
-                    }
+                    className="inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
                   >
                     {plan.ctaLabel}
                   </a>
