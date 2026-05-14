@@ -28,13 +28,14 @@ const features = [
 ] as const;
 
 function marketingCtaHref(plan: PlanKey) {
-  if (plan === 'scale') return PLAN_CATALOG.scale.ctaHref;
-  return `/sign-up?plan=${plan}`;
+  const subject = plan === 'scale' ? 'Repurly Studio or Founder Pilot' : `Repurly ${PLAN_CATALOG[plan].name} testing interest`;
+  return `mailto:support@repurly.org?subject=${encodeURIComponent(subject)}`;
 }
 
 const pricing = PLAN_ORDER.map((key) => ({
   ...PLAN_CATALOG[key],
   ctaHref: marketingCtaHref(key),
+  ctaLabel: key === 'scale' ? 'Apply for Studio' : 'Register testing interest',
 }));
 
 export default function HomePage() {
@@ -110,12 +111,12 @@ export default function HomePage() {
           <div>
             <h2 className="text-2xl font-semibold text-slate-950">Ready to run Repurly as a LinkedIn-led Growth OS?</h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-              Start with Starter or Operator, or apply for Studio if you manage higher-volume multi-brand or done-with-you operations.
+              Repurly should be used internally first, then offered through controlled founder pilots. Self-serve Starter and Operator checkout should only be made public after the live test gates pass.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/sign-up?plan=growth" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Start with Operator
+            <Link href="mailto:support@repurly.org?subject=Repurly%20Founder%20Pilot%20interest" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
+              Apply for Founder Pilot
             </Link>
             <Link href="/sign-in" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Sign in

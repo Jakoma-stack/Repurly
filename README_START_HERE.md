@@ -106,7 +106,7 @@ This pack aligns the app around the live monetisation posture:
 - Starter at £79/month
 - Operator at £249/month
 - Scale as Custom/manual sales
-- paid pilot / onboarding from £1,500
+- Founder Pilot at £950 one-off, with implementation/onboarding from £1,500 where needed
 - LinkedIn text publishing as the first live customer workflow
 
 Before inviting customers, run:
