@@ -79,7 +79,7 @@ export function buildUsageRows(snapshot: UsageSnapshot) {
     { key: 'Brands', used: snapshot.brandsUsed ?? 0, limit: limits.brands, unit: 'brands' },
     { key: 'Posts this month', used: snapshot.postsUsedThisMonth, limit: limits.monthlyPosts, unit: 'posts' },
     { key: 'Storage', used: snapshot.storageUsedGb, limit: limits.storageGb, unit: 'GB' },
-    { key: 'Connected channels', used: snapshot.channelsConnected, limit: limits.connectedChannels, unit: 'channels' },
+    { key: 'Campaign/output channels', used: snapshot.channelsConnected, limit: limits.connectedChannels, unit: 'channels' },
   ].map((row) => {
     const ratio = row.limit > 0 ? row.used / row.limit : 0;
 

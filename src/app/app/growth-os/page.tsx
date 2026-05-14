@@ -27,6 +27,22 @@ const portfolio = [
   },
 ];
 
+
+const outputChannels = [
+  'LinkedIn post',
+  'LinkedIn carousel outline',
+  'Facebook Page post',
+  'Instagram caption',
+  'Google Business Profile update',
+  'Email/newsletter',
+  'Blog post',
+  'YouTube title, description, chapters, and script',
+  'TikTok/Reels hook, caption, and shot list',
+  'Threads post',
+  'X post/thread export',
+  'WhatsApp/referral message',
+];
+
 const modules = [
   'Offer and CTA library',
   'Audience and ICP notes',
@@ -35,7 +51,7 @@ const modules = [
   'Approval and safety checks',
   'Lead notes and follow-up reminders',
   'Weekly performance review',
-  'Export packs for LinkedIn, email, local posts, WhatsApp, and blog outlines',
+  'Export packs for LinkedIn, Facebook Page, Instagram, Google Business Profile, email, blog, YouTube/TikTok scripts, Threads, X, and WhatsApp',
 ];
 
 export default function GrowthOsPage() {
@@ -67,6 +83,19 @@ export default function GrowthOsPage() {
             </CardContent>
           </Card>
         ))}
+      </section>
+
+
+      <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-card">
+        <h2 className="text-2xl font-semibold text-slate-950">Campaign/output channels</h2>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
+          Channel limits mean how many destinations Repurly helps plan, adapt, approve, export, or publish to where integrations are enabled. LinkedIn remains the primary launch workflow; supporting channels should be treated as export and campaign assets until their direct integrations are approved and tested.
+        </p>
+        <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {outputChannels.map((channel) => (
+            <div key={channel} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">{channel}</div>
+          ))}
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-slate-200 bg-white p-8 shadow-card">

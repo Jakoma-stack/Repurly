@@ -21,6 +21,10 @@ const features = [
     'Human-in-the-loop safety',
     'Support responsible campaign execution with approval steps, lead notes, recovery views, and clear boundaries: no scraping, automated DMs, or fake engagement.',
   ],
+  [
+    'Campaign/output channels',
+    'Turn one idea into LinkedIn-led assets plus export-ready copy for Facebook Pages, Instagram, Google Business Profile, email, blog, video scripts, Threads, X, and WhatsApp without promising untested auto-posting.',
+  ],
 ] as const;
 
 function marketingCtaHref(plan: PlanKey) {
@@ -57,7 +61,7 @@ export default function HomePage() {
             Pricing for operators who need a revenue workflow, not another cheap scheduler
           </h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is priced for LinkedIn-led campaign operations: planning, approvals, CTAs, lead notes, and human-approved follow-up. It should be used internally first, then sold through paid pilots and assisted onboarding.
+            Repurly is priced for LinkedIn-led campaign operations: planning, approvals, CTAs, lead notes, output-channel exports, and human-approved follow-up. It should be used internally first, then sold through paid pilots and assisted onboarding.
           </p>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Founder Pilot support is available from <strong>£950</strong> one-off. Implementation and done-with-you content operations can be sold separately once the workflow is proven.

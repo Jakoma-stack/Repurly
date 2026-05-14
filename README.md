@@ -6,7 +6,7 @@ This repository contains the current working application, marketing site, billin
 
 ## Product story
 
-Repurly wins on **workflow control and operator confidence**, not on channel count.
+Repurly wins on **workflow control and operator confidence**, not on channel count. Public copy should refer to **campaign/output channels** unless a screen is specifically discussing verified API account connections.
 
 The strongest current workflow is:
 
@@ -134,3 +134,9 @@ See `.env.example` for the full current reference.
 - a finished social listening platform
 
 That focus is deliberate. It lets the product feel sharper, more premium, and more commercially believable.
+
+## Commercial and billing notes
+
+- See `docs/subscription-feature-mapping.md` for the current Starter / Operator / Studio entitlement map, including the campaign/output channel wording rule.
+- See `docs/commercial-viability-review.md` for positioning, pricing logic, and launch recommendations.
+- Internal plan keys remain `core`, `growth`, and `scale` for compatibility, but the public labels are Starter, Operator, and Studio.
