@@ -140,3 +140,8 @@ That focus is deliberate. It lets the product feel sharper, more premium, and mo
 - See `docs/subscription-feature-mapping.md` for the current Starter / Operator / Studio entitlement map, including the campaign/output channel wording rule.
 - See `docs/commercial-viability-review.md` for positioning, pricing logic, and launch recommendations.
 - Internal plan keys remain `core`, `growth`, and `scale` for compatibility, but the public labels are Starter, Operator, and Studio.
+
+
+## Proof and case-study policy
+
+Representative use cases are included for commercial clarity. Do not publish invented testimonials, client logos or outcome claims. See `docs/proof-and-case-study-policy.md` and `docs/founder-pilot-case-study-template.md`.
