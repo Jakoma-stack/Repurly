@@ -12,13 +12,14 @@ import {
   CalendarCheck,
   SlidersHorizontal,
   BarChart3,
+  ShieldCheck,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
 import type { WorkspaceSession } from '@/lib/auth/workspace';
 import { formatPlanLabel } from '@/lib/billing/plans';
 
-const BUILD_MARKER = 'Opportunity Desk beta';
+const BUILD_MARKER = '10/10 private beta package';
 
 type BillingAccessState = {
   hasPaidAccess: boolean;
@@ -35,6 +36,7 @@ const fullNav = [
   { href: '/app/outreach-copilot', label: 'Outreach', icon: UserPlus },
   { href: '/app/brands', label: 'Brand settings', icon: BriefcaseBusiness },
   { href: '/app/pilot-dashboard', label: 'Pilot Dashboard', icon: BarChart3 },
+  { href: '/app/proof-score', label: 'Proof Score', icon: ShieldCheck },
   { href: '/app/settings', label: 'Settings', icon: Settings },
   { href: '/app/billing', label: 'Billing', icon: CreditCard },
 ];
@@ -83,7 +85,7 @@ export function AppShell({
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Payment is required before this workspace can use the product. Core or Growth unlocks self-serve access; Scale is handled manually.
+              Beta access is not enabled for this workspace yet. Ask the Repurly team to switch on private beta access or connect billing.
             </div>
           ) : null}
 
@@ -114,7 +116,7 @@ export function AppShell({
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950">{session.workspaceName}</h1>
                 <p className="text-sm text-muted-foreground">
                   {session.role} • {session.availableWorkspaces.length} workspace access
-                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? formatPlanLabel(billingAccess.plan) : 'payment required'}` : ''}
+                  {billingAccess ? ` • ${billingAccess.hasPaidAccess ? formatPlanLabel(billingAccess.plan) : 'beta access not enabled'}` : ''}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">{BUILD_MARKER}</span>
@@ -122,6 +124,7 @@ export function AppShell({
                   <a href="/app/relationships" className="font-medium text-primary">Relationships</a>
                   <a href="/app/weekly-plan" className="font-medium text-primary">Weekly Plan</a>
                   <a href="/app/opportunity-settings" className="font-medium text-primary">Opportunity Settings</a>
+                  <a href="/app/proof-score" className="font-medium text-primary">Proof Score</a>
                 </div>
               </div>
             </div>

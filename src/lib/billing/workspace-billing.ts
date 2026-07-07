@@ -22,6 +22,21 @@ type WorkspaceBillingRow = Omit<WorkspaceBillingRecord, 'plan'> & {
 
 const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
+function isInternalBetaAccessEnabled() {
+  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') {
+    return true;
+  }
+
+  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'false') {
+    return false;
+  }
+
+  // Staging should always be usable for private beta testing, even when Stripe is not wired yet.
+  // Production domains still require billing unless ENABLE_INTERNAL_BETA_ACCESS=true is explicitly set.
+  const appUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''} ${process.env.APP_URL ?? ''}`;
+  return appUrl.includes('staging.repurly.org') || appUrl.includes('.onrender.com');
+}
+
 export function hasPaidWorkspaceAccess(
   record: Pick<WorkspaceBillingRecord, 'stripeSubscriptionId' | 'stripeSubscriptionStatus'>,
 ) {
@@ -71,7 +86,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
-  const hasPaidAccess = process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true' || hasPaidWorkspaceAccess(workspace);
+  const hasPaidAccess = isInternalBetaAccessEnabled() || hasPaidWorkspaceAccess(workspace);
 
   return {
     ...workspace,
@@ -83,7 +98,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
 export async function requirePaidWorkspaceAccess(workspaceId: string) {
   const billingState = await getWorkspaceBillingAccessState(workspaceId);
 
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') {
+  if (isInternalBetaAccessEnabled()) {
     return billingState ?? {
       id: workspaceId,
       name: 'Internal beta workspace',

@@ -78,3 +78,15 @@ The Daily Agent now supports optional LinkedIn analytics export uploads alongsid
 
 This improves analytics review without scraping LinkedIn or automating account actions. Screenshots/OCR, browser extension capture and official LinkedIn analytics API sync remain later-stage features.
 
+
+## 10/10 Beta additions
+
+This build includes the 10/10 beta improvement pass:
+
+- `/app/proof-score` for beta readiness and validation scoring
+- stronger `/app/opportunity-settings` self-serve setup
+- Daily Agent quality-gate cards
+- stricter AI guardrails around no-DM discipline and brand rules
+- proof-led beta messaging on the homepage
+
+Use `/app/proof-score` after 3-5 real Daily Agent sessions to decide whether to invite more beta users.

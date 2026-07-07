@@ -7,7 +7,7 @@ import type { PlanKey } from '@/lib/billing/plans';
 const features = [
   [
     'Daily Agent intake',
-    'Paste LinkedIn notifications, comments, analytics, profile names and context. Repurly turns the noise into a clear daily action plan.',
+    'Paste LinkedIn notifications, comments, profile names and context. Upload LinkedIn analytics exports or paste metrics so Repurly turns the noise into a clear daily action plan.',
   ],
   [
     'Reply operating system',
@@ -51,7 +51,7 @@ export default function HomePage() {
           <div className="eyebrow">The wedge</div>
           <h2 className="mt-2 text-3xl font-semibold text-slate-950">Repurly owns the gap between LinkedIn engagement and commercial follow-up.</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Consultants and founders do not need another generic scheduling tool. They need to know who is worth replying to, when to avoid a weak DM, what to follow up, and which relationship signals should be remembered.
+            Consultants and founders do not need another generic scheduling tool. They need to know who is worth replying to, when to avoid a weak DM, what to follow up, which relationship signals should be remembered, and what their LinkedIn analytics are really telling them.
           </p>
         </div>
         <div className="mt-6 grid gap-3 md:grid-cols-5">
@@ -77,6 +77,16 @@ export default function HomePage() {
         ))}
       </section>
 
+      <section className="rounded-[2rem] border border-indigo-200 bg-indigo-50 px-8 py-7 shadow-card lg:px-10">
+        <div className="max-w-4xl">
+          <div className="eyebrow text-indigo-700">Proof-led beta</div>
+          <h2 className="mt-2 text-2xl font-semibold text-indigo-950">Repurly now includes a Proof Score so beta quality is measured, not guessed.</h2>
+          <p className="mt-3 text-sm leading-6 text-indigo-900">
+            Inside the app, Pilot Dashboard and Proof Score track the signals that matter: Daily Agent sessions, actions copied or sent manually, relationships logged, no-DM discipline, configured opportunity rules and weekly next actions. That keeps the beta focused on retention and commercial usefulness rather than feature sprawl.
+          </p>
+        </div>
+      </section>
+
       <section className="grid gap-5 lg:grid-cols-3">
         <Card className="border-emerald-200 bg-emerald-50">
           <CardHeader><h3 className="text-xl font-semibold text-emerald-950">Best-fit users</h3></CardHeader>
@@ -98,6 +108,16 @@ export default function HomePage() {
         </Card>
       </section>
 
+      <section className="rounded-[2rem] border border-slate-200 bg-white px-8 py-7 shadow-card lg:px-10">
+        <div className="max-w-4xl">
+          <div className="eyebrow">Good-fit only</div>
+          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Not for scraping, mass automation or cold DM campaigns.</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            Repurly is for experts who want a safer daily rhythm for replies, relationships, analytics review and follow-up. It drafts and organises the work; the user approves every reply, comment, DM, connection note and tracker update before taking action.
+          </p>
+        </div>
+      </section>
+
       <section id="pricing" className="space-y-5">
         <div className="max-w-3xl">
           <h2 className="text-3xl font-semibold text-slate-950">Private beta pricing</h2>
@@ -112,18 +132,18 @@ export default function HomePage() {
               key={plan.name}
               className={
                 plan.featured
-                  ? 'border-slate-950 bg-slate-950 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]'
+                  ? 'border-indigo-300 bg-white shadow-[0_24px_80px_rgba(79,70,229,0.16)] ring-2 ring-indigo-100'
                   : 'border-slate-200/80 bg-white/95'
               }
             >
               <CardHeader>
-                <div className={plan.featured ? 'text-sm font-medium text-slate-300' : 'text-sm font-medium text-primary'}>{plan.eyebrow}</div>
+                <div className={plan.featured ? 'text-sm font-medium text-indigo-600' : 'text-sm font-medium text-primary'}>{plan.eyebrow}</div>
                 <h3 className="mt-2 text-2xl font-semibold">{plan.name}</h3>
                 <div className="mt-2 text-3xl font-semibold">{plan.priceLabel}</div>
               </CardHeader>
               <CardContent>
-                <p className={plan.featured ? 'text-sm leading-6 text-slate-300' : 'text-sm leading-6 text-slate-600'}>{plan.summary}</p>
-                <ul className={plan.featured ? 'mt-4 space-y-2 text-sm text-slate-300' : 'mt-4 space-y-2 text-sm text-slate-600'}>
+                <p className="text-sm leading-6 text-slate-600">{plan.summary}</p>
+                <ul className="mt-4 space-y-2 text-sm text-slate-600">
                   {plan.bullets.map((bullet) => <li key={bullet}>• {bullet}</li>)}
                 </ul>
                 <div className="mt-6">
@@ -131,7 +151,7 @@ export default function HomePage() {
                     href={plan.ctaHref}
                     className={
                       plan.featured
-                        ? 'inline-flex rounded-2xl bg-white px-4 py-2 text-sm font-medium text-slate-950'
+                        ? 'inline-flex rounded-2xl bg-indigo-600 px-4 py-2 text-sm font-medium text-white'
                         : 'inline-flex rounded-2xl bg-slate-950 px-4 py-2 text-sm font-medium text-white'
                     }
                   >
@@ -154,7 +174,7 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
-              Join Pro Beta
+              Join private beta
             </Link>
             <Link href="mailto:support@repurly.org?subject=Repurly%20Assisted%20Beta" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Ask about assisted beta
