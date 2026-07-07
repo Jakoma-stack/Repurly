@@ -254,14 +254,14 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
         </CardHeader>
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
           <div className="rounded-2xl border border-border p-4">Brands live inside the same workspace, so drafting and reporting can stay in one shared operating view.</div>
-          <div className="rounded-2xl border border-border p-4">Campaign/output channels are workspace-level today. LinkedIn is the primary connected launch path; supporting channels can be used for approved exports, briefs, and channel-specific copy where direct publishing is not enabled yet.</div>
+          <div className="rounded-2xl border border-border p-4">Connected channels are workspace-level today. Pick the correct LinkedIn destination per post, and confirm the workspace default carefully before switching brands.</div>
           <div className="rounded-2xl border border-border p-4">Repurly is safest when one workspace maps to one LinkedIn permission boundary. If brand two needs a different LinkedIn login, create a separate workspace rather than reconnecting over the top of brand one.</div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-semibold">Primary launch channel and output support</h3>
+          <h3 className="text-lg font-semibold">Primary channel</h3>
         </CardHeader>
         <CardContent>
           <PlatformGrid workspaceId={session.workspaceId} linkedInConnected={setup.linkedInConnected} />
@@ -271,7 +271,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
       <ReconnectNudges workspaceId={session.workspaceId} />
 
       <div className="rounded-3xl border border-dashed border-border bg-slate-50 p-5 text-sm text-slate-600">
-        Need more output channels later? Keep direct integrations behind the LinkedIn wedge for now. The next best move is cleaner workflow completion and safer exports, not broad auto-posting.
+        Need to add more channels later? Keep them behind the LinkedIn wedge for now. The next best move is cleaner workflow completion, not broader channel count.
         <Link href="/app/content" className="ml-2 inline-flex items-center gap-1 font-medium text-primary">
           Open composer <ArrowRight className="size-4" />
         </Link>

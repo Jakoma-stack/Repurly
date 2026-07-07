@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation';
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
-import { checkPlanLimit } from '@/lib/billing/enforce-limits';
 import { requireWorkspaceRole, type WorkspaceRole } from '@/lib/auth/workspace';
 import { setWorkspaceOperatorFlag, type OperatorFlagKey } from '@/lib/ops/feature-flags';
 import { auditEvents, workspaceInvites, workspaceMemberships } from '../../../drizzle/schema';
@@ -52,8 +51,6 @@ export async function createWorkspaceInvite(formData: FormData) {
   if (!workspaceId || !email) redirect(settingsPath(undefined, 'invalid'));
   const access = await requireWorkspaceRole(workspaceId, SETTINGS_ADMIN_ROLES);
   if (role === 'owner' && access.role !== 'owner') redirect(settingsPath(undefined, 'owner-role-required'));
-  const memberLimit = await checkPlanLimit(workspaceId, 'workspaceMembers');
-  if (!memberLimit.allowed) redirect(settingsPath(undefined, 'plan-limit-members'));
   const token = crypto.randomUUID();
   await db.insert(workspaceInvites).values({ workspaceId, email, role, token, invitedById: access.userId, expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14) });
   await logAudit(workspaceId, access.userId, 'workspace_invite_created', token, { email, role });
@@ -104,11 +101,7 @@ export async function acceptWorkspaceInvite(formData: FormData) {
   if (invite.expiresAt && invite.expiresAt.getTime() < Date.now()) redirect('/app/settings?error=invite-expired' as Route);
   if ((invite.email ?? '').toLowerCase() !== email) redirect('/app/settings?error=invite-email-mismatch' as Route);
   const existing = await db.select({ id: workspaceMemberships.id }).from(workspaceMemberships).where(and(eq(workspaceMemberships.workspaceId, invite.workspaceId), eq(workspaceMemberships.clerkUserId, userId))).limit(1);
-  if (!existing[0]?.id) {
-    const memberLimit = await checkPlanLimit(invite.workspaceId, 'workspaceMembers');
-    if (!memberLimit.allowed) redirect('/app/settings?error=plan-limit-members' as Route);
-    await db.insert(workspaceMemberships).values({ workspaceId: invite.workspaceId, clerkUserId: userId, role: invite.role });
-  }
+  if (!existing[0]?.id) await db.insert(workspaceMemberships).values({ workspaceId: invite.workspaceId, clerkUserId: userId, role: invite.role });
   await db.update(workspaceInvites).set({ status: 'accepted', acceptedAt: new Date() }).where(eq(workspaceInvites.id, invite.id));
   await logAudit(invite.workspaceId, userId, 'workspace_invite_accepted', invite.id, { email });
   revalidatePath('/app/settings');

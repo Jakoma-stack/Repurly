@@ -31,7 +31,10 @@ async function refreshBrandPages() {
   revalidatePath('/app/content');
   revalidatePath('/app/leads');
   revalidatePath('/app/engagement');
+  revalidatePath('/app/opportunity-settings');
+  revalidatePath('/app/weekly-plan');
 }
+
 
 export async function saveBrand(formData: FormData) {
   const workspaceId = requiredString(formData, 'workspaceId');
@@ -103,4 +106,56 @@ export async function restoreBrand(formData: FormData) {
 
   await refreshBrandPages();
   redirect('/app/brands?ok=restored' as Route);
+}
+
+function splitSettingLines(raw: string) {
+  return raw
+    .split(/\r?\n/)
+    .map((item) => item.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+export async function saveOpportunitySettings(formData: FormData) {
+  const workspaceId = requiredString(formData, 'workspaceId');
+  const brandId = requiredString(formData, 'brandId');
+
+  if (!workspaceId || !brandId) {
+    redirect('/app/opportunity-settings?error=invalid' as Route);
+  }
+  await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+
+  const existing = await db
+    .select({ metadata: brands.metadata })
+    .from(brands)
+    .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)))
+    .limit(1);
+
+  if (!existing[0]) {
+    redirect('/app/opportunity-settings?error=missing-brand' as Route);
+  }
+
+  const previousMetadata = (existing[0].metadata ?? {}) as Record<string, unknown>;
+  const metadata = {
+    ...previousMetadata,
+    opportunityDesk: {
+      offer: requiredString(formData, 'offer'),
+      idealCustomers: splitSettingLines(requiredString(formData, 'idealCustomers')),
+      warmSignals: splitSettingLines(requiredString(formData, 'warmSignals')),
+      ignoreSignals: splitSettingLines(requiredString(formData, 'ignoreSignals')),
+      dmPolicy: requiredString(formData, 'dmPolicy'),
+      contentLanes: splitSettingLines(requiredString(formData, 'contentLanes')),
+      noGoTopics: splitSettingLines(requiredString(formData, 'noGoTopics')),
+      relationshipRules: splitSettingLines(requiredString(formData, 'relationshipRules')),
+      updatedAt: new Date().toISOString(),
+    },
+  };
+
+  await db
+    .update(brands)
+    .set({ metadata, updatedAt: new Date() })
+    .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)));
+
+  revalidatePath('/app/daily-agent');
+  revalidatePath('/app/opportunity-settings');
+  redirect('/app/opportunity-settings?ok=saved' as Route);
 }

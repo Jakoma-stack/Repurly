@@ -8,7 +8,7 @@ Repurly has a credible product wedge, but the wedge is narrower than a broad soc
 
 The strongest current interpretation of the app is:
 
-**A LinkedIn-led Growth OS for agencies and B2B teams that care about approvals, queue control, and operational confidence.**
+**A premium LinkedIn-first workflow and reliability product for agencies and B2B teams that care about approvals, queue control, and operational confidence.**
 
 That is a viable commercial direction.
 

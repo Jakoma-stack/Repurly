@@ -1,25 +1,24 @@
 import {
-  BellRing,
   CreditCard,
-  History,
-  LayoutDashboard,
   PencilLine,
-  Send,
   Settings,
   Sparkles,
-  PanelsTopLeft,
   Building2,
   BriefcaseBusiness,
   MessageSquareQuote,
   Users,
-  ShieldCheck,
+  UserPlus,
+  ClipboardList,
+  CalendarCheck,
+  SlidersHorizontal,
+  BarChart3,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
 
 import type { WorkspaceSession } from '@/lib/auth/workspace';
 import { formatPlanLabel } from '@/lib/billing/plans';
 
-const BUILD_MARKER = 'Polish+AI build';
+const BUILD_MARKER = 'Opportunity Desk beta';
 
 type BillingAccessState = {
   hasPaidAccess: boolean;
@@ -27,19 +26,17 @@ type BillingAccessState = {
 } | null;
 
 const fullNav = [
-  { href: '/app', label: 'Overview', icon: LayoutDashboard },
-  { href: '/app/growth-os', label: 'Growth OS', icon: Sparkles },
-  { href: '/app/content', label: 'Studio', icon: PencilLine },
-  { href: '/app/brands', label: 'Brands', icon: BriefcaseBusiness },
-  { href: '/app/calendar', label: 'Calendar & queue', icon: Send },
+  { href: '/app/daily-agent', label: 'Daily Agent', icon: ClipboardList },
+  { href: '/app/relationships', label: 'Relationships', icon: Users },
+  { href: '/app/weekly-plan', label: 'Weekly Plan', icon: CalendarCheck },
+  { href: '/app/opportunity-settings', label: 'Opportunity Settings', icon: SlidersHorizontal },
+  { href: '/app/content', label: 'Content', icon: PencilLine },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
-  { href: '/app/leads', label: 'Leads', icon: Users },
-  { href: '/app/channels', label: 'Channels', icon: PanelsTopLeft },
-  { href: '/app/activity', label: 'Delivery history', icon: History },
-  { href: '/app/reliability', label: 'Reliability', icon: ShieldCheck },
-  { href: '/app/notifications', label: 'Notifications', icon: BellRing },
-  { href: '/app/billing', label: 'Billing', icon: CreditCard },
+  { href: '/app/outreach-copilot', label: 'Outreach', icon: UserPlus },
+  { href: '/app/brands', label: 'Brand settings', icon: BriefcaseBusiness },
+  { href: '/app/pilot-dashboard', label: 'Pilot Dashboard', icon: BarChart3 },
   { href: '/app/settings', label: 'Settings', icon: Settings },
+  { href: '/app/billing', label: 'Billing', icon: CreditCard },
 ];
 
 const unpaidNav = [{ href: '/app/billing', label: 'Billing', icon: CreditCard }];
@@ -66,7 +63,7 @@ export function AppShell({
             </div>
             <div>
               <div className="font-semibold tracking-tight">Repurly</div>
-              <div className="text-sm text-white/60">Premium content operations</div>
+              <div className="text-sm text-white/60">Daily LinkedIn opportunity desk</div>
             </div>
           </div>
 
@@ -78,15 +75,15 @@ export function AppShell({
 
           <div className="mb-6 rounded-[1.5rem] border border-indigo-400/20 bg-gradient-to-br from-indigo-500/15 to-cyan-400/10 p-4 text-sm text-white/78">
             <div className="eyebrow !text-white/50">Positioning</div>
-            <div className="mt-2 text-base font-semibold text-white">LinkedIn-led Growth OS</div>
+            <div className="mt-2 text-base font-semibold text-white">Daily opportunity desk</div>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              Campaigns, CTAs, approvals, lead notes, and human-approved follow-up in one surface.
+              Paste LinkedIn activity, approve public replies, avoid weak DMs, log relationships, and decide the next content and follow-up actions.
             </p>
           </div>
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Payment is required before this workspace can use the product. Starter or Operator unlocks self-serve access; Studio is handled manually.
+              Payment is required before this workspace can use the product. Core or Growth unlocks self-serve access; Scale is handled manually.
             </div>
           ) : null}
 
@@ -121,9 +118,10 @@ export function AppShell({
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                   <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1 font-medium text-slate-700">{BUILD_MARKER}</span>
-                  <a href="/app/billing" className="font-medium text-primary">Billing</a>
-                  <a href="/app/channels" className="font-medium text-primary">Channels</a>
-                  <a href="/app/content" className="font-medium text-primary">Studio</a>
+                  <a href="/app/daily-agent" className="font-medium text-primary">Daily Agent</a>
+                  <a href="/app/relationships" className="font-medium text-primary">Relationships</a>
+                  <a href="/app/weekly-plan" className="font-medium text-primary">Weekly Plan</a>
+                  <a href="/app/opportunity-settings" className="font-medium text-primary">Opportunity Settings</a>
                 </div>
               </div>
             </div>

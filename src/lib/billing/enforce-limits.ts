@@ -1,20 +1,10 @@
 import { and, count, eq, gte } from 'drizzle-orm';
 
-import { PLAN_LIMITS, normalizePlanKey, type PlanKey, type PlanLimits } from '@/lib/billing/plans';
+import { PLAN_LIMITS, normalizePlanKey, type PlanKey } from '@/lib/billing/plans';
 import { db } from '@/lib/db/client';
 import { brands, platformAccounts, posts, workspaceMemberships, workspaces } from '../../../drizzle/schema';
 
 export type EnforcedLimit = 'workspaceMembers' | 'brands' | 'monthlyPosts' | 'connectedChannels';
-
-export type BooleanPlanFeature = Extract<{
-  [K in keyof PlanLimits]: PlanLimits[K] extends boolean ? K : never
-}[keyof PlanLimits], string>;
-
-export type PlanFeatureCheck = {
-  allowed: boolean;
-  feature: BooleanPlanFeature;
-  plan: PlanKey;
-};
 
 export type PlanLimitCheck = {
   allowed: boolean;
@@ -103,29 +93,6 @@ export async function assertPlanLimit(workspaceId: string, metric: EnforcedLimit
 
   if (!result.allowed) {
     throw new Error(`PLAN_LIMIT_EXCEEDED:${metric}:${result.plan}:${result.used}/${result.limit}`);
-  }
-
-  return result;
-}
-
-
-export async function checkPlanFeature(
-  workspaceId: string,
-  feature: BooleanPlanFeature,
-): Promise<PlanFeatureCheck> {
-  const plan = await getWorkspacePlan(workspaceId);
-  return {
-    allowed: Boolean(PLAN_LIMITS[plan][feature]),
-    feature,
-    plan,
-  };
-}
-
-export async function assertPlanFeature(workspaceId: string, feature: BooleanPlanFeature) {
-  const result = await checkPlanFeature(workspaceId, feature);
-
-  if (!result.allowed) {
-    throw new Error(`PLAN_FEATURE_UNAVAILABLE:${feature}:${result.plan}`);
   }
 
   return result;

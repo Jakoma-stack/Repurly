@@ -72,10 +72,10 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
   return (
     <div className="space-y-6">
       {billingState === 'success' || billingState === 'checkout-created' ? <Banner kind="success">Checkout completed or opened successfully. Your workspace access should update after Stripe confirms the subscription.</Banner> : null}
-      {billingState === 'cancelled' ? <Banner kind="warning">Checkout was cancelled. Choose Starter or Operator when you are ready to activate the workspace.</Banner> : null}
+      {billingState === 'cancelled' ? <Banner kind="warning">Checkout was cancelled. Choose Core or Growth when you are ready to activate the workspace.</Banner> : null}
       {billingState === 'checkout-unavailable' ? <Banner kind="error">Checkout is not available for that plan yet. Check the configured Stripe price IDs.</Banner> : null}
       {billingState === 'checkout-not-configured' ? <Banner kind="error">Stripe checkout is not configured yet. Add the live Stripe secret and price IDs before testing customers.</Banner> : null}
-      {billingState === 'invalid-plan' ? <Banner kind="error">That plan is not available for checkout. Choose Starter or Operator, or contact us for Studio.</Banner> : null}
+      {billingState === 'invalid-plan' ? <Banner kind="error">That plan is not available for checkout. Choose Core or Growth, or contact us for Scale.</Banner> : null}
       {billingState === 'portal-unavailable' || billingState === 'no-customer' ? <Banner kind="warning">Billing portal is not available yet for this workspace.</Banner> : null}
       {billingState === 'forbidden' ? <Banner kind="error">Only workspace owners and admins can manage billing.</Banner> : null}
 
@@ -83,7 +83,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <CardHeader>
           <h2 className="text-2xl font-semibold">Billing and plan usage</h2>
           <p className="text-sm text-muted-foreground">
-            Repurly is priced for LinkedIn-led revenue workflows: campaign control, multi-brand operations, lead follow-up, and human-in-the-loop execution.
+            Repurly is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
           </p>
         </CardHeader>
         <CardContent>

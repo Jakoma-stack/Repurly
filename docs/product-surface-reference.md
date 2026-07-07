@@ -6,7 +6,7 @@ This document is the working source of truth for what Repurly can safely claim t
 
 ## Product thesis
 
-Repurly is currently strongest as a **LinkedIn-led Growth OS** for:
+Repurly is currently strongest as a **premium LinkedIn-first content operations product** for:
 
 - boutique agencies
 - fractional content and social teams
@@ -198,7 +198,7 @@ The broader adapter layer is useful technically, but commercial positioning shou
 ## Messaging guardrails
 
 ### Recommended language
-- LinkedIn-led Growth OS
+- premium LinkedIn-first content operations
 - approvals, queue control, and publish reliability
 - agency and B2B workflow control
 - manual-first engagement capture

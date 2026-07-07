@@ -242,14 +242,6 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     };
   }
 
-  if (error === 'plan-feature-approval-flows') {
-    return {
-      kind: 'error',
-      title: 'Approval workflows need Operator',
-      body: 'Starter workspaces can save and schedule drafts. Upgrade to Operator to route posts through approval workflows.',
-    };
-  }
-
   if (error === 'invalid') {
     return {
       kind: 'error',

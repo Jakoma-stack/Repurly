@@ -1,95 +1,74 @@
-# Repurly pricing overview
+# Repurly private beta pricing
 
-Repurly should launch as a **LinkedIn-led Growth OS**, not as a cheap generic social media scheduler.
+Repurly should be sold as a Daily LinkedIn Opportunity Desk, not as another LinkedIn scheduler.
 
-The product should be used internally first to run campaigns across multiple offers, then sold through paid pilots, assisted onboarding, and only later broader SaaS subscriptions.
+## Core commercial promise
 
-## Recommended public pricing
+Repurly helps consultants, founders and expert-led businesses turn LinkedIn comments, notifications, analytics and profile signals into a daily action plan:
 
-### Starter — £79/mo
+- who matters
+- what to reply
+- what to ignore
+- who to follow up
+- what to log
+- what to post next
 
-For solo consultants, founders, and one-offer operators.
+Safe operating principle:
 
-Includes:
+> Repurly drafts. The user approves. The user posts or sends. Repurly logs and learns.
 
-- 1 workspace member
-- 1 brand or offer
-- 60 planned posts per month
-- content ideas and LinkedIn drafts
-- campaign calendar
-- CTA tracking
-- export packs
+## Recommended beta offers
 
-### Operator — £249/mo
+### Repurly Pro Beta — £49/month
 
-For serious consultants, small B2B teams, fractional marketers, and multi-offer operators.
-
-Includes:
-
-- up to 3 workspace members
-- up to 4 brands or offers
-- 300 planned posts per month
-- approvals
-- AI drafting
-- campaign calendars
-- lead notes
-- reports and notifications
-
-### Studio — from £699/mo
-
-For agencies, multi-client operators, and done-with-you content operations.
+For solo consultants, founders and expert-led operators.
 
 Includes:
 
-- custom workspace and brand limits
-- higher campaign volume
-- priority support
-- onboarding support
-- reporting support
-- optional done-with-you workflow
+- Daily Agent intake and briefing
+- reply/comment/DM drafts
+- no-over-DM guidance
+- relationship tracker
+- basic analytics interpretation
+- weekly next-action plan
+- brand/opportunity settings
+- 40 Daily Agent sessions/month
 
-## Service-led monetisation
+### Assisted Beta — £250/month
 
-### Founder Pilot — £950 one-off
+For users who want help turning LinkedIn activity into a repeatable operating rhythm.
 
-The first external monetisation offer.
+Includes:
 
-Deliver:
+- everything in Pro Beta
+- weekly opportunity review
+- help configuring relationship rules and content lanes
+- assisted review of warm leads and follow-ups
+- priority feedback loop while the product matures
 
-- workspace setup
-- offer and audience mapping
-- voice/tone setup
-- CTA library
-- first 30-day campaign structure
-- initial content pack
-- review call
+### Founder / Agency Pilot — £500+/month
 
-### Implementation — £1,500–£3,000 one-off
+For expert-led teams, agencies or multi-brand operators.
 
-For customers who need guided setup, team workflow, campaign templates, and approval process configuration.
+Includes:
 
-### Done-with-you content operations — £750–£2,500/mo
+- multi-brand setup
+- relationship and reply rules configured with the customer
+- pilot dashboard review
+- workflow design and onboarding support
 
-For customers who want Repurly plus operational help.
+## Avoid for now
 
-Deliver:
+Do not lead with:
 
-- monthly campaign plan
-- post draft batches
-- repurposing support
-- lead follow-up workflow
-- weekly or monthly review
+- automated LinkedIn outreach
+- generic AI content generation
+- broad social scheduling
+- multi-channel publishing
+- enterprise social media management
 
-## Positioning rule
+## Best landing page line
 
-Do not sell Repurly as:
-
-- a Buffer replacement
-- an autopilot LinkedIn bot
-- a scraping tool
-- automated DM software
-- fake engagement software
-
-Sell Repurly as:
-
-> A human-in-the-loop LinkedIn-led growth operating system for consultants, agencies, founders, and B2B teams who need campaigns, approvals, CTAs, lead notes, and follow-up discipline.
+> Your daily LinkedIn opportunity desk.
+>
+> Paste what happened. Repurly tells you who matters, what to reply, what to ignore, who to follow up and what to post next.

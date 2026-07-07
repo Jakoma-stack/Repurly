@@ -14,20 +14,20 @@ export type PlanLimits = {
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
   core: {
-    workspaceMembers: 1,
+    workspaceMembers: 2,
     brands: 1,
-    monthlyPosts: 60,
+    monthlyPosts: 120,
     storageGb: 10,
-    connectedChannels: 2,
+    connectedChannels: 3,
     approvalFlows: false,
     prioritySupport: false,
   },
   growth: {
-    workspaceMembers: 3,
-    brands: 4,
-    monthlyPosts: 300,
+    workspaceMembers: 5,
+    brands: 3,
+    monthlyPosts: 1000,
     storageGb: 100,
-    connectedChannels: 6,
+    connectedChannels: 10,
     approvalFlows: true,
     prioritySupport: false,
   },
@@ -79,7 +79,7 @@ export function buildUsageRows(snapshot: UsageSnapshot) {
     { key: 'Brands', used: snapshot.brandsUsed ?? 0, limit: limits.brands, unit: 'brands' },
     { key: 'Posts this month', used: snapshot.postsUsedThisMonth, limit: limits.monthlyPosts, unit: 'posts' },
     { key: 'Storage', used: snapshot.storageUsedGb, limit: limits.storageGb, unit: 'GB' },
-    { key: 'Campaign/output channels', used: snapshot.channelsConnected, limit: limits.connectedChannels, unit: 'channels' },
+    { key: 'Connected channels', used: snapshot.channelsConnected, limit: limits.connectedChannels, unit: 'channels' },
   ].map((row) => {
     const ratio = row.limit > 0 ? row.used / row.limit : 0;
 
@@ -104,7 +104,7 @@ export function canConsume(plan: PlanInput, feature: keyof PlanLimits, currentVa
 
 export function formatPlanLabel(plan: PlanInput) {
   const normalized = normalizePlanKey(plan);
-  if (normalized === 'core') return 'Starter';
-  if (normalized === 'growth') return 'Operator';
-  return 'Studio';
+  if (normalized === 'core') return 'Core';
+  if (normalized === 'growth') return 'Growth';
+  return 'Scale';
 }

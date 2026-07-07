@@ -6,22 +6,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <header className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 lg:px-8">
         <Link href="/" className="text-lg font-semibold tracking-tight text-slate-950">Repurly</Link>
         <nav className="hidden gap-6 text-sm text-slate-600 md:flex">
-          <a href="/#features">Platform</a>
-          <a href="/#pricing">Pricing</a>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
+          <a href="#features">Platform</a>
+          <a href="#pricing">Pricing</a>
           <Link href="/sign-in">Sign in</Link>
         </nav>
       </header>
       <main className="mx-auto max-w-7xl px-4 pb-16 lg:px-8">{children}</main>
-      <footer className="mx-auto flex max-w-7xl flex-col gap-3 border-t border-slate-200 px-4 py-8 text-sm text-slate-500 lg:px-8 md:flex-row md:items-center md:justify-between">
-        <p>© {new Date().getFullYear()} Repurly. LinkedIn-led Growth OS for human-approved campaign workflows.</p>
-        <nav className="flex flex-wrap gap-4">
-          <Link href="/privacy" className="hover:text-slate-900">Privacy</Link>
-          <Link href="/terms" className="hover:text-slate-900">Terms</Link>
-          <a href="mailto:support@repurly.com" className="hover:text-slate-900">Support</a>
-        </nav>
-      </footer>
     </div>
   );
 }

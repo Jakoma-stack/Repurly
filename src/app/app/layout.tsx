@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { AppShell } from '@/components/layout/app-shell';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';

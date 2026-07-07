@@ -1,147 +1,73 @@
 # Repurly
 
-Repurly is a **LinkedIn-led Growth OS** for consultants, agencies, founders, and B2B teams who need campaigns, approvals, CTAs, lead notes, and human-approved follow-up.
+Repurly is a Daily LinkedIn Opportunity Desk for consultants, founders and expert-led businesses.
 
-This repository contains the current working application, marketing site, billing scaffolding, and workflow surfaces for running Repurly as a focused SaaS product rather than a broad social media suite.
+It helps users turn LinkedIn activity into human-approved replies, follow-ups, relationship updates and next content ideas.
 
-## Product story
+## Product principle
 
-Repurly wins on **workflow control and operator confidence**, not on channel count. Public copy should refer to **campaign/output channels** unless a screen is specifically discussing verified API account connections.
+> Repurly drafts. The user approves. The user posts or sends. Repurly logs and learns.
 
-The strongest current workflow is:
+Repurly should avoid risky LinkedIn automation. Do not auto-send comments, DMs, connection requests or profile actions.
 
-- draft content
-- choose the LinkedIn target
-- request approval
-- schedule into queue
-- inspect job detail and recovery
-- handle engagement and lightweight lead follow-up
+## Beta product surface
 
-## What is in this repository today
+- Daily Agent intake and briefing
+- who matters ranking
+- public reply, DM draft and no-DM-yet recommendations
+- ignore/monitor recommendations
+- relationship tracker
+- tracker update suggestions
+- tomorrow’s post idea
+- weekly next-action plan
+- opportunity settings for each brand
+- assisted beta pilot dashboard
 
-### Launch-ready wedge
-- Growth OS marketing site and authenticated product shell
-- workspace-aware authentication and first-user workspace provisioning
-- multi-brand setup for agencies and multi-brand B2B teams
-- AI-assisted LinkedIn draft generation with reusable campaign defaults
-- composer, target selection, approval requests, scheduling, and publish queue visibility
-- engagement inbox and lightweight lead pipeline
-- billing usage metering, checkout scaffolding, and portal routing
-- reliability, reconnect nudges, notifications, and activity history
+## Positioning
 
-### Platform-extensible foundation already in code
-- adapter registry for LinkedIn, X, Facebook, Instagram, Threads, YouTube, and TikTok
-- live OAuth/connect paths for LinkedIn, X, Facebook, and Instagram
-- publish implementations for LinkedIn, X, Facebook, and Instagram
-- webhook entrypoints for Stripe, Meta, X, and YouTube
-- shared publish orchestration, provider correlation IDs, delivery logs, and retry posture
+Repurly is not another generic AI content generator or scheduler. The wedge is the gap between LinkedIn engagement and commercial follow-up.
 
-### Important positioning note
-Repurly is still **commercially and operationally LinkedIn-led**. The extra adapters are architecture progress, not a claim that every provider is equally launch-ready.
+Best-fit users:
 
-## Commercial posture
+- B2B consultants
+- fractional leaders
+- agency founders
+- advisors
+- coaches with high-ticket offers
+- founder-led expert businesses
 
-Repurly is deliberately positioned:
+## Pricing package
 
-- above low-cost schedulers
-- below heavyweight enterprise social suites
-- strongest for human-in-the-loop LinkedIn-led revenue workflows that need campaigns, approvals, CTAs, brand separation, lead notes, and operational trust
+- Pro Beta — £49/month
+- Assisted Beta — £250/month
+- Founder / Agency Pilot — £500+/month
 
-## Stack
-
-- Next.js App Router + TypeScript
-- Postgres + Drizzle ORM
-- Clerk for authentication and organizations
-- Stripe for subscriptions and billing state
-- Resend for transactional email
-- Inngest for durable workflows and retries
-- S3-compatible object storage for media assets
-
-## Local setup
+## Development
 
 ```bash
 npm install
 npm run db:migrate
 npm run seed
-npm run dev
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-## Environment essentials
+## Key environment variables
 
-Required for a meaningful local run:
+```bash
+DATABASE_URL=...
+CLERK_USER_ID=...
+ENABLE_INTERNAL_BETA_ACCESS=true
+DAILY_AGENT_BETA_MONTHLY_LIMIT=40
+DAILY_AGENT_ENFORCE_LIMIT=false
+OPENAI_API_KEY=...
+OPENAI_DAILY_AGENT_MODEL=gpt-4.1-mini
+```
 
-- `DATABASE_URL`
-- `NEXT_PUBLIC_APP_URL`
-- `CLERK_SECRET_KEY`
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET`
-- `STRIPE_PRICE_CORE`
-- `STRIPE_PRICE_GROWTH`
-- `STRIPE_PRICE_SCALE`
-- `RESEND_API_KEY`
-- `EMAIL_FROM`
-- `S3_REGION`
-- `S3_BUCKET`
-- `S3_ACCESS_KEY_ID`
-- `S3_SECRET_ACCESS_KEY`
-- `LINKEDIN_CLIENT_ID`
-- `LINKEDIN_CLIENT_SECRET`
-- `LINKEDIN_REDIRECT_URI`
-- `LINKEDIN_SCOPE`
-- `TOKEN_ENCRYPTION_SECRET`
+## LinkedIn analytics export upload
 
-Optional but supported in the current codebase:
+The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv`, `.xlsx` or `.xls` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
 
-- `OPENAI_API_KEY`
-- `INNGEST_EVENT_KEY`
-- `INNGEST_SIGNING_KEY`
-- `ALERT_EMAIL_TO`
-- `ALERT_WEBHOOK_URL`
-- `S3_ENDPOINT`
-- `S3_PUBLIC_BASE_URL`
-- `X_CLIENT_ID`
-- `X_CLIENT_SECRET`
-- `X_REDIRECT_URI`
-- `X_SCOPE`
-- `META_APP_ID`
-- `META_APP_SECRET`
-- `FACEBOOK_REDIRECT_URI`
-- `FACEBOOK_SCOPE`
-- `INSTAGRAM_REDIRECT_URI`
-- `INSTAGRAM_SCOPE`
-- `META_WEBHOOK_VERIFY_TOKEN`
-- `X_WEBHOOK_SECRET`
-- `YOUTUBE_WEBHOOK_SECRET`
-- `SENTRY_DSN`
-- `RECONNECT_WARNING_DAYS`
-- `ENABLE_LIVE_USAGE_METERING`
+This improves analytics review without scraping LinkedIn or automating account actions. Screenshots/OCR, browser extension capture and official LinkedIn analytics API sync remain later-stage features.
 
-See `.env.example` for the full current reference.
-
-## Repo guidance
-
-- `docs/architecture.md` explains the current system shape.
-- `docs/platform-status-matrix.md` distinguishes current launch posture from broader adapter progress.
-- `docs/environment-reference.md` is the fastest way to align local setup with the actual code.
-- `docs/qa/deep-dive-qa-2026-04-15.md` captures the latest repo QA review and remaining gaps.
-
-## What this build is not pretending to be
-
-- a broad all-network social suite
-- a cheap scheduling tool
-- a full CRM
-- a finished social listening platform
-
-That focus is deliberate. It lets the product feel sharper, more premium, and more commercially believable.
-
-## Commercial and billing notes
-
-- See `docs/subscription-feature-mapping.md` for the current Starter / Operator / Studio entitlement map, including the campaign/output channel wording rule.
-- See `docs/commercial-viability-review.md` for positioning, pricing logic, and launch recommendations.
-- Internal plan keys remain `core`, `growth`, and `scale` for compatibility, but the public labels are Starter, Operator, and Studio.
-
-
-## Proof and case-study policy
-
-Representative use cases are included for commercial clarity. Do not publish invented testimonials, client logos or outcome claims. See `docs/proof-and-case-study-policy.md` and `docs/founder-pilot-case-study-template.md`.

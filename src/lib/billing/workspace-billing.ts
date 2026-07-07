@@ -71,7 +71,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
-  const hasPaidAccess = hasPaidWorkspaceAccess(workspace);
+  const hasPaidAccess = process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true' || hasPaidWorkspaceAccess(workspace);
 
   return {
     ...workspace,
@@ -82,6 +82,20 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
 
 export async function requirePaidWorkspaceAccess(workspaceId: string) {
   const billingState = await getWorkspaceBillingAccessState(workspaceId);
+
+  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') {
+    return billingState ?? {
+      id: workspaceId,
+      name: 'Internal beta workspace',
+      slug: 'internal-beta',
+      plan: 'core',
+      stripeCustomerId: null,
+      stripeSubscriptionId: null,
+      stripeSubscriptionStatus: null,
+      hasPaidAccess: true,
+      paymentRequired: false,
+    };
+  }
 
   if (!billingState?.hasPaidAccess) {
     redirect('/app/billing?billing=payment-required');

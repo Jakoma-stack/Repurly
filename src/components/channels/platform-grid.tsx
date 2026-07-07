@@ -42,7 +42,7 @@ export function PlatformGrid({ workspaceId, linkedInConnected }: PlatformGridPro
       </div>
 
       <div className="rounded-3xl border border-dashed border-border bg-slate-50 p-5 text-sm text-muted-foreground">
-        Repurly is LinkedIn-led at launch. Supporting output channels can be used for export-ready copy, briefs, scripts, and manual posting checklists until direct integrations are enabled and tested. Do not promise automated posting, scraping, or account-risk activity.
+        Secondary channels stay behind the main workflow for now. Keep X, Facebook, Instagram, Threads, YouTube, and TikTok out of the onboarding path until paid pilots prove the LinkedIn wedge.
       </div>
     </div>
   );

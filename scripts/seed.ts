@@ -38,7 +38,7 @@ async function main() {
   const clerkUserId = process.env.CLERK_USER_ID?.trim();
   const databaseUrl = process.env.DATABASE_URL?.trim();
   const workspaceName = process.env.SEED_WORKSPACE_NAME?.trim() || 'Repurly Local Workspace';
-  const brandNames = (process.env.SEED_BRAND_NAMES?.trim() || process.env.SEED_BRAND_NAME?.trim() || 'Default Brand, Client Brand B')
+  const brandNames = (process.env.SEED_BRAND_NAMES?.trim() || process.env.SEED_BRAND_NAME?.trim() || 'Jakoma')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean);
@@ -111,11 +111,57 @@ async function main() {
       name: brandName,
       slug: slugify(brandName),
       status: 'active',
-      defaultTone: 'Clear, commercially realistic, and LinkedIn-first',
-      audience: 'Boutique agencies and B2B marketing teams',
-      primaryCta: 'Reply "workflow" and I will send the checklist.',
-      secondaryCta: 'DM me if you want to pressure-test your current setup.',
-      hashtags: ['linkedin', 'contentops', 'b2bmarketing'],
+      defaultTone: 'Calm, credible, expert, practical and commercially focused. UK spelling. No hype, no fearmongering, no generic AI tips.',
+      audience: 'Senior leaders, directors, CXOs, healthcare leaders, IT services leaders and organisations adopting AI who need governance, data assurance and practical controls.',
+      primaryCta: 'Review the AI Governance Triage: https://jakoma.org/ai-governance-triage.html',
+      secondaryCta: 'Reply if you want to pressure-test whether your AI use is available or actually governed.',
+      hashtags: ['aigovernance', 'dataassurance', 'safeaiadoption', 'aireadiness'],
+      linkedinProfileUrl: 'https://www.linkedin.com/in/tracy-avery',
+      linkedinCompanyUrl: 'https://www.linkedin.com/company/jakoma',
+      metadata: {
+        betaTemplate: 'jakoma',
+        publicFocus: 'AI Governance, Data Assurance, Safe AI Adoption',
+        coreMessage: 'Helping organisations move from AI being available to being governed.',
+        owner: 'Tracy Avery',
+        website: 'https://jakoma.org',
+        email: 'tracy@jakoma.org',
+        offers: [
+          'AI Governance Triage - £950 fixed fee',
+          'AI Governance Readiness Sprint - around £3,500+ depending scope',
+          'Fractional AI, Data & Transformation Leadership - £2k+/month+',
+        ],
+        themes: [
+          'Policy is not proof',
+          'Available vs governed',
+          'AI readiness before scale',
+          'Visibility before governance',
+          'Evidence before assurance',
+          'Ownership, controls, evidence and operating rhythm',
+          'Copilot/informal AI use',
+          'Data exposure',
+          'Audit trail',
+          'Practical governance',
+        ],
+        avoidPublicFocus: ['Repurly', 'Smart Stay', 'Independent Living', 'generic AI content tips'],
+        actionRules: [
+          'Do not over-DM',
+          'Reply publicly to meaningful comments',
+          'Profile views alone are not enough to DM',
+          'New relevant followers should usually be reviewed and tracked first',
+          'Move to DM only after repeated engagement, clear relevance or a natural reason',
+          'Company page is credibility layer; personal LinkedIn profile is main distribution channel',
+        ],
+        knownRelationships: {
+          'Anthony Tabbiruka': 'Highest priority partner/referral conversation. Prep agenda around readiness handing off to evidence/control/audit layer.',
+          'Rob MacPhee': 'Warm NIAS/data-driven care/digital operations conversation. Light follow-up only after two working days.',
+          'Juan Pedro Marquez Castorina': 'High-value Copilot governance contact. Engage publicly; no DM yet unless natural reason.',
+          'Mostafa El Baroudy': 'New relevant follower. Review only, no pitch.',
+          'Surya S': 'Profile view. Awareness signal only.',
+          'Ricardo J Flores': 'Reaction-only signal. Monitor.',
+          'Thomas List': 'Repeated profile views. No action unless stronger engagement appears.',
+          'Promise Tembe': 'Relevant AI Law/Governance/Ethics/Data Protection contact. Review, no pitch.',
+        },
+      },
     });
   }
 
@@ -129,29 +175,29 @@ async function main() {
         workspaceId,
         brandId: firstBrand.id,
         platform: 'linkedin',
-        commenterName: 'Jordan Lee',
-        commenterHandle: '@jordan',
-        sourcePostTitle: 'Why narrow content workflows win',
-        commentText: 'This is useful. Curious how you handle multiple brands and approvals without slowing everything down?',
+        commenterName: 'Judith Cousineau',
+        commenterHandle: '@judith',
+        sourcePostTitle: 'Policy is not proof',
+        commentText: 'This distinction between policy and evidence really matters. A lot of organisations think a policy means governance is covered.',
         intentLabel: 'warm',
-        intentScore: 68,
+        intentScore: 72,
         sentiment: 'positive',
         replyOptions: [
-          'Thanks. The main fix is to keep one operating workflow while giving each brand its own voice and approval path.',
-          'Appreciate that. We have found multiple brands only work when the workflow stays tight underneath.',
+          'Thanks Judith - exactly. A policy can show intent, but evidence shows whether governance is actually operating. That gap is where a lot of AI adoption risk sits.',
+          'Completely agree. Governance becomes real when ownership, controls, evidence and operating rhythm are visible enough to manage.',
         ],
-        suggestedDmText: 'Thanks for the comment. If helpful, I can send over the workflow we use for multi-brand approval and scheduling.',
+        suggestedDmText: null,
       }).returning({ id: engagementComments.id });
 
       await db.insert(leadPipeline).values({
         workspaceId,
         brandId: firstBrand.id,
         commentId: inserted[0].id,
-        leadName: 'Jordan Lee',
-        leadHandle: '@jordan',
-        stage: 'new',
-        intentScore: 68,
-        nextAction: 'Reply publicly, then send DM if interest continues.',
+        leadName: 'Judith Cousineau',
+        leadHandle: '@judith',
+        stage: 'warm_relationship',
+        intentScore: 72,
+        nextAction: 'Reply publicly where meaningful. No DM unless a natural reason appears.',
       });
     }
   }

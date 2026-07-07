@@ -8,7 +8,7 @@ import { and, desc, eq, ne } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
-import { checkPlanFeature, checkPlanLimit } from '@/lib/billing/enforce-limits';
+import { checkPlanLimit } from '@/lib/billing/enforce-limits';
 import { inngest } from '@/lib/inngest/client';
 import { buildBrandIntelligence } from '@/lib/ai/brand-context';
 import { generateVisualAssets } from '@/lib/ai/visual-assets';
@@ -476,11 +476,6 @@ export async function saveDraft(formData: FormData) {
 }
 
 export async function requestApproval(formData: FormData) {
-  const workspaceId = requiredString(formData, 'workspaceId');
-  if (!workspaceId) redirect(buildContentPath({ error: 'invalid' }, 'composer') as Route);
-  const approvalFeature = await checkPlanFeature(workspaceId, 'approvalFlows');
-  if (!approvalFeature.allowed) redirect(buildContentPath({ error: 'plan-feature-approval-flows' }, 'composer') as Route);
-
   const { error, post } = await createOrUpdateBasePost(formData, 'in_review');
   if (error || !post) redirect(buildContentPath({ error: error ?? 'invalid' }, 'composer') as Route);
 

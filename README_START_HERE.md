@@ -1,118 +1,80 @@
-# Repurly unified workspace
+# Repurly — Marketable Beta Start Here
 
-This folder is designed to work as the main working repo for both GitHub execution and ChatGPT-assisted review.
+Repurly is now packaged as a Daily LinkedIn Opportunity Desk for consultants, founders and expert-led businesses.
 
-## How the pieces fit together
+## Core promise
 
-- the **repo root** is the working Next.js codebase
-- `docs/` contains architecture, launch, provider, execution, and decision materials
-- `docs/decision/` contains the latest decision memo and go/no-go checkpoint files
-- `docs/qa/` contains repo-level QA reviews and follow-up notes
+Paste what happened on LinkedIn. Repurly tells you:
 
-## Current external positioning
+- who matters
+- what to reply
+- what to ignore
+- who to follow up
+- what to log
+- what to post next
 
-Repurly should currently be presented as:
+## Operating principle
 
-**A LinkedIn-led Growth OS for agencies and B2B teams**
+Repurly drafts. The user approves. The user posts or sends. Repurly logs and learns.
 
-Not as:
+Do not position Repurly as a LinkedIn automation tool. It should not auto-send comments, DMs, connection requests or profile actions.
 
-- a cheap scheduler
-- a broad all-network social suite
-- a mini-Sprout clone
+## Main app flow
 
-## Current product truth
+- `/app/daily-agent` — daily intake and action queue
+- `/app/relationships` — relationship tracker and follow-up reminders
+- `/app/weekly-plan` — weekly next-action plan
+- `/app/opportunity-settings` — offer, audience, warm-signal and no-DM settings
+- `/app/pilot-dashboard` — assisted beta usage/activation view
+- `/app/content` — secondary content studio
+- `/app/engagement` — captured comments/reply drafts
+- `/app/outreach-copilot` — manual outreach drafts
 
-The codebase already supports a real premium LinkedIn workflow, but the product story must stay tightly aligned to what is actually wired today.
+`/app` redirects to `/app/daily-agent` because the Daily Agent is now the product centre.
 
-### Safe claims
+## Beta pricing
 
-- LinkedIn is the primary launch channel
-- teams can connect a personal profile and, when permissions allow, company pages
-- teams can draft, request approval, approve/reject/request changes, schedule, queue, and publish content
-- workspaces, brands, roles, billing, and reliability views are present
-- engagement is **manual-first** today, not a full synced inbox
-- the planner is grounded in stored brand context and supplied source material
-- queue and activity screens support operator visibility, but the richest delivery forensics are still being completed
+- Pro Beta — £49/month
+- Assisted Beta — £250/month
+- Founder / Agency Pilot — £500+/month
 
-### Claims to avoid until they are fully true in product
+See `pricing_overview.md` and `REPURLY_MARKETABLE_BETA_HANDOFF.md`.
 
-- advanced multi-step approvals beyond the current single-step response loop
-- full synced social inbox
-- social listening
-- deep cross-channel analytics
-- a drag-and-drop calendar planner
-- true website crawling / website grounding
+## Local/staging setup
 
-## Best way to use this folder
+```bash
+npm install
+npm run db:migrate
+npm run seed
+npm run typecheck
+npm run lint
+npm run build
+```
 
-### For GitHub
-Use the **repo root** as your repository. Commit:
-- application code
-- `docs/`
-- `.gitignore`
-- `.env.example`
+For internal Jakoma testing:
 
-Do not commit secrets or temporary local files.
+```bash
+ENABLE_INTERNAL_BETA_ACCESS=true
+DAILY_AGENT_BETA_MONTHLY_LIMIT=40
+DAILY_AGENT_ENFORCE_LIMIT=false
+OPENAI_API_KEY=...
+OPENAI_DAILY_AGENT_MODEL=gpt-4.1-mini
+```
 
-### For a new review or implementation pass
-Start with these files:
-1. `README.md`
-2. `docs/architecture.md`
-3. `docs/platform-status-matrix.md`
-4. `docs/environment-reference.md`
-5. `docs/product-surface-reference.md`
-6. `docs/product-market-assessment-2026-04-18.md`
-7. `docs/qa/deep-dive-qa-2026-04-15.md`
+## Immediate validation path
 
-## Recommended operating stance
-- keep the workflow scope narrow and premium
-- prioritize workflow completion over more channels
-- treat LinkedIn as the hero channel
-- optimize for paid subscriptions, not feature breadth
-- treat the richer delivery-logs build as the architecture base
-- avoid drifting into a mini-Sprout strategy
+1. Seed Jakoma.
+2. Open Daily Agent.
+3. Paste real LinkedIn notifications, comments, analytics and names.
+4. Confirm output prioritises AI governance/data assurance and does not pitch from weak signals.
+5. Log at least three relationships.
+6. Open Weekly Plan.
+7. Configure Opportunity Settings.
+8. Open Pilot Dashboard and check activation metrics.
 
-## Key folders
+## LinkedIn analytics export upload
 
-- `docs/decision/` — latest decision memo and go/no-go checklist
-- `docs/project-management/` — board, gates, and execution scaffolding
-- `docs/build-decisions/` — build-level decision notes
-- `docs/providers/` — provider-specific setup and rollout notes
-- `docs/qa/` — QA findings, repo drift, and corrective actions
-- `docs/archive-source/` — earlier memo and plan docs
+The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv`, `.xlsx` or `.xls` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
 
-## First actions
-1. Review `README.md` and `docs/platform-status-matrix.md` together.
-2. Review `docs/product-surface-reference.md` before changing marketing or pricing copy.
-3. Configure env vars from `.env.example`.
-4. Run migrations and seed a local workspace.
-5. Keep execution aligned to the LinkedIn-led Growth OS story even though the adapter layer is broader.
-## E2E testing now wired in
+This improves analytics review without scraping LinkedIn or automating account actions. Screenshots/OCR, browser extension capture and official LinkedIn analytics API sync remain later-stage features.
 
-The repo now includes both Playwright and Cypress scaffolding for smoke coverage against the marketing surface.
-
-Useful commands:
-- `npm run test:e2e:playwright`
-- `npm run test:e2e:cypress`
-- `npm run test:e2e:playwright:install`
-- `npm run test:e2e:cypress:install`
-
-
-## Commercial-ready update in this pack
-
-This pack aligns the app around the live monetisation posture:
-
-- Starter at £79/month
-- Operator at £249/month
-- Scale as Custom/manual sales
-- Founder Pilot at £950 one-off, with implementation/onboarding from £1,500 where needed
-- LinkedIn text publishing as the first live customer workflow
-
-Before inviting customers, run:
-
-1. `npm run commercial:verify`
-2. `/api/health` on the live site
-3. the manual script in `docs/LIVE_SITE_TEST_SCRIPT.md`
-
-Do not promise broad all-network scheduling, automated inbox, deep analytics, or media publishing until each path has passed live testing.

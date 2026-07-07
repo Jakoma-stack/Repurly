@@ -18,6 +18,7 @@ async function refreshPages() {
   revalidatePath('/app');
   revalidatePath('/app/engagement');
   revalidatePath('/app/leads');
+  revalidatePath('/app/relationships');
 }
 
 async function upsertLeadFromComment(args: {
@@ -248,6 +249,7 @@ export async function updateLeadStage(formData: FormData) {
   const stage = requiredString(formData, 'stage');
   const nextAction = requiredString(formData, 'nextAction') || null;
   const notes = requiredString(formData, 'notes') || null;
+  const returnTo = requiredString(formData, 'returnTo') || '/app/leads';
 
   if (!workspaceId || !leadId || !stage) redirect('/app/leads?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
@@ -258,5 +260,6 @@ export async function updateLeadStage(formData: FormData) {
     .where(and(eq(leadPipeline.id, leadId), eq(leadPipeline.workspaceId, workspaceId)));
 
   await refreshPages();
-  redirect(`/app/leads?ok=updated&stage=${stage}` as Route);
+  const target = returnTo.startsWith('/app/relationships') ? `/app/relationships?ok=updated&stage=${stage}` : `/app/leads?ok=updated&stage=${stage}`;
+  redirect(target as Route);
 }

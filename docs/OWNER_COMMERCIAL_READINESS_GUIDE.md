@@ -250,10 +250,9 @@ In Stripe live mode:
 Suggested commercial pricing:
 
 ```text
-Starter  £79/month
-Operator £249/month
-Studio   from £699/month
-Studio  from £699/month
+Core   £297/month
+Growth £697/month
+Scale  Custom
 ```
 
 Production env vars:
@@ -263,7 +262,7 @@ STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_CORE=
 STRIPE_PRICE_GROWTH=
-STRIPE_PRICE_SCALE=  # optional if Studio is handled manually
+STRIPE_PRICE_SCALE=  # optional if Scale is handled manually
 ```
 
 ## 5.3 LinkedIn
@@ -533,7 +532,7 @@ Give them a clear beta offer:
 
 ```text
 Paid pilot from £1,500 in exchange for a tightly supported onboarding and feedback loop.
-Then £79/month or £249/month depending on usage if they keep using it, or from £699/month for Studio/assisted operations.
+Then £297/month or £697/month depending on usage if they keep using it.
 ```
 
 Track:
