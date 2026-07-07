@@ -1,0 +1,966 @@
+--- a/Repurly/.env.example
++++ b/Repurly/.env.example
+@@ -1,102 +1,104 @@
+-# Repurly environment reference
+-# Copy to .env.local for local development and fill with real values.
+-# This file reflects the current Next.js + Clerk + Stripe + Postgres + Inngest build.
+-
+-# -----------------------------------------------------------------------------
+-# Core app
+-# -----------------------------------------------------------------------------
+-NODE_ENV=development
+-NEXT_PUBLIC_APP_URL=http://localhost:3000
+-DATABASE_URL=postgresql://user:password@localhost:5432/repurly
+-TOKEN_ENCRYPTION_SECRET=replace-with-at-least-32-random-characters
+-
+-# -----------------------------------------------------------------------------
+-# Authentication (Clerk)
+-# -----------------------------------------------------------------------------
+-CLERK_SECRET_KEY=
+-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+-
+-# -----------------------------------------------------------------------------
+-# Billing (Stripe)
+-# -----------------------------------------------------------------------------
+-STRIPE_SECRET_KEY=
+-STRIPE_WEBHOOK_SECRET=
+-STRIPE_PRICE_CORE=
+-STRIPE_PRICE_GROWTH=
+-STRIPE_PRICE_SCALE=
+-
+-# -----------------------------------------------------------------------------
+-# Email / notifications (Resend + ops alerts)
+-# -----------------------------------------------------------------------------
+-RESEND_API_KEY=
+-EMAIL_FROM="Repurly <noreply@example.com>"
+-ALERT_EMAIL_TO=
+-ALERT_WEBHOOK_URL=
+-
+-# -----------------------------------------------------------------------------
+-# Background workflows (Inngest)
+-# -----------------------------------------------------------------------------
+-INNGEST_EVENT_KEY=
+-INNGEST_SIGNING_KEY=
+-PUBLISH_DUE_BATCH_SIZE=25
+-PUBLISH_DISPATCH_THROTTLE_MS=120000
+-RECONNECT_WARNING_DAYS=7
+-ENABLE_LIVE_USAGE_METERING=false
+-
+-# -----------------------------------------------------------------------------
+-# Storage (S3 / R2 compatible)
+-# -----------------------------------------------------------------------------
+-S3_REGION=auto
+-S3_BUCKET=
+-S3_ACCESS_KEY_ID=
+-S3_SECRET_ACCESS_KEY=
+-S3_ENDPOINT=
+-S3_PUBLIC_BASE_URL=
+-
+-# -----------------------------------------------------------------------------
+-# AI drafting / reply generation
+-# -----------------------------------------------------------------------------
+-OPENAI_API_KEY=
+-
+-# -----------------------------------------------------------------------------
+-# LinkedIn (current primary launch channel)
+-# -----------------------------------------------------------------------------
+-LINKEDIN_CLIENT_ID=
+-LINKEDIN_CLIENT_SECRET=
+-LINKEDIN_REDIRECT_URI=http://localhost:3000/api/linkedin/callback
+-LINKEDIN_SCOPE=openid profile email w_member_social w_organization_social
+-LINKEDIN_API_TIMEOUT_MS=15000
+-LINKEDIN_OAUTH_TIMEOUT_MS=15000
+-LINKEDIN_PUBLISH_TIMEOUT_MS=25000
+-
+-# -----------------------------------------------------------------------------
+-# X
+-# -----------------------------------------------------------------------------
+-X_CLIENT_ID=
+-X_CLIENT_SECRET=
+-X_REDIRECT_URI=http://localhost:3000/api/x/callback
+-X_SCOPE=tweet.read tweet.write users.read offline.access media.write
+-X_WEBHOOK_SECRET=
+-
+-# -----------------------------------------------------------------------------
+-# Meta (Facebook Pages / Instagram Business)
+-# -----------------------------------------------------------------------------
+-META_APP_ID=
+-META_APP_SECRET=
+-FACEBOOK_REDIRECT_URI=http://localhost:3000/api/facebook/callback
+-FACEBOOK_SCOPE=pages_show_list pages_manage_posts pages_read_engagement business_management
+-INSTAGRAM_REDIRECT_URI=http://localhost:3000/api/instagram/callback
+-INSTAGRAM_SCOPE=instagram_basic instagram_content_publish pages_show_list business_management
+-META_WEBHOOK_VERIFY_TOKEN=
+-INSTAGRAM_STATUS_MAX_POLLS=12
+-INSTAGRAM_STATUS_POLL_INTERVAL_MS=5000
+-
+-# -----------------------------------------------------------------------------
+-# YouTube webhooks (future-facing)
+-# -----------------------------------------------------------------------------
+-YOUTUBE_WEBHOOK_SECRET=
+-
+-# -----------------------------------------------------------------------------
+-# Observability
+-# -----------------------------------------------------------------------------
+-SENTRY_DSN=
++# Repurly environment reference
++# Copy to .env.local for local development and fill with real values.
++# This file reflects the current Next.js + Clerk + Stripe + Postgres + Inngest build.
++
++# -----------------------------------------------------------------------------
++# Core app
++# -----------------------------------------------------------------------------
++NODE_ENV=development
++NEXT_PUBLIC_APP_URL=http://localhost:3000
++DATABASE_URL=postgresql://user:password@localhost:5432/repurly
++TOKEN_ENCRYPTION_SECRET=replace-with-at-least-32-random-characters
++
++# -----------------------------------------------------------------------------
++# Authentication (Clerk)
++# -----------------------------------------------------------------------------
++CLERK_SECRET_KEY=
++NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
++
++# -----------------------------------------------------------------------------
++# Billing (Stripe)
++# -----------------------------------------------------------------------------
++STRIPE_SECRET_KEY=
++STRIPE_WEBHOOK_SECRET=
++STRIPE_PRICE_CORE=
++STRIPE_PRICE_GROWTH=
++STRIPE_PRICE_SCALE=
++
++# -----------------------------------------------------------------------------
++# Email / notifications (Resend + ops alerts)
++# -----------------------------------------------------------------------------
++RESEND_API_KEY=
++EMAIL_FROM="Repurly <noreply@example.com>"
++ALERT_EMAIL_TO=
++ALERT_WEBHOOK_URL=
++
++# -----------------------------------------------------------------------------
++# Background workflows (Inngest)
++# -----------------------------------------------------------------------------
++INNGEST_EVENT_KEY=
++INNGEST_SIGNING_KEY=
++PUBLISH_DUE_BATCH_SIZE=25
++PUBLISH_DISPATCH_THROTTLE_MS=120000
++RECONNECT_WARNING_DAYS=7
++ENABLE_LIVE_USAGE_METERING=false
++
++# -----------------------------------------------------------------------------
++# Storage (S3 / R2 compatible)
++# -----------------------------------------------------------------------------
++S3_REGION=auto
++S3_BUCKET=
++S3_ACCESS_KEY_ID=
++S3_SECRET_ACCESS_KEY=
++S3_ENDPOINT=
++S3_PUBLIC_BASE_URL=
++
++# -----------------------------------------------------------------------------
++# AI drafting / reply generation
++# -----------------------------------------------------------------------------
++OPENAI_API_KEY=
++
++# -----------------------------------------------------------------------------
++# LinkedIn (current primary launch channel)
++# -----------------------------------------------------------------------------
++LINKEDIN_CLIENT_ID=
++LINKEDIN_CLIENT_SECRET=
++LINKEDIN_REDIRECT_URI=http://localhost:3000/api/linkedin/callback
++LINKEDIN_SCOPE=openid profile email w_member_social w_organization_social rw_organization_admin
++LINKEDIN_ENV_KEY=
++LINKEDIN_API_VERSION=202603
++LINKEDIN_API_TIMEOUT_MS=15000
++LINKEDIN_OAUTH_TIMEOUT_MS=15000
++LINKEDIN_PUBLISH_TIMEOUT_MS=25000
++
++# -----------------------------------------------------------------------------
++# X
++# -----------------------------------------------------------------------------
++X_CLIENT_ID=
++X_CLIENT_SECRET=
++X_REDIRECT_URI=http://localhost:3000/api/x/callback
++X_SCOPE=tweet.read tweet.write users.read offline.access media.write
++X_WEBHOOK_SECRET=
++
++# -----------------------------------------------------------------------------
++# Meta (Facebook Pages / Instagram Business)
++# -----------------------------------------------------------------------------
++META_APP_ID=
++META_APP_SECRET=
++FACEBOOK_REDIRECT_URI=http://localhost:3000/api/facebook/callback
++FACEBOOK_SCOPE=pages_show_list pages_manage_posts pages_read_engagement business_management
++INSTAGRAM_REDIRECT_URI=http://localhost:3000/api/instagram/callback
++INSTAGRAM_SCOPE=instagram_basic instagram_content_publish pages_show_list business_management
++META_WEBHOOK_VERIFY_TOKEN=
++INSTAGRAM_STATUS_MAX_POLLS=12
++INSTAGRAM_STATUS_POLL_INTERVAL_MS=5000
++
++# -----------------------------------------------------------------------------
++# YouTube webhooks (future-facing)
++# -----------------------------------------------------------------------------
++YOUTUBE_WEBHOOK_SECRET=
++
++# -----------------------------------------------------------------------------
++# Observability
++# -----------------------------------------------------------------------------
++SENTRY_DSN=
+--- a/Repurly/src/.env.example
++++ b/Repurly/src/.env.example
+@@ -64,7 +64,9 @@
+ LINKEDIN_CLIENT_ID=
+ LINKEDIN_CLIENT_SECRET=
+ LINKEDIN_REDIRECT_URI=http://localhost:3000/api/linkedin/callback
+-LINKEDIN_SCOPE=openid profile email w_member_social w_organization_social
++LINKEDIN_SCOPE=openid profile email w_member_social w_organization_social rw_organization_admin
++LINKEDIN_ENV_KEY=
++LINKEDIN_API_VERSION=202603
+ LINKEDIN_API_TIMEOUT_MS=15000
+ LINKEDIN_OAUTH_TIMEOUT_MS=15000
+ LINKEDIN_PUBLISH_TIMEOUT_MS=25000
+--- a/Repurly/src/app/api/linkedin/callback/route.ts
++++ b/Repurly/src/app/api/linkedin/callback/route.ts
+@@ -14,11 +14,14 @@
+ 
+   try {
+     const payload = parseLinkedInState(state);
+-    await connectLinkedInWorkspace(payload.workspaceId, code);
++    const result = await connectLinkedInWorkspace(payload.workspaceId, code, payload.configKey);
++    const redirectUrl = new URL(buildAppUrl('/app/channels?linkedin=connected&setup=review-target#linkedin-onboarding', request.url));
+ 
+-    return NextResponse.redirect(
+-      new URL(buildAppUrl('/app/channels?linkedin=connected&setup=review-target#linkedin-onboarding', request.url)),
+-    );
++    if (result.organizationSyncWarning) {
++      redirectUrl.searchParams.set('warning', result.organizationSyncWarning);
++    }
++
++    return NextResponse.redirect(redirectUrl);
+   } catch {
+     return NextResponse.redirect(new URL(buildAppUrl('/app/channels?error=linkedin-connect-failed#linkedin-onboarding', request.url)));
+   }
+--- a/Repurly/src/app/app/channels/page.tsx
++++ b/Repurly/src/app/app/channels/page.tsx
+@@ -37,6 +37,7 @@
+   const linkedInState = firstParam(params.linkedin);
+   const setupState = firstParam(params.setup);
+   const error = firstParam(params.error);
++  const warning = firstParam(params.warning);
+   const currentDefaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
+   const showLinkedInOnboarding = linkedInState === 'connected' || setupState === 'review-target' || setupState === 'target-confirmed';
+ 
+@@ -49,6 +50,10 @@
+       {error === 'linkedin-missing-oauth' ? <Banner kind="error">LinkedIn returned without the expected OAuth details. Start the connection again from this workspace so Repurly can finish setup safely.</Banner> : null}
+       {error === 'linkedin-connect-failed' ? <Banner kind="error">LinkedIn authentication completed, but Repurly could not finish syncing the workspace targets. Retry the connection from this screen.</Banner> : null}
+       {error === 'invalid-target' ? <Banner kind="error">Repurly could not confirm that LinkedIn target for this workspace. Pick a visible target below and try again.</Banner> : null}
++      {warning === 'linkedin-company-pages-missing-scopes' ? <Banner kind="error">LinkedIn connected the member profile, but company pages could not be synced because the granted scopes do not include organization access. Update the app scopes to include company-page permissions, then reconnect.</Banner> : null}
++      {warning === 'linkedin-company-pages-forbidden' ? <Banner kind="error">LinkedIn connected the member profile, but company pages were denied during organization lookup. Confirm this LinkedIn app has approved organization permissions and that the signed-in member is an admin of the company page.</Banner> : null}
++      {warning === 'linkedin-company-pages-unauthorized' ? <Banner kind="error">LinkedIn connected the member profile, but organization lookup was not authorised. Reconnect LinkedIn and accept the full company-page permission set for the correct workspace.</Banner> : null}
++      {warning === 'linkedin-company-pages-unavailable' || warning === 'linkedin-company-pages-sync-failed' ? <Banner kind="error">LinkedIn connected the member profile, but Repurly could not sync company pages for this workspace. Reconnect after confirming the LinkedIn app has company-page access and the signed-in account administers the page.</Banner> : null}
+ 
+       {showLinkedInOnboarding ? (
+         <Card id="linkedin-onboarding" className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
+@@ -61,7 +66,7 @@
+                 </div>
+                 <h2 className="text-2xl font-semibold">Finish the post-connect setup in Channels</h2>
+                 <p className="text-sm text-slate-600">
+-                  Keep the flow workspace-aware: review the discovered LinkedIn destinations, confirm the default posting target, then continue into composer.
++                  Keep the flow workspace-aware: LinkedIn will not show a company-page picker during sign-in, so Repurly discovers any admin-managed company pages after connect and lets you set the default target here.
+                 </p>
+               </div>
+               <div className="grid min-w-[220px] gap-3 sm:grid-cols-2 lg:grid-cols-1">
+@@ -80,7 +85,7 @@
+             <div className="grid gap-3 md:grid-cols-3">
+               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
+                 <div className="font-medium text-slate-950">1. Review discovered destinations</div>
+-                <div className="mt-1 text-slate-600">Make sure the profile or company page shown here matches the real workspace that should publish first.</div>
++                <div className="mt-1 text-slate-600">LinkedIn sign-in only handles consent. Check that Repurly discovered the correct personal profile and any company pages you administer.</div>
+               </div>
+               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
+                 <div className="font-medium text-slate-950">2. Confirm the default target</div>
+@@ -138,7 +143,7 @@
+               </div>
+             ) : (
+               <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-sm text-slate-600">
+-                LinkedIn connected, but no publishable destinations were synced yet. Open the connection again after confirming the account has the right profile or company-page permissions.
++                LinkedIn connected, but no publishable destinations were synced yet. LinkedIn does not offer a company-page picker during OAuth, so Repurly has to discover company pages after connect. Reconnect after confirming the app has approved company-page permissions and the signed-in member administers the page.
+               </div>
+             )}
+           </CardContent>
+--- a/Repurly/src/lib/integrations/service.ts
++++ b/Repurly/src/lib/integrations/service.ts
+@@ -1,4 +1,5 @@
+ import { and, eq } from "drizzle-orm";
++
+ import { db } from "@/lib/db/client";
+ import { decryptSecret, encryptSecret } from "@/lib/security";
+ import { integrations, platformAccounts } from "../../../drizzle/schema";
+@@ -17,6 +18,11 @@
+   status?: string;
+ };
+ 
++export type SyncPlatformAccountsOptions = {
++  preferredDefaultHandle?: string | null;
++  replaceDefaultWhenAvailable?: boolean;
++};
++
+ const ACCESS_TOKEN_REFRESH_WINDOW_MS = 1000 * 60 * 15;
+ const refreshInflight = new Map<string, Promise<string>>();
+ 
+@@ -77,14 +83,17 @@
+ export async function getValidAccessToken(
+   workspaceId: string,
+   provider: PlatformKey,
+-  refresh: (refreshToken: string) => Promise<{
++  refresh: (
++    refreshToken: string,
++    integration: NonNullable<Awaited<ReturnType<typeof getIntegration>>>,
++  ) => Promise<{
+     accessToken: string;
+     refreshToken?: string | null;
+     accessTokenExpiresAt?: Date | null;
+     refreshTokenExpiresAt?: Date | null;
+     scopes?: string[];
+     metadata?: Record<string, unknown>;
+-  }>
++  }>,
+ ) {
+   const integration = await getIntegration(workspaceId, provider);
+   if (!integration?.encryptedAccessToken) {
+@@ -120,7 +129,7 @@
+     }
+ 
+     const decryptedRefreshToken = decryptSecret(latestIntegration.encryptedRefreshToken);
+-    const refreshed = await refresh(decryptedRefreshToken);
++    const refreshed = await refresh(decryptedRefreshToken, latestIntegration);
+     await upsertIntegration({
+       workspaceId,
+       provider,
+@@ -150,7 +159,8 @@
+   workspaceId: string,
+   integrationId: string,
+   provider: PlatformKey,
+-  accounts: PlatformAccountSummary[]
++  accounts: PlatformAccountSummary[],
++  options: SyncPlatformAccountsOptions = {},
+ ) {
+   const existing = await db
+     .select()
+@@ -163,6 +173,7 @@
+       await db
+         .update(platformAccounts)
+         .set({
++          integrationId,
+           displayName: account.displayName,
+           handle: account.handle,
+           targetType: account.targetType,
+@@ -185,4 +196,42 @@
+       });
+     }
+   }
++
++  const refreshedAccounts = await db
++    .select({
++      id: platformAccounts.id,
++      handle: platformAccounts.handle,
++      isDefault: platformAccounts.isDefault,
++      publishEnabled: platformAccounts.publishEnabled,
++    })
++    .from(platformAccounts)
++    .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
++
++  const publishableAccounts = refreshedAccounts.filter((account) => account.publishEnabled);
++  if (!publishableAccounts.length) {
++    return;
++  }
++
++  const currentDefault = publishableAccounts.find((account) => account.isDefault) ?? null;
++  const preferredDefault = options.preferredDefaultHandle
++    ? publishableAccounts.find((account) => account.handle === options.preferredDefaultHandle) ?? null
++    : null;
++
++  const nextDefault = options.replaceDefaultWhenAvailable
++    ? preferredDefault ?? currentDefault ?? publishableAccounts[0]
++    : currentDefault ?? preferredDefault ?? publishableAccounts[0];
++
++  if (!nextDefault) {
++    return;
++  }
++
++  await db
++    .update(platformAccounts)
++    .set({ isDefault: false, updatedAt: new Date() })
++    .where(and(eq(platformAccounts.workspaceId, workspaceId), eq(platformAccounts.provider, provider)));
++
++  await db
++    .update(platformAccounts)
++    .set({ isDefault: true, updatedAt: new Date() })
++    .where(eq(platformAccounts.id, nextDefault.id));
+ }
+--- a/Repurly/src/lib/linkedin/client.ts
++++ b/Repurly/src/lib/linkedin/client.ts
+@@ -1,4 +1,4 @@
+-import { getLinkedInRedirectUriForServer } from '@/lib/linkedin/oauth';
++import { getLinkedInApiVersion, getLinkedInConfig } from '@/lib/linkedin/config';
+ 
+ export interface LinkedInTokenResponse {
+   access_token: string;
+@@ -8,6 +8,12 @@
+   scope?: string;
+ }
+ 
++export type LinkedInRequestError = Error & {
++  retryable?: boolean;
++  status?: number;
++  body?: string;
++};
++
+ const LINKEDIN_OAUTH_TIMEOUT_MS = Number(process.env.LINKEDIN_OAUTH_TIMEOUT_MS ?? 15000);
+ const LINKEDIN_API_TIMEOUT_MS = Number(process.env.LINKEDIN_API_TIMEOUT_MS ?? 15000);
+ 
+@@ -27,7 +33,7 @@
+ 
+     throw Object.assign(
+       new Error(error instanceof Error ? error.message : `${timeoutLabel} failed`),
+-      { retryable: true }
++      { retryable: true },
+     );
+   } finally {
+     clearTimeout(timeout);
+@@ -38,46 +44,55 @@
+   return response.text().catch(() => '');
+ }
+ 
+-export async function exchangeLinkedInCode(code: string): Promise<LinkedInTokenResponse> {
++function buildLinkedInError(timeoutLabel: string, response: Response, body: string): LinkedInRequestError {
++  return Object.assign(
++    new Error(`${timeoutLabel} failed: ${response.status} ${body}`.trim()),
++    {
++      retryable: response.status >= 500 || response.status === 429 || response.status === 408,
++      status: response.status,
++      body,
++    },
++  );
++}
++
++export async function exchangeLinkedInCode(code: string, configKey?: string | null): Promise<LinkedInTokenResponse> {
++  const config = getLinkedInConfig({ configKey });
+   const response = await fetchWithTimeout('https://www.linkedin.com/oauth/v2/accessToken', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+     body: new URLSearchParams({
+       grant_type: 'authorization_code',
+       code,
+-      client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
+-      client_secret: process.env.LINKEDIN_CLIENT_SECRET?.trim() ?? '',
+-      redirect_uri: getLinkedInRedirectUriForServer(),
++      client_id: config.clientId,
++      client_secret: config.clientSecret,
++      redirect_uri: config.redirectUri,
+     }),
+   }, LINKEDIN_OAUTH_TIMEOUT_MS, 'LinkedIn token exchange');
+ 
+   if (!response.ok) {
+     const body = await readResponseText(response);
+-    throw Object.assign(
+-      new Error(`LinkedIn token exchange failed: ${response.status} ${body}`.trim()),
+-      { retryable: response.status >= 500 || response.status === 429 || response.status === 408 }
+-    );
++    throw buildLinkedInError('LinkedIn token exchange', response, body);
+   }
+ 
+   return response.json();
+ }
+ 
+-export async function refreshLinkedInToken(refreshToken: string): Promise<LinkedInTokenResponse> {
++export async function refreshLinkedInToken(refreshToken: string, configKey?: string | null): Promise<LinkedInTokenResponse> {
++  const config = getLinkedInConfig({ configKey });
+   const response = await fetchWithTimeout('https://www.linkedin.com/oauth/v2/accessToken', {
+     method: 'POST',
+     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+     body: new URLSearchParams({
+       grant_type: 'refresh_token',
+       refresh_token: refreshToken,
+-      client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
+-      client_secret: process.env.LINKEDIN_CLIENT_SECRET?.trim() ?? '',
++      client_id: config.clientId,
++      client_secret: config.clientSecret,
+     }),
+   }, LINKEDIN_OAUTH_TIMEOUT_MS, 'LinkedIn token refresh');
+ 
+   if (!response.ok) {
+     const body = await readResponseText(response);
+-    const retryable = response.status >= 500 || response.status === 429 || response.status === 408;
+-    throw Object.assign(new Error(`LinkedIn refresh failed: ${response.status} ${body}`.trim()), { retryable });
++    throw buildLinkedInError('LinkedIn token refresh', response, body);
+   }
+ 
+   return response.json();
+@@ -90,24 +105,26 @@
+ 
+   if (!response.ok) {
+     const body = await readResponseText(response);
+-    throw Object.assign(
+-      new Error(`LinkedIn userinfo failed: ${response.status} ${body}`.trim()),
+-      { retryable: response.status >= 500 || response.status === 429 || response.status === 408 }
+-    );
++    throw buildLinkedInError('LinkedIn userinfo lookup', response, body);
+   }
+ 
+   return response.json() as Promise<{ sub: string; name?: string; email?: string }>;
+ }
+ 
+-export async function fetchOrganizationAccess(accessToken: string) {
++export async function fetchOrganizationAccess(accessToken: string, _configKey?: string | null) {
++  const apiVersion = getLinkedInApiVersion();
+   const response = await fetchWithTimeout('https://api.linkedin.com/rest/organizationAcls?q=roleAssignee', {
+     headers: {
+       Authorization: `Bearer ${accessToken}`,
+-      'LinkedIn-Version': '202503',
++      'LinkedIn-Version': apiVersion,
+       'X-Restli-Protocol-Version': '2.0.0',
+     },
+   }, LINKEDIN_API_TIMEOUT_MS, 'LinkedIn organization lookup');
+ 
+-  if (!response.ok) return { elements: [] };
++  if (!response.ok) {
++    const body = await readResponseText(response);
++    throw buildLinkedInError('LinkedIn organization lookup', response, body);
++  }
++
+   return response.json() as Promise<{ elements: Array<Record<string, unknown>> }>;
+ }
+--- a/Repurly/src/lib/linkedin/oauth.ts
++++ b/Repurly/src/lib/linkedin/oauth.ts
+@@ -1,31 +1,32 @@
+ import { randomBytes } from 'crypto';
+ 
+-import { buildAppUrl } from '@/lib/app-url';
++import { getLinkedInConfig } from '@/lib/linkedin/config';
+ 
+-function getLinkedInRedirectUri(requestUrl?: string) {
+-  return process.env.LINKEDIN_REDIRECT_URI?.trim() || buildAppUrl('/api/linkedin/callback', requestUrl);
+-}
++export type LinkedInOAuthState = {
++  workspaceId: string;
++  nonce: string;
++  configKey: string;
++};
+ 
+ export function buildLinkedInAuthUrl(workspaceId: string, requestUrl?: string) {
+-  const state = Buffer.from(JSON.stringify({ workspaceId, nonce: randomBytes(8).toString('hex') })).toString('base64url');
++  const config = getLinkedInConfig({ requestUrl });
++  const state = Buffer.from(JSON.stringify({
++    workspaceId,
++    nonce: randomBytes(8).toString('hex'),
++    configKey: config.key,
++  } satisfies LinkedInOAuthState)).toString('base64url');
++
+   const params = new URLSearchParams({
+     response_type: 'code',
+-    client_id: process.env.LINKEDIN_CLIENT_ID?.trim() ?? '',
+-    redirect_uri: getLinkedInRedirectUri(requestUrl),
++    client_id: config.clientId,
++    redirect_uri: config.redirectUri,
+     state,
+-    scope: process.env.LINKEDIN_SCOPE?.trim() ?? '',
++    scope: config.scope,
+   });
+ 
+   return `https://www.linkedin.com/oauth/v2/authorization?${params.toString()}`;
+ }
+ 
+ export function parseLinkedInState(state: string) {
+-  return JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as {
+-    workspaceId: string;
+-    nonce: string;
+-  };
+-}
+-
+-export function getLinkedInRedirectUriForServer(requestUrl?: string) {
+-  return getLinkedInRedirectUri(requestUrl);
++  return JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as LinkedInOAuthState;
+ }
+--- a/Repurly/src/lib/linkedin/publisher.ts
++++ b/Repurly/src/lib/linkedin/publisher.ts
+@@ -1,3 +1,5 @@
++import { getLinkedInApiVersion } from "@/lib/linkedin/config";
++
+ export type PublishPayload = {
+   authorUrn: string;
+   commentary: string;
+@@ -9,6 +11,7 @@
+ const LINKEDIN_PUBLISH_TIMEOUT_MS = Number(process.env.LINKEDIN_PUBLISH_TIMEOUT_MS ?? 25000);
+ 
+ export async function publishLinkedInPost(accessToken: string, payload: PublishPayload) {
++  const apiVersion = getLinkedInApiVersion();
+   const body: Record<string, unknown> = {
+     author: payload.authorUrn,
+     commentary: payload.commentary,
+@@ -51,7 +54,7 @@
+       headers: {
+         Authorization: `Bearer ${accessToken}`,
+         "Content-Type": "application/json",
+-        "LinkedIn-Version": "202503",
++        "LinkedIn-Version": apiVersion,
+         "X-Restli-Protocol-Version": "2.0.0",
+       },
+       body: JSON.stringify(body),
+--- a/Repurly/src/lib/linkedin/service.ts
++++ b/Repurly/src/lib/linkedin/service.ts
+@@ -1,4 +1,11 @@
+-import { exchangeLinkedInCode, fetchLinkedInMember, fetchOrganizationAccess, refreshLinkedInToken } from '@/lib/linkedin/client';
++import {
++  exchangeLinkedInCode,
++  fetchLinkedInMember,
++  fetchOrganizationAccess,
++  refreshLinkedInToken,
++  type LinkedInRequestError,
++} from '@/lib/linkedin/client';
++import { getLinkedInConfig } from '@/lib/linkedin/config';
+ import { getValidAccessToken, syncPlatformAccounts, upsertIntegration } from '@/lib/integrations/service';
+ 
+ function getOrganizationTargetId(value: unknown) {
+@@ -15,23 +22,47 @@
+   return null;
+ }
+ 
+-export async function connectLinkedInWorkspace(workspaceId: string, code: string) {
+-  const tokens = await exchangeLinkedInCode(code);
++function parseGrantedScopes(scope?: string) {
++  return new Set((scope ?? '').split(/\s+/).map((entry) => entry.trim()).filter(Boolean));
++}
++
++function buildOrganizationSyncWarning(error: unknown, grantedScopes: Set<string>) {
++  const linkedInError = error as LinkedInRequestError | undefined;
++  const details = linkedInError?.body?.trim();
++
++  if (grantedScopes.size > 0 && !grantedScopes.has('w_organization_social') && !grantedScopes.has('rw_organization_admin')) {
++    return 'linkedin-company-pages-missing-scopes';
++  }
++
++  if (linkedInError?.status === 403) {
++    return 'linkedin-company-pages-forbidden';
++  }
++
++  if (linkedInError?.status === 401) {
++    return 'linkedin-company-pages-unauthorized';
++  }
++
++  if (details && /organization|company|page/i.test(details)) {
++    return 'linkedin-company-pages-unavailable';
++  }
++
++  return 'linkedin-company-pages-sync-failed';
++}
++
++export async function connectLinkedInWorkspace(workspaceId: string, code: string, configKey?: string | null) {
++  const config = getLinkedInConfig({ configKey });
++  const tokens = await exchangeLinkedInCode(code, config.key);
+   const member = await fetchLinkedInMember(tokens.access_token);
+-  const organizations = await fetchOrganizationAccess(tokens.access_token);
++  const grantedScopes = parseGrantedScopes(tokens.scope);
+ 
+-  const integration = await upsertIntegration({
+-    workspaceId,
+-    provider: 'linkedin',
+-    externalAccountId: member.sub,
+-    accessToken: tokens.access_token,
+-    refreshToken: tokens.refresh_token,
+-    accessTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+-    refreshTokenExpiresAt: tokens.refresh_token_expires_in ? new Date(Date.now() + tokens.refresh_token_expires_in * 1000) : null,
+-    scopes: tokens.scope?.split(' ') ?? [],
+-    metadata: { member, organizations },
+-    status: 'connected',
+-  });
++  let organizations: { elements: Array<Record<string, unknown>> } = { elements: [] };
++  let organizationSyncWarning: string | null = null;
++
++  try {
++    organizations = await fetchOrganizationAccess(tokens.access_token, config.key);
++  } catch (error) {
++    organizationSyncWarning = buildOrganizationSyncWarning(error, grantedScopes);
++  }
+ 
+   const organizationAccounts = (Array.isArray(organizations.elements) ? organizations.elements : [])
+     .map((entry) => {
+@@ -54,29 +85,56 @@
+     })
+     .filter((account): account is NonNullable<typeof account> => Boolean(account));
+ 
++  const memberHandle = `urn:li:person:${member.sub}`;
++  const preferredDefaultHandle = organizationAccounts[0]?.handle ?? memberHandle;
++
++  const integration = await upsertIntegration({
++    workspaceId,
++    provider: 'linkedin',
++    externalAccountId: member.sub,
++    accessToken: tokens.access_token,
++    refreshToken: tokens.refresh_token,
++    accessTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
++    refreshTokenExpiresAt: tokens.refresh_token_expires_in ? new Date(Date.now() + tokens.refresh_token_expires_in * 1000) : null,
++    scopes: tokens.scope?.split(' ') ?? [],
++    metadata: {
++      member,
++      organizations,
++      linkedInConfigKey: config.key,
++      organizationSyncWarning,
++    },
++    status: 'connected',
++  });
++
+   await syncPlatformAccounts(workspaceId, integration.id, 'linkedin', [
+     {
+       provider: 'linkedin',
+-      handle: `urn:li:person:${member.sub}`,
++      handle: memberHandle,
+       displayName: member.name ?? member.email ?? 'LinkedIn member',
+       targetType: 'member',
+       publishEnabled: true,
+     },
+     ...organizationAccounts,
+-  ]);
++  ], {
++    preferredDefaultHandle,
++    replaceDefaultWhenAvailable: organizationAccounts.length > 0,
++  });
+ 
+-  return { member, organizations };
++  return { member, organizations, organizationSyncWarning };
+ }
+ 
+ export async function getValidLinkedInAccessToken(workspaceId: string) {
+-  return getValidAccessToken(workspaceId, 'linkedin', async (refreshToken) => {
+-    const refreshed = await refreshLinkedInToken(refreshToken);
++  return getValidAccessToken(workspaceId, 'linkedin', async (refreshToken, integration) => {
++    const metadata = integration.metadata as Record<string, unknown> | null;
++    const configKey = typeof metadata?.linkedInConfigKey === 'string' ? metadata.linkedInConfigKey : null;
++    const refreshed = await refreshLinkedInToken(refreshToken, configKey);
+     return {
+       accessToken: refreshed.access_token,
+       refreshToken: refreshed.refresh_token ?? refreshToken,
+       accessTokenExpiresAt: new Date(Date.now() + refreshed.expires_in * 1000),
+       refreshTokenExpiresAt: refreshed.refresh_token_expires_in ? new Date(Date.now() + refreshed.refresh_token_expires_in * 1000) : null,
+       scopes: refreshed.scope?.split(' '),
++      metadata: configKey ? { linkedInConfigKey: configKey } : undefined,
+     };
+   });
+ }
+--- a/Repurly/PATCH_NOTES_LINKEDIN_COMPANY_PAGES.md
++++ b/Repurly/PATCH_NOTES_LINKEDIN_COMPANY_PAGES.md
+@@ -0,0 +1,64 @@
++# Repurly LinkedIn company-page patch
++
++This patch fixes the main reasons Repurly was defaulting to a personal LinkedIn profile instead of a company page.
++
++## What changed
++
++- Added safer LinkedIn configuration resolution.
++  - Supports the standard env vars:
++    - `LINKEDIN_CLIENT_ID`
++    - `LINKEDIN_CLIENT_SECRET`
++    - `LINKEDIN_REDIRECT_URI`
++    - `LINKEDIN_SCOPE`
++  - Also supports legacy suffixed env vars such as:
++    - `LINKEDIN_CLIENT_ID_Repurly`
++    - `LINKEDIN_CLIENT_SECRET_Repurly`
++    - `LINKEDIN_REDIRECT_URI_Repurly`
++    - `LINKEDIN_SCOPE_Repurly`
++  - You can force a specific suffixed set with `LINKEDIN_ENV_KEY`.
++
++- Persisted the LinkedIn config selection through OAuth state.
++  - The callback now exchanges the code using the same LinkedIn app credentials and redirect URI that were used to start sign-in.
++
++- Updated LinkedIn REST version handling.
++  - Added `LINKEDIN_API_VERSION` with a default of `202603`.
++
++- Improved company-page discovery behaviour.
++  - Repurly now surfaces company-page sync problems instead of silently swallowing them.
++  - OAuth still succeeds for the member profile, but Channels now shows a clear warning when organization lookup fails.
++
++- Prefer company pages as the default target when discovered.
++  - On connect/reconnect, if a LinkedIn company page is available, Repurly now prefers it as the workspace default target.
++
++- Clarified the Channels UX copy.
++  - The UI now explains that LinkedIn does not show a company-page picker during sign-in.
++  - Company pages are discovered after connect and selected inside Repurly.
++
++## Required LinkedIn setup
++
++For company-page posting/discovery to work reliably, the LinkedIn app and member account still need the right access:
++
++- The signed-in LinkedIn member must administer the company page.
++- The LinkedIn app must be approved for the organization/page permissions you request.
++- Your environment scope should include the company-page permissions you actually have approval for.
++
++Suggested scope set in this patch:
++
++`openid profile email w_member_social w_organization_social rw_organization_admin`
++
++## Files changed
++
++- `src/lib/linkedin/config.ts`
++- `src/lib/linkedin/oauth.ts`
++- `src/lib/linkedin/client.ts`
++- `src/lib/linkedin/service.ts`
++- `src/lib/linkedin/publisher.ts`
++- `src/lib/integrations/service.ts`
++- `src/app/api/linkedin/callback/route.ts`
++- `src/app/app/channels/page.tsx`
++- `.env.example`
++- `src/.env.example`
++
++## Important
++
++The source zip included local environment files with real-looking secrets. Those files were excluded from the patched zip. Rotate any exposed LinkedIn, Stripe, Clerk, database, or storage credentials before deploying.
+--- a/Repurly/src/lib/linkedin/config.ts
++++ b/Repurly/src/lib/linkedin/config.ts
+@@ -0,0 +1,146 @@
++export type LinkedInConfig = {
++  key: string;
++  clientId: string;
++  clientSecret: string;
++  redirectUri: string;
++  scope: string;
++  apiVersion: string;
++  source: 'standard' | 'legacy-suffixed';
++};
++
++type PartialLinkedInConfig = Partial<Omit<LinkedInConfig, 'apiVersion' | 'source'>>;
++
++type ResolveLinkedInConfigOptions = {
++  requestUrl?: string;
++  configKey?: string | null;
++};
++
++const LINKEDIN_ENV_FIELDS = ['CLIENT_ID', 'CLIENT_SECRET', 'REDIRECT_URI', 'SCOPE'] as const;
++const DEFAULT_LINKEDIN_API_VERSION = process.env.LINKEDIN_API_VERSION?.trim() || '202603';
++
++export function getLinkedInApiVersion() {
++  return DEFAULT_LINKEDIN_API_VERSION;
++}
++
++function trimEnv(value: string | undefined) {
++  const trimmed = value?.trim();
++  return trimmed ? trimmed : null;
++}
++
++function readStandardConfig(): LinkedInConfig | null {
++  const clientId = trimEnv(process.env.LINKEDIN_CLIENT_ID);
++  const clientSecret = trimEnv(process.env.LINKEDIN_CLIENT_SECRET);
++  const redirectUri = trimEnv(process.env.LINKEDIN_REDIRECT_URI);
++  const scope = trimEnv(process.env.LINKEDIN_SCOPE);
++
++  if (!clientId || !clientSecret || !redirectUri || !scope) {
++    return null;
++  }
++
++  return {
++    key: 'default',
++    clientId,
++    clientSecret,
++    redirectUri,
++    scope,
++    apiVersion: DEFAULT_LINKEDIN_API_VERSION,
++    source: 'standard',
++  };
++}
++
++function readLegacyConfigs() {
++  const configs = new Map<string, PartialLinkedInConfig>();
++
++  for (const [envName, envValue] of Object.entries(process.env)) {
++    const match = envName.match(/^LINKEDIN_(CLIENT_ID|CLIENT_SECRET|REDIRECT_URI|SCOPE)_(.+)$/);
++    if (!match) continue;
++
++    const [, field, suffix] = match;
++    const trimmedValue = trimEnv(envValue);
++    if (!trimmedValue) continue;
++
++    const current = configs.get(suffix) ?? {};
++    const key = field.toLowerCase().replace(/_([a-z])/g, (_, char: string) => char.toUpperCase()) as keyof PartialLinkedInConfig;
++    current[key] = trimmedValue;
++    configs.set(suffix, current);
++  }
++
++  return Array.from(configs.entries())
++    .map(([key, value]) => {
++      const clientId = value.clientId?.trim();
++      const clientSecret = value.clientSecret?.trim();
++      const redirectUri = value.redirectUri?.trim();
++      const scope = value.scope?.trim();
++
++      if (!clientId || !clientSecret || !redirectUri || !scope) {
++        return null;
++      }
++
++      return {
++        key,
++        clientId,
++        clientSecret,
++        redirectUri,
++        scope,
++        apiVersion: DEFAULT_LINKEDIN_API_VERSION,
++        source: 'legacy-suffixed' as const,
++      } satisfies LinkedInConfig;
++    })
++    .filter((config): config is LinkedInConfig => Boolean(config));
++}
++
++function hostFromUrl(url?: string) {
++  if (!url) return null;
++
++  try {
++    return new URL(url).host;
++  } catch {
++    return null;
++  }
++}
++
++function findLegacyConfigByKey(configs: LinkedInConfig[], key?: string | null) {
++  if (!key) return null;
++  return configs.find((config) => config.key === key) ?? null;
++}
++
++function findLegacyConfigByHost(configs: LinkedInConfig[], host?: string | null) {
++  if (!host) return null;
++  return configs.find((config) => hostFromUrl(config.redirectUri) === host) ?? null;
++}
++
++export function getLinkedInConfig(options: ResolveLinkedInConfigOptions = {}): LinkedInConfig {
++  const standardConfig = readStandardConfig();
++  const legacyConfigs = readLegacyConfigs();
++  const requestedHost = hostFromUrl(options.requestUrl);
++  const configuredHost = hostFromUrl(process.env.APP_URL) ?? hostFromUrl(process.env.NEXT_PUBLIC_APP_URL);
++  const explicitConfigKey = trimEnv(process.env.LINKEDIN_ENV_KEY) ?? options.configKey ?? null;
++
++  const byKey = findLegacyConfigByKey(legacyConfigs, explicitConfigKey);
++  if (byKey) return byKey;
++
++  const byRequestHost = findLegacyConfigByHost(legacyConfigs, requestedHost);
++  if (byRequestHost) return byRequestHost;
++
++  const byConfiguredHost = findLegacyConfigByHost(legacyConfigs, configuredHost);
++  if (byConfiguredHost) return byConfiguredHost;
++
++  if (standardConfig) {
++    return standardConfig;
++  }
++
++  if (legacyConfigs.length === 1) {
++    return legacyConfigs[0];
++  }
++
++  const availableLegacyFields = legacyConfigs.length
++    ? legacyConfigs.map((config) => config.key).join(', ')
++    : 'none';
++
++  throw new Error(
++    [
++      'LinkedIn configuration is incomplete.',
++      `Provide LINKEDIN_${LINKEDIN_ENV_FIELDS.join(', LINKEDIN_')} or set LINKEDIN_ENV_KEY to one of: ${availableLegacyFields}.`,
++    ].join(' '),
++  );
++}
