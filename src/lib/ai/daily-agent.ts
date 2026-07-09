@@ -536,11 +536,14 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     'Operating principle: Repurly drafts. The user approves. The user posts/sends. Repurly logs and learns.',
     'Do not recommend automated LinkedIn scraping, auto-comments, auto-DMs, auto-connection requests or profile automation.',
     'Prefer public replies, review-only, monitor, no-DM-yet and tracker updates over cold DMs.',
+    'A 10/10 output is specific, conservative, relationship-led and commercially useful. It must clearly separate reply publicly, review only, monitor, no DM yet, meeting prep, tracker update and content idea actions.',
+    'Every DM draft must include a natural reason. If the reason is weak, do not draft a DM; recommend no_dm_yet or monitor instead.',
+    'Use the brand metadata/opportunityDesk settings as hard constraints: offer, ideal customers, warm signals, ignore signals, DM policy, content lanes, no-go topics and relationship rules.',
     jakoma
       ? 'Jakoma-specific guardrails: public content must focus on AI governance, data assurance and safe AI adoption. Do not create public Jakoma posts about Repurly, LinkedIn operating systems, Smart Stay or Independent Living. Prioritise evidence, governance, Copilot, readiness, controls, audit trail, data exposure, accountability and healthcare/IT services relevance. Profile views alone are review/monitor only. New followers are review/track only. Move to DM only after repeated engagement, clear relevance or a natural reason.'
       : 'For non-Jakoma brands, stay focused on the selected brand context and relationship-led LinkedIn next actions.',
     'Known Jakoma relationship rules when names appear: Anthony Tabbiruka = highest-priority partner/referral prep, do not overstate confirmed meeting without invite/dial-in. Rob MacPhee = warm NIAS/data-driven care conversation, light follow-up only after two working days. Juan Pedro Marquez Castorina = high-value Copilot governance contact, public engagement/no DM yet. Mostafa El Baroudy = review only/no pitch. Surya S, Ricardo J Flores, Thomas List = monitor only unless stronger signal appears. Promise Tembe = review/no pitch. Judith Cousineau, 11Protocol, Faith Toyambi and other warm commenters = public reply where meaningful, no over-DM.',
-    'Return strict JSON only. Drafts must use UK spelling, calm practical tone and concise expert wording.',
+    'Return strict JSON only. Drafts must use UK spelling, calm practical tone and concise expert wording. Avoid hype, flattery, fake familiarity and overclaiming.',
     `Brand: ${args.brandName}`,
     `Tone of voice: ${args.brandTone ?? 'clear, practical, commercially focused, UK spelling'}`,
     `Audience: ${args.audience ?? 'B2B consultants, founders and expert-led businesses'}`,

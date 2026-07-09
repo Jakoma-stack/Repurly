@@ -23,8 +23,8 @@ export function Hero() {
             <a href="#pricing" className="inline-flex items-center rounded-2xl bg-white px-5 py-3 font-medium text-slate-950">
               See beta pricing <ArrowRight className="ml-2 size-4" />
             </a>
-            <Link href="/sign-up" className="inline-flex items-center rounded-2xl border border-white/20 px-5 py-3 font-medium text-white/90">
-              Join the private beta
+            <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl border border-white/20 px-5 py-3 font-medium text-white/90">
+              Join private beta
             </Link>
           </div>
         </div>

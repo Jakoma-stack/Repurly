@@ -1,6 +1,6 @@
 import { PLATFORM_CAPABILITIES } from "@/lib/platforms/capabilities";
 import { discoverXAccounts, getValidXAccessToken } from "@/lib/x/service";
-import { publishXContent } from "@/lib/x/publisher";
+import { publishXContent } from "@/lib/x/publisher-live";
 import type { PlatformAdapter } from "@/lib/platforms/types";
 
 export const xAdapter: PlatformAdapter = {

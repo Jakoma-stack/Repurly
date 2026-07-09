@@ -77,6 +77,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
             <div className="font-semibold text-white">Beta usage</div>
             <div className="mt-2 text-3xl font-semibold text-white">{data.usage.used}/{data.usage.limit}</div>
             <p className="mt-1">Daily Agent sessions used in this monthly allowance.</p>
+            <a href="/app/proof-score" className="mt-3 inline-flex rounded-2xl border border-white/10 px-3 py-2 text-xs font-medium text-white hover:bg-white/10">Open proof score</a>
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-white" style={{ width: `${Math.min(100, (data.usage.used / data.usage.limit) * 100)}%` }} />
             </div>
@@ -86,6 +87,20 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
 
       {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Daily Agent updated.</div> : null}
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">Something needs attention: {error}.</div> : null}
+
+      <section className="grid gap-4 md:grid-cols-4">
+        {[
+          { label: '1. Paste/upload real signals', value: data.sessions.length ? 'habit started' : 'start today', href: '/app/daily-agent' },
+          { label: '2. Complete opportunity rules', value: defaultBrand ? 'settings ready to review' : 'add brand', href: '/app/opportunity-settings' },
+          { label: '3. Act only after approval', value: 'no auto-send', href: '/app/relationships' },
+          { label: '4. Check proof score', value: 'validate before scaling', href: '/app/proof-score' },
+        ].map((item) => (
+          <a key={item.label} href={item.href} className="rounded-3xl border border-border bg-white p-4 text-sm transition hover:bg-slate-50">
+            <div className="font-semibold text-slate-950">{item.label}</div>
+            <div className="mt-2 text-slate-600">{item.value}</div>
+          </a>
+        ))}
+      </section>
 
       <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <Card>
