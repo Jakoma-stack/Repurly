@@ -4,15 +4,15 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Repurly',
-  description: 'Premium LinkedIn-first content operations for agencies and B2B teams.',
+  description: 'Daily LinkedIn Opportunity Desk for consultants, founders and expert-led businesses.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en">
-        <body>{children}</body>
-      </html>
-    </ClerkProvider>
+    <html lang="en">
+      <body>
+        <ClerkProvider>{children}</ClerkProvider>
+      </body>
+    </html>
   );
 }
