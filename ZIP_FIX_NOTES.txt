@@ -1,0 +1,13 @@
+Repurly clean Render fix zip
+
+What is fixed in this zip:
+- Adds package-lock.json so Render can use npm ci.
+- Adds src/lib/x/publisher-live.ts as a clean X publisher module.
+- Updates src/lib/platforms/adapters/x.ts to import @/lib/x/publisher-live instead of the OneDrive-corrupted publisher.ts path.
+- Keeps Node target files at 20.19.5.
+
+Recommended use:
+1. Do not extract this over C:\Users\tracy\OneDrive\GitHub\Repurly.
+2. Extract it to C:\dev\Repurly-clean or upload/push the changed files from a non-OneDrive folder.
+3. Commit/push to branch commercial-test-suite.
+4. On Render, run Manual Deploy -> Clear build cache & deploy.
