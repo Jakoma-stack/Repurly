@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createPresignedUpload } from '@/lib/storage/presign';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 import { getAuthenticatedWorkspaceRole } from '@/lib/auth/workspace';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
 
@@ -24,6 +25,10 @@ function sanitizeFileName(fileName: string) {
 }
 
 export async function POST(request: NextRequest) {
+  if (isPrivatePilotMode()) {
+    return NextResponse.json({ error: 'Uploads disabled in private pilot' }, { status: 503 });
+  }
+
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

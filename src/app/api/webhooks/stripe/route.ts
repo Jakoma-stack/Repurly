@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getPlanFromPriceId, stripe } from '@/lib/billing/stripe';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 import { db } from '@/lib/db/client';
 import { stripeWebhookEvents, workspaces } from '../../../../../drizzle/schema';
 
@@ -120,6 +121,10 @@ async function syncSubscription(subscription: Stripe.Subscription, explicitWorks
 }
 
 export async function POST(request: NextRequest) {
+  if (isPrivatePilotMode()) {
+    return NextResponse.json({ error: 'Billing webhooks disabled in private pilot' }, { status: 503 });
+  }
+
   const body = await request.text();
   const signature = (await headers()).get('stripe-signature');
 

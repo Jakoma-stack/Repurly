@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, lte, or } from "drizzle-orm";
 import { serve } from "inngest/next";
+import { isPrivatePilotMode } from "@/lib/billing/private-pilot";
 import { inngest } from "@/lib/inngest/client";
 import { db } from "@/lib/db/client";
 import { deliveryLogs, platformAccounts, postTargets, posts, publishJobs } from "../../../drizzle/schema";
@@ -387,5 +388,5 @@ export const publishSinglePost = inngest.createFunction(
   }
 );
 
-export const functions = [publishDuePosts, publishSinglePost];
+export const functions = isPrivatePilotMode() ? [] : [publishDuePosts, publishSinglePost];
 export const { GET, POST, PUT } = serve({ client: inngest, functions });

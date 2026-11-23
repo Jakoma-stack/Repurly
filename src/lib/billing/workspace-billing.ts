@@ -1,9 +1,12 @@
 import { eq } from 'drizzle-orm';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { stripe } from '@/lib/billing/stripe';
 import { normalizePlanKey, type PlanInput, type PlanKey } from '@/lib/billing/plans';
 import { db } from '@/lib/db/client';
+import { assertWorkspaceAccess } from '@/lib/auth/workspace';
+import { isPrivatePilotEmailAllowed, isPrivatePilotMode } from '@/lib/billing/private-pilot';
 import { workspaces } from '../../../drizzle/schema';
 
 export type WorkspaceBillingRecord = {
@@ -31,6 +34,15 @@ export function isInternalBetaAccessEnabled(workspaceId: string) {
     .map((id) => id.trim())
     .filter(Boolean)
     .includes(workspaceId);
+}
+
+async function hasPrivatePilotWorkspaceAccess(workspaceId: string): Promise<boolean> {
+  if (!isPrivatePilotMode()) return false;
+  const { userId } = await auth();
+  if (!userId) return false;
+  const user = await currentUser();
+  if (!isPrivatePilotEmailAllowed(user?.primaryEmailAddress?.emailAddress)) return false;
+  return assertWorkspaceAccess(userId, workspaceId);
 }
 
 export async function getWorkspaceBillingRecord(workspaceId: string): Promise<WorkspaceBillingRecord | null> {
@@ -72,7 +84,8 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
-  const hasPaidAccess = isInternalBetaAccessEnabled(workspaceId) || hasPaidWorkspaceAccess(workspace);
+  const hasPaidAccess = isInternalBetaAccessEnabled(workspaceId) ||
+    (await hasPrivatePilotWorkspaceAccess(workspaceId)) || hasPaidWorkspaceAccess(workspace);
 
   return {
     ...workspace,
