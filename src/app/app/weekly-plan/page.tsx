@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getWeeklyOpportunityPlan } from '@/server/queries/opportunity';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 
 function label(value: string | null | undefined) {
   return value ? value.replace(/_/g, ' ') : 'not set';
@@ -22,18 +23,19 @@ export default async function WeeklyPlanPage() {
         </p>
       </section>
 
+      {isPrivatePilotMode() ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Private pilot: weekly totals include fictional testing sessions. They do not yet demonstrate real customer activity. The outstanding action list excludes completed, ignored and monitor-only suggestions.</p> : null}
       <section className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader><div className="text-sm text-muted-foreground">Daily sessions</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.sessions}</div></CardContent></Card>
         <Card><CardHeader><div className="text-sm text-muted-foreground">Actions generated</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.actions}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">No-DM / monitor calls</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.noDm}</div></CardContent></Card>
-        <Card><CardHeader><div className="text-sm text-muted-foreground">Logged relationships</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.logged}</div></CardContent></Card>
+        <Card><CardHeader><div className="text-sm text-muted-foreground">No-DM / monitor suggestions</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.noDm}</div></CardContent></Card>
+        <Card><CardHeader><div className="text-sm text-muted-foreground">Logged action updates</div></CardHeader><CardContent><div className="text-3xl font-semibold">{data.metrics.logged}</div></CardContent></Card>
       </section>
 
       <section className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold">Next 5 actions</h2>
-            <p className="text-sm text-muted-foreground">Prioritised from high-signal actions, follow-ups, meeting prep and public replies.</p>
+            <h2 className="text-xl font-semibold">Next 5 outstanding actions</h2>
+            <p className="text-sm text-muted-foreground">Prioritised from actionable public replies and human-reviewed follow-ups, excluding completed, weak and duplicate suggestions.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.nextFive.map((action, index) => (
@@ -49,14 +51,14 @@ export default async function WeeklyPlanPage() {
                 {action.draftText ? <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">{action.draftText}</pre> : null}
               </div>
             ))}
-            {!data.nextFive.length ? <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">No weekly actions yet. Generate and log at least one Daily Agent session.</div> : null}
+            {!data.nextFive.length ? <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">No outstanding reviewable actions. Completed, ignored and monitor-only suggestions do not appear here.</div> : null}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <h2 className="text-xl font-semibold">People to keep warm</h2>
-            <p className="text-sm text-muted-foreground">Relationship memory from the tracker. Use this to avoid losing warm signals.</p>
+            <h2 className="text-xl font-semibold">Tracked relationships</h2>
+            <p className="text-sm text-muted-foreground">People you have logged and their proposed next actions. Commercial-interest scores do not measure reply urgency.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.topPeople.map((person) => (
@@ -64,7 +66,7 @@ export default async function WeeklyPlanPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-slate-950">{person.leadName}</div>
-                    <div className="mt-1 text-sm text-slate-500">{label(person.stage)} · score {person.intentScore}/100</div>
+                    <div className="mt-1 text-sm text-slate-500">{label(person.stage)} · estimated commercial interest {person.intentScore}/100</div>
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-slate-700">{person.nextAction || 'No next action set.'}</p>

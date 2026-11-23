@@ -3,6 +3,7 @@ import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
 import { db } from '@/lib/db/client';
 import { brands, dailyAgentActions, dailyAgentSessions, leadPipeline } from '../../../drizzle/schema';
 import type { DailyAgentBriefing } from '@/lib/ai/daily-agent';
+import { selectWeeklyNextActions } from '@/lib/opportunity/weekly-actions';
 
 function daysAgo(days: number) {
   const date = new Date();
@@ -84,13 +85,7 @@ export async function getWeeklyOpportunityPlan(workspaceId: string) {
   const analyticsSignals = briefings.flatMap((briefing) => briefing.analyticsReview?.signals ?? []).slice(0, 10);
   const topPeople = relationships.slice(0, 8);
 
-  const nextFive = [
-    ...highPriority,
-    ...followUps.filter((action) => !highPriority.some((item) => item.id === action.id)),
-    ...publicReplies.filter((action) => !highPriority.some((item) => item.id === action.id)),
-  ]
-    .filter((action, index, array) => array.findIndex((item) => item.id === action.id) === index)
-    .slice(0, 5);
+  const nextFive = selectWeeklyNextActions(actions, relationships.map(person => person.leadName));
 
   return {
     sessions,
