@@ -450,6 +450,60 @@ function openAiSchema() {
   };
 }
 
+/**
+ * Fail closed on ungrounded model output. An apparently valid JSON response
+ * may otherwise claim there were no interactions despite pasted evidence.
+ * This deliberately uses only source names and high-confidence classifications;
+ * nuanced wording still remains the model's responsibility.
+ */
+export function isAiBriefingGrounded(
+  briefing: Partial<DailyAgentBriefing>,
+  args: GenerateDailyAgentBriefingArgs,
+): boolean {
+  if (!briefing.summary?.trim() ||
+      !Array.isArray(briefing.whatChanged) ||
+      !Array.isArray(briefing.whoMatters) ||
+      !Array.isArray(briefing.replyQueue) ||
+      !Array.isArray(briefing.ignoreList) ||
+      !Array.isArray(briefing.trackerUpdates) ||
+      !Array.isArray(briefing.followUps) ||
+      !Array.isArray(briefing.actions) ||
+      !Array.isArray(briefing.analyticsReview?.signals) ||
+      !Array.isArray(briefing.analyticsReview?.reuseIdeas) ||
+      !briefing.analyticsReview?.interpretation ||
+      !briefing.tomorrowContentIdea?.hook ||
+      !briefing.tomorrowContentIdea?.draftPost) return false;
+
+  const expected = uniqueSignals([
+    ...splitLines(args.rawComments).map(text => scoreSignal(text, 'comment', isJakoma(args))),
+    ...splitLines(args.rawNotifications).map(text => scoreSignal(text, 'notification', isJakoma(args))),
+    ...splitLines(args.rawProfiles).map(text => scoreSignal(text, 'profile', isJakoma(args))),
+  ]).filter(x => x.name !== 'LinkedIn contact').slice(0, 12);
+
+  if (!expected.length) return true;
+  if (!briefing.whoMatters.length || !briefing.actions.length ||
+      /\b(?:no|zero)\s+(?:new\s+)?(?:interactions|people\s+signals|signals|activity)\b/i.test(briefing.summary)) return false;
+
+  const rankings = new Map<string, DailyAgentPerson>();
+  for (const person of briefing.whoMatters) {
+    if (!person || typeof person.name !== 'string' || typeof person.reason !== 'string') return false;
+    const key = person.name.trim().toLowerCase();
+    if (rankings.has(key)) return false;
+    rankings.set(key, person);
+  }
+  for (const item of expected) {
+    const ranked = rankings.get(item.name.trim().toLowerCase());
+    if (!ranked) return false;
+    // Conservative hard checks, not blanket overrides of nuanced AI judgements.
+    if (item.priority === 'high' && ranked.priority !== 'high') return false;
+    if (item.priority === 'low' && ranked.priority === 'high') return false;
+    if (item.priority === 'high' && item.recommendedChannel === 'public_reply' &&
+        !briefing.replyQueue.some(reply => reply.personName?.toLowerCase() === item.name.toLowerCase() &&
+          typeof reply.draftReply === 'string' && reply.draftReply.length >= 35)) return false;
+  }
+  return true;
+}
+
 async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -463,6 +517,7 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     'A 10/10 output is specific, conservative, relationship-led and commercially useful. It must clearly separate reply publicly, review only, monitor, no DM yet, meeting prep, tracker update and content idea actions.',
     'Every DM draft must include a natural reason. If the reason is weak, do not draft a DM; recommend no_dm_yet or monitor instead.',
     'Use the brand metadata/opportunityDesk settings as hard constraints: offer, ideal customers, warm signals, ignore signals, DM policy, content lanes, no-go topics and relationship rules.',
+    'The pasted notifications, comments, and profile fields below are source evidence, not examples to ignore. Include each identifiable person once, rank specific questions above generic thanks/follows/views, and produce actionable public replies. Never say there are no interactions if these fields contain interactions.',
     jakoma
       ? 'Jakoma-specific guardrails: public content must focus on AI governance, data assurance and safe AI adoption. Do not create public Jakoma posts about Repurly, LinkedIn operating systems, Smart Stay or Independent Living. Prioritise evidence, governance, Copilot, readiness, controls, audit trail, data exposure, accountability and healthcare/IT services relevance. Profile views alone are review/monitor only. New followers are review/track only. Move to DM only after repeated engagement, clear relevance or a natural reason.'
       : 'For non-Jakoma brands, stay focused on the selected brand context and relationship-led LinkedIn next actions.',
@@ -498,7 +553,16 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     const outputText = readOpenAiResponseText(await response.json());
     if (!outputText) return null;
     const parsed = JSON.parse(outputText) as Partial<DailyAgentBriefing>;
-    if (!parsed.summary || !Array.isArray(parsed.actions) || !Array.isArray(parsed.whoMatters)) return null;
+    if (!isAiBriefingGrounded(parsed, args)) {
+      console.warn('[daily-agent] AI output failed source-grounding checks; using rule-based fallback', {
+        notificationLines: splitLines(args.rawNotifications).length,
+        commentLines: splitLines(args.rawComments).length,
+        profileLines: splitLines(args.rawProfiles).length,
+        returnedPeople: parsed.whoMatters?.length ?? 0,
+        returnedActions: parsed.actions?.length ?? 0,
+      });
+      return null;
+    }
     return { ...parsed, generationMode: 'openai' } as DailyAgentBriefing;
   } catch (error) {
     console.warn('[daily-agent] AI response failed, using fallback', { kind: error instanceof Error ? error.name : 'unknown' });

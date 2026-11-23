@@ -84,7 +84,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
       </section>
 
       {ok ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Daily Agent updated.</div> : null}
-      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">Something needs attention: {error}.</div> : null}
+      {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">{error === 'add-signals' ? 'Paste notifications, comments, profiles or analytics before generating a briefing.' : `Something needs attention: ${error}.`}</div> : null}
 
       <section className="grid gap-4 md:grid-cols-4">
         {[
@@ -207,6 +207,10 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
             </CardHeader>
             <CardContent>
               <div className="space-y-5 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                  <span className="font-medium">{active.generationMode === 'openai' ? 'AI-generated briefing' : 'Rule-based fallback briefing'}</span>
+                  <span className="text-xs">Inputs recorded: {active.rawNotifications?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0} notification lines · {active.rawComments?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0} comment lines · {active.rawAnalytics ? 'analytics included' : 'no analytics'}</span>
+                </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">{briefing.summary}</div>
                 {(active.generationMode === 'fallback' || briefing.generationMode === 'fallback') ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">Rule-based fallback used because AI generation was unavailable. Rankings and drafts may be less accurate. Check OpenAI credentials and billing, then generate a fresh briefing.</div>

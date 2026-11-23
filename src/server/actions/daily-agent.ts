@@ -105,6 +105,13 @@ export async function createDailyAgentSession(formData: FormData) {
   const rawNotes = nullableString(formData, 'rawNotes');
 
   if (!workspaceId) redirect('/app/daily-agent?error=invalid' as Route);
+  // Notes alone do not constitute LinkedIn activity; reject empty test runs
+  // rather than creating a plausible-looking invented briefing.
+  if (![rawNotifications, rawComments, rawAnalytics, rawProfiles].some(value => value?.trim()) &&
+      !(formData.get('analyticsExport') instanceof File &&
+        (formData.get('analyticsExport') as File).size > 0)) {
+    redirect('/app/daily-agent?error=add-signals' as Route);
+  }
   const access = await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
   await requirePaidWorkspaceAccess(workspaceId);
   await enforceDailyAgentUsageLimit(workspaceId);
@@ -127,6 +134,17 @@ export async function createDailyAgentSession(formData: FormData) {
     rawAnalytics,
     rawProfiles,
     rawNotes,
+  });
+
+  // Diagnostics intentionally contain counts only, never private contact text.
+  console.info('[daily-agent] briefing input/output summary', {
+    notificationLines: rawNotifications?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
+    commentLines: rawComments?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
+    analyticsProvided: Boolean(rawAnalytics?.trim()),
+    profileLines: rawProfiles?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
+    mode: briefing.generationMode,
+    people: briefing.whoMatters.length,
+    actions: briefing.actions.length,
   });
 
   const [session] = await db
