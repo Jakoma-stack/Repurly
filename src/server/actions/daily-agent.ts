@@ -116,7 +116,7 @@ export async function createDailyAgentSession(formData: FormData) {
   if (brandId && !brand) redirect('/app/daily-agent?error=brand' as Route);
 
   const briefing = await generateDailyAgentBriefing({
-    brandName: brand?.name ?? 'Jakoma',
+    brandName: brand?.name ?? 'Your organisation',
     brandTone: brand?.defaultTone ?? 'clear, useful, commercially focused, UK spelling',
     audience: brand?.audience ?? 'consultants, founders and expert-led businesses',
     primaryCta: brand?.primaryCta ?? 'reply if this would be useful to map out',
