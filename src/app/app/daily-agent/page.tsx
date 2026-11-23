@@ -209,7 +209,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
               <div className="space-y-5 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-700">
                   <span className="font-medium">{active.generationMode === 'openai' ? 'AI-generated briefing' : 'Rule-based fallback briefing'}</span>
-                  <span className="text-xs">Inputs recorded: {active.rawNotifications?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0} notification lines · {active.rawComments?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0} comment lines · {active.rawAnalytics ? 'analytics included' : 'no analytics'}</span>
+                  <span className="text-xs">Inputs recorded: {active.rawNotifications?.split(/\r?\n/).filter(x => x.trim()).length ?? 0} notification lines · {active.rawComments?.split(/\r?\n/).filter(x => x.trim()).length ?? 0} comment lines · {active.rawAnalytics ? 'analytics included' : 'no analytics'}</span>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">{briefing.summary}</div>
                 {(active.generationMode === 'fallback' || briefing.generationMode === 'fallback') ? (

@@ -138,10 +138,10 @@ export async function createDailyAgentSession(formData: FormData) {
 
   // Diagnostics intentionally contain counts only, never private contact text.
   console.info('[daily-agent] briefing input/output summary', {
-    notificationLines: rawNotifications?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
-    commentLines: rawComments?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
+    notificationLines: rawNotifications?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
+    commentLines: rawComments?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
     analyticsProvided: Boolean(rawAnalytics?.trim()),
-    profileLines: rawProfiles?.split(/\\r?\\n/).filter(x => x.trim()).length ?? 0,
+    profileLines: rawProfiles?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
     mode: briefing.generationMode,
     people: briefing.whoMatters.length,
     actions: briefing.actions.length,
