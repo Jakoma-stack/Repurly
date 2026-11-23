@@ -87,25 +87,6 @@ function buildWorkspaceSlug(baseSlug: string, suffix: string) {
   return `${baseSlug}-${suffix}`.slice(0, 120);
 }
 
-async function findWorkspaceByOrgId(orgId: string | null) {
-  if (!orgId) {
-    return null;
-  }
-
-  const rows = await db
-    .select({
-      id: workspaces.id,
-      name: workspaces.name,
-      slug: workspaces.slug,
-      clerkOrganizationId: workspaces.clerkOrganizationId,
-    })
-    .from(workspaces)
-    .where(eq(workspaces.clerkOrganizationId, orgId))
-    .limit(1);
-
-  return rows[0] ?? null;
-}
-
 async function createStarterWorkspaceForUser(args: {
   userId: string;
   orgId: string | null;
@@ -118,11 +99,8 @@ async function createStarterWorkspaceForUser(args: {
     return existing[0];
   }
 
-  // Existing organisation workspaces require an explicit invitation and role assignment.
-  // Never convert a Clerk organisation match into an owner membership.
-  if (await findWorkspaceByOrgId(orgId)) {
-    throw new Error('A workspace already exists for this organisation; request an invitation.');
-  }
+  // Starter workspaces are personal. Organisation workspaces require explicit,
+  // role-verified invitations; never infer ownership from Clerk org context.
 
   const workspaceName = buildWorkspaceName(user);
   const baseSlug = slugify(workspaceName.replace(/'s workspace$/i, ''));
@@ -144,7 +122,7 @@ async function createStarterWorkspaceForUser(args: {
           .values({
             name: workspaceName,
             slug: workspaceSlug,
-            clerkOrganizationId: orgId,
+            clerkOrganizationId: null,
           })
           .returning({
             id: workspaces.id,
