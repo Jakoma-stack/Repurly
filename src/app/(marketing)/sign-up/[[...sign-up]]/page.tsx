@@ -1,3 +1,4 @@
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 import { SignUp } from '@clerk/nextjs';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -26,9 +27,11 @@ function normalizePlan(value: string | undefined): BillingPlan | null {
 export default async function Page({ searchParams }: { searchParams?: SearchParams }) {
   const params = (await searchParams) ?? {};
   const plan = normalizePlan(firstParam(params.plan));
-  const redirectUrl = plan
-    ? `/app/billing?billing=payment-required&plan=${plan}`
-    : '/app/billing?billing=payment-required';
+  const redirectUrl = isPrivatePilotMode()
+    ? '/app/daily-agent'
+    : plan
+      ? `/app/billing?billing=payment-required&plan=${plan}`
+      : '/app/billing?billing=payment-required';
   const signInUrl = plan ? `/sign-in?plan=${plan}` : '/sign-in';
 
   return (
