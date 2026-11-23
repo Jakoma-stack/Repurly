@@ -27,11 +27,11 @@ export default async function RelationshipsPage() {
           <CardContent><div className="text-3xl font-semibold">{data.relationships.length}</div></CardContent>
         </Card>
         <Card>
-          <CardHeader><div className="text-sm text-muted-foreground">Follow-up reminders</div></CardHeader>
+          <CardHeader><div className="text-sm text-muted-foreground">Next actions recorded</div></CardHeader>
           <CardContent><div className="text-3xl font-semibold">{data.relationships.filter((item) => Boolean(item.nextAction)).length}</div></CardContent>
         </Card>
         <Card>
-          <CardHeader><div className="text-sm text-muted-foreground">High priority</div></CardHeader>
+          <CardHeader><div className="text-sm text-muted-foreground">High commercial interest</div></CardHeader>
           <CardContent><div className="text-3xl font-semibold">{data.relationships.filter((item) => item.intentScore >= 70).length}</div></CardContent>
         </Card>
       </section>
@@ -48,7 +48,7 @@ export default async function RelationshipsPage() {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium text-slate-900">{lead.leadName} <span className="text-sm text-slate-500">{lead.leadHandle}</span></div>
-                    <div className="mt-1 text-sm text-slate-600">Priority score: {lead.intentScore}/100 · Last updated {lead.updatedAt.toLocaleDateString()}</div>
+                    <div className="mt-1 text-sm text-slate-600">Estimated commercial interest: {lead.intentScore}/100 · Last updated {lead.updatedAt.toLocaleDateString()}</div>
                     <div className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">{lead.nextAction || 'No follow-up reminder set.'}</div>
                     {lead.notes ? <pre className="mt-3 whitespace-pre-wrap rounded-2xl bg-white p-3 text-sm text-slate-600 ring-1 ring-slate-100">{lead.notes}</pre> : null}
                   </div>
@@ -59,6 +59,10 @@ export default async function RelationshipsPage() {
                     <select name="stage" defaultValue={lead.stage} className="rounded-2xl border border-border px-4 py-3 text-sm">
                       {stages.map((item) => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
                     </select>
+                    <label className="grid gap-1 text-xs text-slate-600">
+                      Estimated commercial interest (0–100, not reply urgency)
+                      <input type="number" name="intentScore" min={0} max={100} step={1} defaultValue={lead.intentScore} className="rounded-2xl border border-border px-4 py-3 text-sm" />
+                    </label>
                     <input name="nextAction" defaultValue={lead.nextAction ?? ''} className="rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Next action / reminder" />
                     <textarea name="notes" defaultValue={lead.notes ?? ''} className="min-h-[90px] rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Relationship notes" />
                     <button className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Update relationship</button>

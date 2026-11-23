@@ -10,6 +10,7 @@ import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { isInternalBetaAccessEnabled, requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { generateDailyAgentBriefing, type DailyAgentAction, type DailyAgentBriefing } from '@/lib/ai/daily-agent';
 import { parseLinkedInAnalyticsImport } from '@/lib/analytics/linkedin-import';
+import { classifyRelationshipInterest } from '@/lib/relationships/intent';
 import { brands, dailyAgentActions, dailyAgentSessions, leadPipeline } from '../../../drizzle/schema';
 
 function requiredString(formData: FormData, key: string) {
@@ -225,8 +226,9 @@ export async function logDailyAgentActionToRelationship(formData: FormData) {
     .where(and(eq(leadPipeline.workspaceId, workspaceId), eq(leadPipeline.leadName, leadName)))
     .limit(1);
 
-  const score = action.priority === 'high' ? 85 : action.priority === 'medium' ? 55 : 25;
-  const relationshipStage = action.recommendedChannel === 'meeting_prep' ? 'partner_referral' : action.recommendedChannel === 'review_profile' ? 'review_only' : action.recommendedChannel === 'monitor' || action.recommendedChannel === 'no_dm_yet' ? 'monitor' : action.priority === 'high' ? 'potential_opportunity' : 'warm_relationship';
+  // Reply priority is not purchase intent. Do not treat a high-priority
+  // public question as an automatically qualified sales opportunity.
+  const { score, relationshipStage } = classifyRelationshipInterest(action);
   const note = [
     `Daily Agent ${action.actionType}: ${action.reason ?? 'Recommended action'}`,
     action.draftText ? `Draft/action: ${action.draftText}` : null,
