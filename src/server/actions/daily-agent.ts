@@ -107,7 +107,7 @@ export async function createDailyAgentSession(formData: FormData) {
   if (!workspaceId) redirect('/app/daily-agent?error=invalid' as Route);
   // Notes alone do not constitute LinkedIn activity; reject empty test runs
   // rather than creating a plausible-looking invented briefing.
-  if (![rawNotifications, rawComments, rawAnalytics, rawProfiles].some(value => value?.trim()) &&
+  if (![rawNotifications, rawComments, manualRawAnalytics, rawProfiles].some(value => value?.trim()) &&
       !(formData.get('analyticsExport') instanceof File &&
         (formData.get('analyticsExport') as File).size > 0)) {
     redirect('/app/daily-agent?error=add-signals' as Route);
