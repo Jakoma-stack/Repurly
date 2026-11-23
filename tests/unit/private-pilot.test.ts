@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { isPrivatePilotEmailAllowed, isPrivatePilotMode } from '../../src/lib/billing/private-pilot';
+import { isPrivatePilotEmailAllowed, isPrivatePilotMode, isPrivatePilotUserIdAllowed } from '../../src/lib/billing/private-pilot';
 
 const staging = { enabled: 'true', environment: 'staging', allowedEmail: 'owner@example.com' };
 
@@ -18,4 +18,13 @@ test('private pilot email is an exact, case-insensitive approved account', () =>
   assert.equal(isPrivatePilotEmailAllowed(null, staging), false);
   assert.equal(isPrivatePilotEmailAllowed('owner@example.com', { ...staging, allowedEmail: '' }), false);
   assert.equal(isPrivatePilotEmailAllowed('owner@example.com', { ...staging, environment: 'production' }), false);
+});
+
+test('private pilot requires exact Clerk user ID when configured', () => {
+  const config = { ...staging, allowedUserId: 'user_allowed' };
+  assert.equal(isPrivatePilotUserIdAllowed('user_allowed', config), true);
+  assert.equal(isPrivatePilotUserIdAllowed('user_other', config), false);
+  assert.equal(isPrivatePilotUserIdAllowed(null, config), false);
+  assert.equal(isPrivatePilotUserIdAllowed('user_allowed', { ...config, environment: 'production' }), false);
+  assert.equal(isPrivatePilotUserIdAllowed('user_allowed', { ...config, enabled: 'false' }), false);
 });

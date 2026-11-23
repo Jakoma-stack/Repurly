@@ -6,7 +6,7 @@ import { stripe } from '@/lib/billing/stripe';
 import { normalizePlanKey, type PlanInput, type PlanKey } from '@/lib/billing/plans';
 import { db } from '@/lib/db/client';
 import { assertWorkspaceAccess } from '@/lib/auth/workspace';
-import { isPrivatePilotEmailAllowed, isPrivatePilotMode } from '@/lib/billing/private-pilot';
+import { isPrivatePilotEmailAllowed, isPrivatePilotMode, isPrivatePilotUserIdAllowed } from '@/lib/billing/private-pilot';
 import { workspaces } from '../../../drizzle/schema';
 
 export type WorkspaceBillingRecord = {
@@ -40,8 +40,13 @@ async function hasPrivatePilotWorkspaceAccess(workspaceId: string): Promise<bool
   if (!isPrivatePilotMode()) return false;
   const { userId } = await auth();
   if (!userId) return false;
-  const user = await currentUser();
-  if (!isPrivatePilotEmailAllowed(user?.primaryEmailAddress?.emailAddress)) return false;
+  const allowedId = process.env.REPURLY_PILOT_CLERK_USER_ID?.trim();
+  if (allowedId) {
+    if (!isPrivatePilotUserIdAllowed(userId)) return false;
+  } else {
+    const user = await currentUser();
+    if (!isPrivatePilotEmailAllowed(user?.primaryEmailAddress?.emailAddress)) return false;
+  }
   return assertWorkspaceAccess(userId, workspaceId);
 }
 

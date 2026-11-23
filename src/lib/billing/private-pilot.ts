@@ -7,6 +7,7 @@ export type PrivatePilotSettings = {
   enabled?: string;
   environment?: string;
   allowedEmail?: string;
+  allowedUserId?: string;
 };
 
 function settingsFromEnvironment(): PrivatePilotSettings {
@@ -14,6 +15,7 @@ function settingsFromEnvironment(): PrivatePilotSettings {
     enabled: process.env.REPURLY_PRIVATE_PILOT_MODE,
     environment: process.env.RAILWAY_ENVIRONMENT_NAME,
     allowedEmail: process.env.REPURLY_PILOT_EMAIL,
+    allowedUserId: process.env.REPURLY_PILOT_CLERK_USER_ID,
   };
 }
 
@@ -28,4 +30,13 @@ export function isPrivatePilotEmailAllowed(
   const expected = settings.allowedEmail?.trim().toLowerCase();
   return Boolean(expected) && isPrivatePilotMode(settings) &&
     userEmail?.trim().toLowerCase() === expected;
+}
+
+/** Match an authenticated Clerk account by ID, avoiding email-provider ambiguity. */
+export function isPrivatePilotUserIdAllowed(
+  userId: string | null | undefined,
+  settings: PrivatePilotSettings = settingsFromEnvironment(),
+) {
+  const expected = settings.allowedUserId?.trim();
+  return Boolean(expected) && isPrivatePilotMode(settings) && userId === expected;
 }
