@@ -43,3 +43,33 @@ test('allows zero-people analytics-only sessions to give content insight', async
   const baseline = await fallbackBriefing(analyticsOnly);
   assert.equal(isAiBriefingGrounded(baseline, analyticsOnly), true);
 });
+
+test('generic appreciation cannot become medium intent or a connection-note draft', async () => {
+  const baseline = await fallbackBriefing(input);
+  const inflated = { ...baseline, whoMatters: baseline.whoMatters.map(p =>
+    p.name === 'Jordan Example' ? { ...p, priority: 'medium' as const } : p) };
+  assert.equal(isAiBriefingGrounded(inflated, input), false);
+
+  const connectionNote = { ...baseline, actions: [
+    { actionType: 'connection_note' as const, personName: 'Jordan Example',
+      priority: 'medium' as const, recommendedChannel: 'connection_note' as const,
+      source: 'linkedin', reason: 'Followed a page', draftText: 'Would you like to explore our offer?' },
+    ...baseline.actions,
+  ] };
+  assert.equal(isAiBriefingGrounded(connectionNote, input), false);
+});
+
+test('high-priority public question requires a reviewable public-reply action', async () => {
+  const baseline = await fallbackBriefing(input);
+  assert.equal(isAiBriefingGrounded(baseline, input), true);
+  const missingPublicReply = { ...baseline, actions: baseline.actions.filter(a =>
+    !(a.personName === 'Alex Sample' && a.actionType === 'public_reply')) };
+  assert.equal(isAiBriefingGrounded(missingPublicReply, input), false);
+});
+
+test('briefing cannot claim draft actions have been completed', async () => {
+  const baseline = await fallbackBriefing(input);
+  const falseClaim = { ...baseline,
+    summary: 'Engaged Alex Sample with a public reply. Acknowledged Jordan Example.' };
+  assert.equal(isAiBriefingGrounded(falseClaim, input), false);
+});

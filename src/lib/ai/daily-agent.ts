@@ -484,6 +484,10 @@ export function isAiBriefingGrounded(
   if (!briefing.whoMatters.length || !briefing.actions.length ||
       /\b(?:no|zero)\s+(?:new\s+)?(?:interactions|people\s+signals|signals|activity)\b/i.test(briefing.summary)) return false;
 
+  // The agent generates drafts; it never performs an engagement itself.
+  // Do not present a past-tense claim of contact as a completed action.
+  if (/^(?:engaged|replied|answered|acknowledged|contacted|messaged|sent|monitored|logged|approved|followed\s+up\s+with)\b/i.test(briefing.summary.trim())) return false;
+
   const rankings = new Map<string, DailyAgentPerson>();
   for (const person of briefing.whoMatters) {
     if (!person || typeof person.name !== 'string' || typeof person.reason !== 'string') return false;
@@ -496,10 +500,24 @@ export function isAiBriefingGrounded(
     if (!ranked) return false;
     // Conservative hard checks, not blanket overrides of nuanced AI judgements.
     if (item.priority === 'high' && ranked.priority !== 'high') return false;
-    if (item.priority === 'low' && ranked.priority === 'high') return false;
-    if (item.priority === 'high' && item.recommendedChannel === 'public_reply' &&
-        !briefing.replyQueue.some(reply => reply.personName?.toLowerCase() === item.name.toLowerCase() &&
+    if (item.priority === 'low') {
+      // Mere follows, profile views and generic praise are not warm leads.
+      if (ranked.priority !== 'low') return false;
+      if (!['monitor', 'review_profile', 'no_dm_yet'].includes(ranked.recommendedChannel)) return false;
+      if (briefing.actions.some(action =>
+        action.personName?.trim().toLowerCase() === item.name.trim().toLowerCase() &&
+        (['connection_note', 'dm_draft', 'public_reply', 'follow_up', 'meeting_prep'].includes(action.actionType) ||
+         ['connection_note', 'dm', 'public_reply', 'meeting_prep'].includes(action.recommendedChannel)))) return false;
+    }
+    if (item.priority === 'high' && item.recommendedChannel === 'public_reply') {
+      const person = item.name.trim().toLowerCase();
+      if (!briefing.replyQueue.some(reply => reply.personName?.trim().toLowerCase() === person &&
           typeof reply.draftReply === 'string' && reply.draftReply.length >= 35)) return false;
+      // A good suggestion must also be available as an actionable review card.
+      if (!briefing.actions.some(action => action.personName?.trim().toLowerCase() === person &&
+          action.actionType === 'public_reply' && action.recommendedChannel === 'public_reply' &&
+          typeof action.draftText === 'string' && action.draftText.trim().length >= 35)) return false;
+    }
   }
   return true;
 }
@@ -518,6 +536,9 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     'Every DM draft must include a natural reason. If the reason is weak, do not draft a DM; recommend no_dm_yet or monitor instead.',
     'Use the brand metadata/opportunityDesk settings as hard constraints: offer, ideal customers, warm signals, ignore signals, DM policy, content lanes, no-go topics and relationship rules.',
     'The pasted notifications, comments, and profile fields below are source evidence, not examples to ignore. Include each identifiable person once, rank specific questions above generic thanks/follows/views, and produce actionable public replies. Never say there are no interactions if these fields contain interactions.',
+    'Weak signals like a follow, profile view or generic praise (e.g. "useful framework, thanks") are low priority. Recommend monitor/review only: never draft a connection note, DM, commercial invitation or follow-up for weak signals.',
+    'For each specific substantive public question, include BOTH an actual public-reply draft in replyQueue AND an action of type public_reply containing that draft. Put this actionable response ahead of monitor-only items.',
+    'All actions are proposals and have NOT been completed. Write summaries in recommendation/future tense ("Consider replying", "Monitor") and NEVER claim that a person was already engaged, acknowledged, messaged, monitored or contacted. No action is sent automatically.',
     jakoma
       ? 'Jakoma-specific guardrails: public content must focus on AI governance, data assurance and safe AI adoption. Do not create public Jakoma posts about Repurly, LinkedIn operating systems, Smart Stay or Independent Living. Prioritise evidence, governance, Copilot, readiness, controls, audit trail, data exposure, accountability and healthcare/IT services relevance. Profile views alone are review/monitor only. New followers are review/track only. Move to DM only after repeated engagement, clear relevance or a natural reason.'
       : 'For non-Jakoma brands, stay focused on the selected brand context and relationship-led LinkedIn next actions.',
@@ -591,7 +612,8 @@ export async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Pr
     sourceText: signal.text,
     intent: signal.intent,
     draftReply: jakoma ? jakomaReply(signal) : genericReply(signal, args.brandName),
-    draftDm: signal.priority === 'high' && !jakoma ? `Hi ${signal.name}, thanks for engaging with the post. Your point stood out because it connects to the practical follow-up gap I was writing about.` : undefined,
+    // A question in a public thread is not permission to open a private conversation.
+    draftDm: undefined,
     priority: signal.priority,
     reason: signal.reason,
     recommendedChannel: signal.recommendedChannel,
