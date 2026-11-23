@@ -3,11 +3,11 @@
 Created 23 November 2026. This repository must not be treated as a live migration until all gates pass.
 
 ## Deployment
-- Railway project: repurly (Jakoma's Projects), staging environment first.
+- Railway project: repurly (Jakoma's Projects), staging environment first. Dashboard: https://railway.com/project/db0d857a-ebb9-408c-9a77-b4b70d782a4d. Staging URL: https://repurly-web-staging.up.railway.app (not operational until credentials and database are provisioned).
 - Render production/staging services are suspended and must not be deleted as a shortcut.
 - Keep original database and object storage unchanged until backups and origins are verified.
-- Build from the reviewed fix branch. Promote to main only after tests pass.
-- Configure Node 20, npm ci, npm run build, npm run start, and /api/health.
+- Build from the reviewed fix branch. CI on the application commit eb667eaf60e86790c998ed9a1808428fecd27469 passed (unit tests, TypeScript, lint). Promote to main only after tests pass.
+- Configure Node 20, npm ci, npm run build, npm run start, and /api/health. SKIP_ENV_VALIDATION=true is permitted only for build-time compile checks, never as a runtime substitute for real secrets.
 - Do not point the custom domain to Railway before health, billing, OAuth and data migration pass.
 
 ## Required credentials and dependencies
