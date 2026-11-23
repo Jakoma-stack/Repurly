@@ -5,6 +5,7 @@
  */
 export type WeeklyActionCandidate = {
   id: string;
+  sessionId?: string;
   actionType: string;
   personName: string | null;
   recommendedChannel: string;
@@ -13,7 +14,24 @@ export type WeeklyActionCandidate = {
   draftText: string | null;
   linkedLeadId?: string | null;
   createdAt: Date;
+  updatedAt?: Date;
 };
+
+export type WeeklySourceSignal = {
+  name: string;
+  priority: 'high' | 'medium' | 'low';
+  recommendedChannel: string;
+};
+
+export type WeeklyActionContext = {
+  /** Conservative, deterministic per-session evidence from original pasted data. */
+  sessionEvidence: ReadonlyMap<string, ReadonlyMap<string, WeeklySourceSignal>>;
+};
+
+function normalisePerson(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+}
+
 
 const completedStatuses = new Set(['logged', 'sent_manually', 'ignored']);
 const weakChannels = new Set(['monitor', 'no_dm_yet', 'review_profile']);
@@ -23,12 +41,38 @@ export function selectWeeklyNextActions<T extends WeeklyActionCandidate>(
   actions: readonly T[],
   knownRelationships: readonly string[] = [],
   limit = 5,
+  context?: WeeklyActionContext,
 ): T[] {
-  const tracked = new Set(knownRelationships.map(name => name.trim().toLocaleLowerCase()));
+  const tracked = new Set(knownRelationships.map(normalisePerson));
+
+  // A logged or manually sent action closes prior suggestions for that person.
+  // Future sessions with genuinely new source activity may create new work.
+  const completedAt = new Map<string, number>();
+  for (const action of actions) {
+    if (!['logged', 'sent_manually'].includes(action.status) || !action.personName) continue;
+    const key = normalisePerson(action.personName);
+    completedAt.set(key, Math.max(completedAt.get(key) ?? 0,
+      (action.updatedAt ?? action.createdAt).getTime()));
+  }
+
   const pending = actions.filter(action => {
     if (completedStatuses.has(action.status)) return false;
-    const name = action.personName?.trim().toLocaleLowerCase();
+    const name = action.personName ? normalisePerson(action.personName) : '';
     if (!name || name === 'linkedin contact') return false;
+    if (action.createdAt.getTime() <= (completedAt.get(name) ?? 0)) return false;
+
+    if (context) {
+      // Old AI output was sometimes hallucinated, duplicate or too aggressive.
+      // Match the original named input in the same session rather than blindly
+      // promoting the persisted model label.
+      const evidence = action.sessionId
+        ? context.sessionEvidence.get(action.sessionId)?.get(name)
+        : undefined;
+      if (!evidence || evidence.priority === 'low') return false;
+      if (action.priority === 'high' && evidence.priority !== 'high') return false;
+      if (action.actionType === 'public_reply' &&
+          evidence.recommendedChannel !== 'public_reply') return false;
+    }
     if (weakChannels.has(action.recommendedChannel)) return false;
     if (['content', 'monitor', 'ignore'].includes(action.actionType)) return false;
 
@@ -71,7 +115,8 @@ export function selectWeeklyNextActions<T extends WeeklyActionCandidate>(
   const seen = new Set<string>();
   const selected: T[] = [];
   for (const action of ordered) {
-    const identity = `${action.personName!.trim().toLocaleLowerCase()}::${action.actionType}`;
+    // One sensible next action per person, even across repeated test sessions.
+    const identity = normalisePerson(action.personName!);
     if (seen.has(identity)) continue;
     seen.add(identity);
     selected.push(action);

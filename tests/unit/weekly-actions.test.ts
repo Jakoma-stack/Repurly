@@ -50,3 +50,45 @@ test('unapproved or weak-signal outreach is not promoted to weekly recommendatio
   ]);
   assert.deepEqual(result.map(x => x.id), ['follow']);
 });
+
+test('historical AI contacts must match their actual session inputs', () => {
+  const evidence = new Map([
+    ['old-session', new Map([
+      ['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }],
+      ['jordan example', { name: 'Jordan Example', priority: 'low' as const, recommendedChannel: 'review_profile' }],
+    ])],
+  ]);
+  const result = selectWeeklyNextActions([
+    action('alex', { sessionId: 'old-session' }),
+    action('false-jordan', { sessionId: 'old-session', personName: 'Jordan Example', priority: 'high' }),
+    action('fragment', { sessionId: 'old-session', personName: 'Alex Sample commented on my post about AI governance. They', priority: 'medium' }),
+    action('invented', { sessionId: 'missing-session', personName: 'Unknown Person' }),
+  ], [], 5, { sessionEvidence: evidence });
+  assert.deepEqual(result.map(x => x.id), ['alex']);
+});
+
+test('logging a reply closes previous proposals for that person across all sessions', () => {
+  const evidence = new Map([
+    ['one', new Map([['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }]])],
+    ['two', new Map([['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }]])],
+    ['three', new Map([['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }]])],
+  ]);
+  const result = selectWeeklyNextActions([
+    action('old-one', { sessionId: 'one', createdAt: new Date('2026-11-23T19:00:00Z') }),
+    action('old-two', { sessionId: 'two', createdAt: new Date('2026-11-23T20:00:00Z') }),
+    action('logged', { sessionId: 'two', status: 'logged', updatedAt: new Date('2026-11-23T21:00:00Z') }),
+    action('new-conversation', { sessionId: 'three', createdAt: new Date('2026-11-23T22:00:00Z') }),
+  ], ['Alex Sample'], 5, { sessionEvidence: evidence });
+  assert.deepEqual(result.map(x => x.id), ['new-conversation']);
+});
+
+test('one strong action per person is selected even across different action types', () => {
+  const evidence = new Map([
+    ['one', new Map([['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }]])],
+  ]);
+  const result = selectWeeklyNextActions([
+    action('tracker', { sessionId: 'one', actionType: 'tracker_update', recommendedChannel: 'tracker_update' }),
+    action('reply', { sessionId: 'one' }),
+  ], [], 5, { sessionEvidence: evidence });
+  assert.deepEqual(result.map(x => x.id), ['reply']);
+});
