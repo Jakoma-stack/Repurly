@@ -136,11 +136,12 @@ function firstSentence(value: string) {
 
 function extractName(line: string) {
   const cleaned = line.replace(/^\d+[.)]\s*/, '').trim();
+  // Recognise an activity verb first so a sentence isn't mistaken for a name.
+  const activity = cleaned.match(/^([A-ZÀ-Ž][A-Za-zÀ-ž'’.-]+(?:\s+[A-ZÀ-Ž][A-Za-zÀ-ž'’.-]+){0,3})\s+(?:commented|liked|viewed|followed|reposted|reacted|accepted|connected|replied|asked|said)\b/i);
+  if (activity?.[1]) return activity[1].trim();
+
   const split = cleaned.split(/\s+[—-]\s+|:\s+/)[0]?.trim();
   if (split && split.length <= 70 && /^[A-Za-z0-9][A-Za-z0-9À-ž' .-]+$/.test(split) && !/post|analytics|notification|comment|profile|followers|impressions/i.test(split)) return split;
-
-  const activity = cleaned.match(/^([A-Z][A-Za-zÀ-ž' .-]{1,70})\s+(?:commented|liked|viewed|followed|reposted|reacted|accepted|connected|replied|asked|said)/i);
-  if (activity?.[1]) return activity[1].trim();
 
   const fromPossessive = cleaned.match(/^([A-Z][A-Za-zÀ-ž' .-]{1,70})['’]s\s+/);
   if (fromPossessive?.[1]) return fromPossessive[1].trim();
@@ -154,9 +155,14 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
   const isProfileView = /viewed.*profile|profile viewer|viewed profile/.test(lower);
   const isFollower = /followed|new follower/.test(lower);
   const isComment = source === 'comment' || /commented|replied|asked|said|:/.test(lower);
-  const isGeneric = GENERIC_NOISE.test(lower) || /great post|love this|thanks for sharing|liked|reacted/.test(lower);
+  // Polite praise about a "framework" is not strong commercial intent.
+  const isGeneric = GENERIC_NOISE.test(lower) || /\b(?:great post|love this|thanks(?: for sharing| for this)?|helpful framework|useful framework|liked|reacted)\b/.test(lower);
   const hasJakomaSignal = jakoma && JAKOMA_TERMS.test(line);
-  const hasCommercialSignal = /struggle|need|looking|interested|call|framework|help|problem|client|budget|proposal|referral|partner|meeting|triage|sprint|retainer/i.test(line);
+  const hasCommercialSignal = /\b(?:struggl(?:e|ing)|need(?:ing)?|looking\s+for|interested\s+in|budget|proposal|referral|partnership|meeting|retainer|sprint|buy|hire)\b/i.test(line);
+  const hasSpecificQuestion = isComment &&
+    (/\?/.test(line) || /\b(?:asked|asking)\s+(?:how|what|why|whether|if)\b/i.test(line) ||
+      /\b(?:how|what|why|which)\s+(?:can|could|do|does|would|should|to)\b/i.test(line)) &&
+    /\b(?:AI|policy|process|staff|evidence|prove|control|governance|team|business|data|workflow|audit|organisation|approval|risk|product|customer)\b/i.test(line);
 
   if (isProfileView) {
     return {
@@ -184,7 +190,7 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
     };
   }
 
-  if (isGeneric && !hasJakomaSignal && !hasCommercialSignal) {
+  if (isGeneric && !hasCommercialSignal && !hasSpecificQuestion) {
     return {
       name,
       text: line,
@@ -197,7 +203,20 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
     };
   }
 
-  if (hasCommercialSignal || /partner|referral|meeting/i.test(line)) {
+  if (hasSpecificQuestion && !hasCommercialSignal) {
+    return {
+      name,
+      text: line,
+      source,
+      priority: 'high',
+      intent: 'warm',
+      reason: 'A specific practical question deserves a substantive public answer; it is not proof of buying intent.',
+      suggestedAction: 'Answer the actual question publicly with a practical example. Do not pitch or DM on this signal alone.',
+      recommendedChannel: 'public_reply',
+    };
+  }
+
+  if (hasCommercialSignal) {
     return {
       name,
       text: line,
@@ -259,6 +278,10 @@ function jakomaReply(signal: Signal) {
 
 function genericReply(signal: Signal, brandName: string) {
   const name = signal.name === 'LinkedIn contact' ? '' : ` ${signal.name.split(' ')[0]}`;
+  if (/\b(?:policy|governance|AI|control)\b/i.test(signal.text) &&
+      /\b(?:prove|evidence|follow(?:ing|ed)?|staff|show|demonstrate)\b/i.test(signal.text)) {
+    return `Thanks${name} — I'd start with evidence from the actual workflow: clear ownership, training or approval records, sampled practice, exception logs and periodic checks. A policy sets expectations; those records help show whether it is followed in practice.`;
+  }
   if (signal.priority === 'high') {
     return `Thanks${name} — that is exactly the gap ${brandName} is focused on: turning attention into a clear next action, without jumping straight to aggressive outreach.`;
   }
@@ -371,13 +394,22 @@ function genericPost(args: GenerateDailyAgentBriefingArgs, signals: Signal[]) {
 }
 
 function uniqueSignals(signals: Signal[]) {
-  const seen = new Set<string>();
-  return signals.filter((signal) => {
-    const key = `${signal.name.toLowerCase()}-${signal.source}-${signal.text.slice(0, 40).toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // A comment and its notification describe one person, not separate leads.
+  const deduped = new Map<string, Signal>();
+  const weight = (signal: Signal) => {
+    const priority = signal.priority === 'high' ? 30 : signal.priority === 'medium' ? 20 : 10;
+    const source = signal.source === 'comment' && signal.priority !== 'low' ? 3 : 0;
+    const actionable = signal.recommendedChannel === 'review_profile' ? 1 : 0;
+    return priority + source + actionable;
+  };
+  for (const signal of signals) {
+    const key = signal.name === 'LinkedIn contact'
+      ? `unknown-${signal.text.slice(0, 50).toLowerCase()}`
+      : signal.name.trim().toLowerCase().replace(/\s+/g, ' ');
+    const current = deduped.get(key);
+    if (!current || weight(signal) > weight(current)) deduped.set(key, signal);
+  }
+  return [...deduped.values()];
 }
 
 function openAiSchema() {
@@ -474,13 +506,13 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
   }
 }
 
-async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing> {
+export async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing> {
   const jakoma = isJakoma(args);
   const lines = [
     ...splitLines(args.rawComments).map((text) => ({ text, source: 'comment' })),
     ...splitLines(args.rawNotifications).map((text) => ({ text, source: 'notification' })),
     ...splitLines(args.rawProfiles).map((text) => ({ text, source: 'profile' })),
-    ...splitLines(args.rawNotes).map((text) => ({ text, source: 'note' })),
+    // Notes provide context, not additional people to score.
   ];
 
   const signals = uniqueSignals(lines.map((line) => scoreSignal(line.text, line.source, jakoma)));

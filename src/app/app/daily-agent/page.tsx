@@ -209,7 +209,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
               <div className="space-y-5 text-sm">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-slate-700">{briefing.summary}</div>
                 {(active.generationMode === 'fallback' || briefing.generationMode === 'fallback') ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">Fallback mode used. The workflow is safe and usable, but configure OpenAI for higher-quality briefing intelligence.</div>
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-900">Rule-based fallback used because AI generation was unavailable. Rankings and drafts may be less accurate. Check OpenAI credentials and billing, then generate a fresh briefing.</div>
                 ) : null}
                 {analyticsImport?.fileName ? (
                   <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4">
