@@ -17,3 +17,7 @@ for (const status of [null, 'incomplete', 'incomplete_expired', 'past_due', 'unp
 test('billing refuses absent subscription', () => {
   assert.equal(hasPaidWorkspaceAccess({ stripeSubscriptionId: null, stripeSubscriptionStatus: null }), false);
 });
+
+test('billing refuses active status without a subscription ID', () => {
+  assert.equal(hasPaidWorkspaceAccess({ stripeSubscriptionId: null, stripeSubscriptionStatus: 'active' }), false);
+});
