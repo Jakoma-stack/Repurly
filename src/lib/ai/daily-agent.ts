@@ -125,8 +125,9 @@ function splitLines(value?: string | null) {
 }
 
 function isJakoma(args: GenerateDailyAgentBriefingArgs) {
-  const haystack = [args.brandName, args.brandTone, args.audience, args.primaryCta, JSON.stringify(args.brandMetadata ?? {})].join(' ').toLowerCase();
-  return /jakoma|ai governance|data assurance|safe ai|ai readiness|available to being governed/.test(haystack);
+  // Never infer a tenant from general topical text: other brands may discuss AI governance too.
+  const metadata = args.brandMetadata as { betaTemplate?: unknown } | null | undefined;
+  return metadata?.betaTemplate === 'jakoma' || args.brandName.trim().toLowerCase() === 'jakoma';
 }
 
 function firstSentence(value: string) {
