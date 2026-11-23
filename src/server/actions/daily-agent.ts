@@ -101,9 +101,6 @@ export async function createDailyAgentSession(formData: FormData) {
   const rawNotifications = nullableString(formData, 'rawNotifications');
   const rawComments = nullableString(formData, 'rawComments');
   const manualRawAnalytics = nullableString(formData, 'rawAnalytics');
-  const analyticsFile = formData.get('analyticsExport');
-  const analyticsImport = analyticsFile instanceof File ? await parseLinkedInAnalyticsImport(analyticsFile) : null;
-  const rawAnalytics = [manualRawAnalytics, analyticsImport?.textSummary].filter(Boolean).join('\n\n--- Imported LinkedIn analytics export ---\n\n') || null;
   const rawProfiles = nullableString(formData, 'rawProfiles');
   const rawNotes = nullableString(formData, 'rawNotes');
 
@@ -111,6 +108,9 @@ export async function createDailyAgentSession(formData: FormData) {
   const access = await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
   await requirePaidWorkspaceAccess(workspaceId);
   await enforceDailyAgentUsageLimit(workspaceId);
+  const analyticsFile = formData.get('analyticsExport');
+  const analyticsImport = analyticsFile instanceof File ? await parseLinkedInAnalyticsImport(analyticsFile) : null;
+  const rawAnalytics = [manualRawAnalytics, analyticsImport?.textSummary].filter(Boolean).join('\n\n--- Imported LinkedIn analytics export ---\n\n') || null;
   const brand = await getBrandContext(workspaceId, brandId);
 
   if (brandId && !brand) redirect('/app/daily-agent?error=brand' as Route);
