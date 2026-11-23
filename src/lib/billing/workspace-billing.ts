@@ -20,7 +20,8 @@ type WorkspaceBillingRow = Omit<WorkspaceBillingRecord, 'plan'> & {
   plan: PlanInput;
 };
 
-const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
+import { hasPaidWorkspaceAccess } from '@/lib/billing/access-policy';
+export { hasPaidWorkspaceAccess } from '@/lib/billing/access-policy';
 
 export function isInternalBetaAccessEnabled(workspaceId: string) {
   if (process.env.ENABLE_INTERNAL_BETA_ACCESS !== 'true') return false;
@@ -30,16 +31,6 @@ export function isInternalBetaAccessEnabled(workspaceId: string) {
     .map((id) => id.trim())
     .filter(Boolean)
     .includes(workspaceId);
-}
-
-export function hasPaidWorkspaceAccess(
-  record: Pick<WorkspaceBillingRecord, 'stripeSubscriptionId' | 'stripeSubscriptionStatus'>,
-) {
-  if (record.stripeSubscriptionStatus && PAID_STATUSES.has(record.stripeSubscriptionStatus)) {
-    return true;
-  }
-
-  return !record.stripeSubscriptionStatus && Boolean(record.stripeSubscriptionId);
 }
 
 export async function getWorkspaceBillingRecord(workspaceId: string): Promise<WorkspaceBillingRecord | null> {
