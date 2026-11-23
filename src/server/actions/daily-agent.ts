@@ -7,6 +7,7 @@ import { and, count, eq, gte } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
+import { isInternalBetaAccessEnabled, requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { generateDailyAgentBriefing, type DailyAgentAction, type DailyAgentBriefing } from '@/lib/ai/daily-agent';
 import { parseLinkedInAnalyticsImport } from '@/lib/analytics/linkedin-import';
 import { brands, dailyAgentActions, dailyAgentSessions, leadPipeline } from '../../../drizzle/schema';
@@ -40,8 +41,8 @@ function monthStart() {
 }
 
 async function enforceDailyAgentUsageLimit(workspaceId: string) {
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') return;
-  if (process.env.DAILY_AGENT_ENFORCE_LIMIT !== 'true') return;
+  if (isInternalBetaAccessEnabled(workspaceId)) return;
+  if (process.env.DAILY_AGENT_ENFORCE_LIMIT === 'false') return;
   const limit = betaMonthlyLimit();
   const rows = await db
     .select({ value: count() })
@@ -108,6 +109,7 @@ export async function createDailyAgentSession(formData: FormData) {
 
   if (!workspaceId) redirect('/app/daily-agent?error=invalid' as Route);
   const access = await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
   await enforceDailyAgentUsageLimit(workspaceId);
   const brand = await getBrandContext(workspaceId, brandId);
 
@@ -161,6 +163,7 @@ export async function updateDailyAgentAction(formData: FormData) {
 
   if (!workspaceId || !actionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   const rows = await db
     .select({ id: dailyAgentActions.id, sessionId: dailyAgentActions.sessionId })
@@ -186,6 +189,7 @@ export async function logDailyAgentActionToRelationship(formData: FormData) {
 
   if (!workspaceId || !actionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   const rows = await db
     .select()
@@ -263,6 +267,7 @@ export async function updateDailyAgentFeedback(formData: FormData) {
 
   if (!workspaceId || !sessionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   await db
     .update(dailyAgentSessions)

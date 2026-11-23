@@ -22,19 +22,14 @@ type WorkspaceBillingRow = Omit<WorkspaceBillingRecord, 'plan'> & {
 
 const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-function isInternalBetaAccessEnabled() {
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') {
-    return true;
-  }
-
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'false') {
-    return false;
-  }
-
-  // Staging should always be usable for private beta testing, even when Stripe is not wired yet.
-  // Production domains still require billing unless ENABLE_INTERNAL_BETA_ACCESS=true is explicitly set.
-  const appUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''} ${process.env.APP_URL ?? ''}`;
-  return appUrl.includes('staging.repurly.org') || appUrl.includes('.onrender.com');
+export function isInternalBetaAccessEnabled(workspaceId: string) {
+  if (process.env.ENABLE_INTERNAL_BETA_ACCESS !== 'true') return false;
+  // Explicit workspace allowlist, not a domain heuristic. Empty means nobody bypasses billing.
+  return (process.env.INTERNAL_BETA_WORKSPACE_IDS ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .includes(workspaceId);
 }
 
 export function hasPaidWorkspaceAccess(
@@ -86,7 +81,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
-  const hasPaidAccess = isInternalBetaAccessEnabled() || hasPaidWorkspaceAccess(workspace);
+  const hasPaidAccess = isInternalBetaAccessEnabled(workspaceId) || hasPaidWorkspaceAccess(workspace);
 
   return {
     ...workspace,
@@ -98,21 +93,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
 export async function requirePaidWorkspaceAccess(workspaceId: string) {
   const billingState = await getWorkspaceBillingAccessState(workspaceId);
 
-  if (isInternalBetaAccessEnabled()) {
-    return billingState ?? {
-      id: workspaceId,
-      name: 'Internal beta workspace',
-      slug: 'internal-beta',
-      plan: 'core',
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeSubscriptionStatus: null,
-      hasPaidAccess: true,
-      paymentRequired: false,
-    };
-  }
-
-  if (!billingState?.hasPaidAccess) {
+ if (!billingState?.hasPaidAccess) {
     redirect('/app/billing?billing=payment-required');
   }
 

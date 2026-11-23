@@ -1,0 +1,23 @@
+name: Repurly CI
+on:
+  push:
+    branches: [main, fix/railway-readiness-20261123]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CYPRESS_INSTALL_BINARY: "0"
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.5"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run typecheck
+      - run: npm run lint

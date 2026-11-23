@@ -67,7 +67,7 @@ OPENAI_DAILY_AGENT_MODEL=gpt-4.1-mini
 
 ## LinkedIn analytics export upload
 
-The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv`, `.xlsx` or `.xls` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
+The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
 
 This improves analytics review without scraping LinkedIn or automating account actions. Screenshots/OCR, browser extension capture and official LinkedIn analytics API sync remain later-stage features.
 

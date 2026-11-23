@@ -6,23 +6,21 @@ import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { createDailyAgentSession, logDailyAgentActionToRelationship, updateDailyAgentAction, updateDailyAgentFeedback } from '@/server/actions/daily-agent';
 import { getDailyAgentSnapshot } from '@/server/queries/daily-agent';
 
-const exampleNotifications = `Anthony Tabbiruka — highest priority partner/referral conversation; hold Tuesday 7 July at 14:00 UK time, do not overstate confirmed unless invite/dial-in is received.
-Mostafa El Baroudy followed Tracy. Relevant follower, review only.
-Surya S viewed profile. Awareness signal only.
-Ricardo J Flores reacted to the policy is not proof carousel. Monitor only.`;
+// All sample activity below is fictional; never ship actual contact intelligence.
+const exampleNotifications = `Alex Sample commented on your post about approval workflows. Ask what evidence their team currently uses.
+Jordan Example followed your company page. Review only; no pitch.
+Taylor Demo viewed your profile. Awareness signal only.`;
 
-const exampleComments = `Judith Cousineau: This distinction between policy and evidence really matters. A lot of organisations think a policy means governance is covered.
-11Protocol: Copilot governance needs an evidence layer, not just a usage policy.
-Mark: Great post.`;
+const exampleComments = `Alex Sample: We have approval steps, but we struggle to show whether they were followed.
+Jordan Example: Helpful framework, thanks.
+Casey Demo: Great post.`;
 
-const exampleAnalytics = `Aggregate analytics 23 June to 6 July:
-1,086 impressions
-468 members reached
-276 total followers
-Senior 38%, Director 18%, CXO 10%
-Hospitals and Health Care 25%, IT Services and IT Consulting 16%
-Policy is not proof carousel: 135 impressions, 1 profile viewer, 1 follower driven, 2 reactions, 3 comments
-Copilot/evidence post: 203 impressions, 3 profile viewers, 1 follower driven`;
+const exampleAnalytics = `Illustrative metrics (fictional example):
+1,200 impressions
+420 members reached
+15 comments
+5 profile views
+Governance checklist post: 350 impressions, 6 comments`;
 
 function todayIsoDate() {
   const now = new Date();
@@ -151,11 +149,11 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
 
               <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-4">
                 <label className="grid gap-2 text-sm font-medium text-emerald-950">
-                  Upload LinkedIn analytics export
-                  <input name="analyticsExport" type="file" accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700" />
+                  Upload LinkedIn CSV analytics export
+                  <input name="analyticsExport" type="file" accept=".csv,text/csv" className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700" />
                 </label>
                 <p className="mt-2 text-xs leading-5 text-emerald-900/80">
-                  Optional. Upload LinkedIn CSV/XLSX analytics exports for a stronger performance review. Repurly parses metrics and audience/post signals, then feeds the summary into the Daily Agent. Screenshots can still be pasted as text; OCR remains later.
+                  Optional. Upload LinkedIn CSV analytics exports for a stronger performance review. Repurly parses metrics and audience/post signals, then feeds the summary into the Daily Agent. Screenshots can still be pasted as text; OCR remains later.
                 </p>
               </div>
 
@@ -164,7 +162,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
                 <textarea name="rawNotes" className="min-h-[120px] rounded-2xl border border-border px-4 py-3 text-sm" placeholder="Example: Jakoma focuses on AI governance, data assurance and safe AI adoption. Prioritise available vs governed, policy is not proof, evidence before assurance, ownership, controls and practical operating rhythm. Do not pitch from profile views alone." />
               </label>
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-950">
-                Screenshot/OCR support is intentionally manual in this beta, but LinkedIn analytics export files are now supported. Upload CSV/XLSX analytics exports above and paste important notification/comment text from screenshots so the workflow stays safe, reliable and human-approved.
+                Screenshot/OCR support is intentionally manual in this beta, but LinkedIn analytics export files are now supported. Upload CSV analytics exports above and paste important notification/comment text from screenshots so the workflow stays safe, reliable and human-approved.
               </div>
               <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-medium text-white">Generate daily briefing</button>
             </form>

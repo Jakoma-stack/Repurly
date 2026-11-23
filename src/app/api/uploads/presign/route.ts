@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createPresignedUpload } from '@/lib/storage/presign';
 import { getAuthenticatedWorkspaceRole } from '@/lib/auth/workspace';
+import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
     const access = await getAuthenticatedWorkspaceRole(workspaceId);
     if (!access || !['owner', 'admin', 'editor'].includes(access.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
+    await requirePaidWorkspaceAccess(workspaceId);
     const objectKey = `workspaces/${workspaceId}/uploads/${randomUUID()}-${sanitizeFileName(fileName)}`;
     const result = await createPresignedUpload(objectKey, contentType);
     return NextResponse.json({ ...result, maxBytes: MAX_UPLOAD_BYTES });

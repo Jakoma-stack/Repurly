@@ -87,37 +87,6 @@ function buildWorkspaceSlug(baseSlug: string, suffix: string) {
   return `${baseSlug}-${suffix}`.slice(0, 120);
 }
 
-async function createWorkspaceMembership(workspaceId: string, userId: string) {
-  const existingMembership = await db
-    .select({ id: workspaceMemberships.id })
-    .from(workspaceMemberships)
-    .where(and(eq(workspaceMemberships.workspaceId, workspaceId), eq(workspaceMemberships.clerkUserId, userId)))
-    .limit(1);
-
-  if (!existingMembership[0]) {
-    await db.insert(workspaceMemberships).values({
-      workspaceId,
-      clerkUserId: userId,
-      role: 'owner',
-    });
-  }
-}
-
-async function findWorkspaceBySlug(workspaceSlug: string) {
-  const rows = await db
-    .select({
-      id: workspaces.id,
-      name: workspaces.name,
-      slug: workspaces.slug,
-      clerkOrganizationId: workspaces.clerkOrganizationId,
-    })
-    .from(workspaces)
-    .where(eq(workspaces.slug, workspaceSlug))
-    .limit(1);
-
-  return rows[0] ?? null;
-}
-
 async function findWorkspaceByOrgId(orgId: string | null) {
   if (!orgId) {
     return null;
@@ -137,15 +106,6 @@ async function findWorkspaceByOrgId(orgId: string | null) {
   return rows[0] ?? null;
 }
 
-async function repairWorkspaceAccess(args: {
-  userId: string;
-  workspaceId: string;
-}) {
-  await createWorkspaceMembership(args.workspaceId, args.userId);
-  const repaired = await listAccessibleWorkspaces(args.userId);
-  return repaired[0] ?? null;
-}
-
 async function createStarterWorkspaceForUser(args: {
   userId: string;
   orgId: string | null;
@@ -158,12 +118,10 @@ async function createStarterWorkspaceForUser(args: {
     return existing[0];
   }
 
-  const orgWorkspace = await findWorkspaceByOrgId(orgId);
-  if (orgWorkspace) {
-    const repaired = await repairWorkspaceAccess({ userId, workspaceId: orgWorkspace.id });
-    if (repaired) {
-      return repaired;
-    }
+  // Existing organisation workspaces require an explicit invitation and role assignment.
+  // Never convert a Clerk organisation match into an owner membership.
+  if (await findWorkspaceByOrgId(orgId)) {
+    throw new Error('A workspace already exists for this organisation; request an invitation.');
   }
 
   const workspaceName = buildWorkspaceName(user);
@@ -222,30 +180,6 @@ async function createStarterWorkspaceForUser(args: {
         return raced[0];
       }
 
-      const existingOrgWorkspace = await findWorkspaceByOrgId(orgId);
-      if (existingOrgWorkspace) {
-        const repaired = await repairWorkspaceAccess({ userId, workspaceId: existingOrgWorkspace.id });
-        if (repaired) {
-          return repaired;
-        }
-      }
-
-      const existingWorkspace = await findWorkspaceBySlug(workspaceSlug);
-      if (existingWorkspace) {
-        try {
-          const repaired = await repairWorkspaceAccess({ userId, workspaceId: existingWorkspace.id });
-          if (repaired) {
-            return repaired;
-          }
-        } catch (repairError) {
-          console.error('Workspace bootstrap repair failed', {
-            userId,
-            workspaceId: existingWorkspace.id,
-            workspaceSlug,
-            error: serializeError(repairError),
-          });
-        }
-      }
     }
   }
 

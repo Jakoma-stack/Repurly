@@ -1,3 +1,5 @@
+import { readOpenAiResponseText } from '@/lib/ai/response-text';
+
 export type DailyAgentPriority = 'high' | 'medium' | 'low';
 export type DailyAgentActionType =
   | 'public_reply'
@@ -145,119 +147,8 @@ function extractName(line: string) {
   return 'LinkedIn contact';
 }
 
-function knownRelationshipRule(name: string, text: string): Partial<Signal> | null {
-  const lowerName = name.toLowerCase();
-  const lower = `${name} ${text}`.toLowerCase();
-
-  if (lowerName.includes('anthony tabbiruka') || lower.includes('anthony tabbiruka')) {
-    return {
-      priority: 'high',
-      intent: 'hot',
-      reason: 'Highest-priority partner/referral conversation. Keep the focus on AI readiness handing off to evidence/control/audit layer.',
-      suggestedAction: 'Prepare the partner/referral agenda. Do not overstate the meeting as confirmed unless invite/dial-in is received.',
-      recommendedChannel: 'meeting_prep',
-    };
-  }
-
-  if (lowerName.includes('rob macphee') || lower.includes('rob macphee')) {
-    return {
-      priority: 'high',
-      intent: 'warm',
-      reason: 'Warm conversation around NIAS, data-driven care and digital operations.',
-      suggestedAction: 'If there has been no reply after two working days, send a light follow-up only.',
-      recommendedChannel: 'dm',
-    };
-  }
-
-  if (lowerName.includes('juan pedro') || lower.includes('juan pedro')) {
-    return {
-      priority: 'high',
-      intent: 'warm',
-      reason: 'High-value Copilot governance contact. Relevant to Jakoma’s AI governance/evidence lane.',
-      suggestedAction: 'Keep engaging publicly. Do not DM yet unless he engages again or there is a natural reason.',
-      recommendedChannel: 'no_dm_yet',
-    };
-  }
-
-  if (lowerName.includes('mostafa') || lower.includes('mostafa el baroudy')) {
-    return {
-      priority: 'medium',
-      intent: 'nurture',
-      reason: 'Relevant new follower. Useful to review and track, but not enough signal to pitch.',
-      suggestedAction: 'Review profile only and track context. No pitch.',
-      recommendedChannel: 'review_profile',
-    };
-  }
-
-  if (lowerName.includes('surya') || lower.includes('surya s')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Profile view is an awareness signal only.',
-      suggestedAction: 'Monitor only. Do not DM from a profile view alone.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('ricardo j flores') || lower.includes('ricardo j flores')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Reaction-only signal. Useful to notice, not enough to act on.',
-      suggestedAction: 'Monitor only.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('thomas list') || lower.includes('thomas list')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Repeated profile views are awareness signals, but not enough to DM without further engagement.',
-      suggestedAction: 'Track repeated views; no action unless he comments, connects or creates a natural reason.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('promise tembe') || lower.includes('promise tembe')) {
-    return {
-      priority: 'medium',
-      intent: 'nurture',
-      reason: 'Relevant AI Law / Governance / Ethics / Data Protection contact.',
-      suggestedAction: 'Review profile and track. No pitch.',
-      recommendedChannel: 'review_profile',
-    };
-  }
-
-  if (/judith cousineau|11protocol|faith toyambi|roberta de lorenzis|mukul dakwale|zaynab atwi/i.test(lower)) {
-    return {
-      priority: 'medium',
-      intent: 'warm',
-      reason: 'Warm/relevant engagement already in the Jakoma relationship map.',
-      suggestedAction: 'Reply publicly where meaningful and track the relationship. Do not over-DM.',
-      recommendedChannel: 'public_reply',
-    };
-  }
-
-  return null;
-}
-
 function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
   const name = extractName(line);
-  const known = knownRelationshipRule(name, line);
-  if (known) {
-    return {
-      name,
-      text: line,
-      source,
-      priority: known.priority ?? 'medium',
-      intent: known.intent ?? 'nurture',
-      reason: known.reason ?? 'Known relationship rule matched.',
-      suggestedAction: known.suggestedAction ?? 'Review manually.',
-      recommendedChannel: known.recommendedChannel ?? 'monitor',
-    };
-  }
-
   const lower = line.toLowerCase();
   const isProfileView = /viewed.*profile|profile viewer|viewed profile/.test(lower);
   const isFollower = /followed|new follower/.test(lower);
@@ -305,7 +196,7 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
     };
   }
 
-  if (hasCommercialSignal || /anthony|rob macphee|partner|referral|meeting/i.test(line)) {
+  if (hasCommercialSignal || /partner|referral|meeting/i.test(line)) {
     return {
       name,
       text: line,
@@ -542,7 +433,6 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     jakoma
       ? 'Jakoma-specific guardrails: public content must focus on AI governance, data assurance and safe AI adoption. Do not create public Jakoma posts about Repurly, LinkedIn operating systems, Smart Stay or Independent Living. Prioritise evidence, governance, Copilot, readiness, controls, audit trail, data exposure, accountability and healthcare/IT services relevance. Profile views alone are review/monitor only. New followers are review/track only. Move to DM only after repeated engagement, clear relevance or a natural reason.'
       : 'For non-Jakoma brands, stay focused on the selected brand context and relationship-led LinkedIn next actions.',
-    'Known Jakoma relationship rules when names appear: Anthony Tabbiruka = highest-priority partner/referral prep, do not overstate confirmed meeting without invite/dial-in. Rob MacPhee = warm NIAS/data-driven care conversation, light follow-up only after two working days. Juan Pedro Marquez Castorina = high-value Copilot governance contact, public engagement/no DM yet. Mostafa El Baroudy = review only/no pitch. Surya S, Ricardo J Flores, Thomas List = monitor only unless stronger signal appears. Promise Tembe = review/no pitch. Judith Cousineau, 11Protocol, Faith Toyambi and other warm commenters = public reply where meaningful, no over-DM.',
     'Return strict JSON only. Drafts must use UK spelling, calm practical tone and concise expert wording. Avoid hype, flattery, fake familiarity and overclaiming.',
     `Brand: ${args.brandName}`,
     `Tone of voice: ${args.brandTone ?? 'clear, practical, commercially focused, UK spelling'}`,
@@ -564,15 +454,21 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
       body: JSON.stringify({
         model: process.env.OPENAI_DAILY_AGENT_MODEL?.trim() || 'gpt-4.1-mini',
         input: prompt,
-        text: { format: { type: 'json_schema', name: 'repurly_daily_agent_briefing', schema: openAiSchema() } },
+        text: { format: { type: 'json_schema', name: 'repurly_daily_agent_briefing', schema: openAiSchema(), strict: false } },
       }),
     });
 
-    if (!response.ok) return null;
-    const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
-    return { ...(JSON.parse(payload.output_text) as DailyAgentBriefing), generationMode: 'openai' };
-  } catch {
+    if (!response.ok) {
+      console.warn('[daily-agent] AI response rejected', { status: response.status });
+      return null;
+    }
+    const outputText = readOpenAiResponseText(await response.json());
+    if (!outputText) return null;
+    const parsed = JSON.parse(outputText) as Partial<DailyAgentBriefing>;
+    if (!parsed.summary || !Array.isArray(parsed.actions) || !Array.isArray(parsed.whoMatters)) return null;
+    return { ...parsed, generationMode: 'openai' } as DailyAgentBriefing;
+  } catch (error) {
+    console.warn('[daily-agent] AI response failed, using fallback', { kind: error instanceof Error ? error.name : 'unknown' });
     return null;
   }
 }

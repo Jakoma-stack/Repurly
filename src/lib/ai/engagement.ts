@@ -1,3 +1,5 @@
+import { readOpenAiResponseText } from '@/lib/ai/response-text';
+
 export type IntentSummary = {
   intentLabel: 'hot' | 'warm' | 'nurture' | 'spam';
   intentScore: number;
@@ -123,9 +125,9 @@ async function replyOptionsWithOpenAi(args: {
     });
 
     if (!response.ok) return null;
-    const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
-    const parsed = JSON.parse(payload.output_text) as { replies?: string[]; dm?: string };
+    const outputText = readOpenAiResponseText(await response.json());
+    if (!outputText) return null;
+    const parsed = JSON.parse(outputText) as { replies?: string[]; dm?: string };
     if (!parsed.replies?.length || !parsed.dm) return null;
     return parsed;
   } catch {
