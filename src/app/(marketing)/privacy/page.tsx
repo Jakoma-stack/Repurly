@@ -9,7 +9,7 @@ export default function PrivacyPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">1. Roles</h2>
-        <p>Repurly is normally controller for account, billing, support, security and service-usage data. For customer content, lead notes and campaign data uploaded by a business customer, Repurly may act as processor on that customer's behalf, subject to an applicable Data Processing Addendum.</p>
+        <p>Repurly is normally controller for account, billing, support, security and service-usage data. For customer content, lead notes and campaign data uploaded by a business customer, Repurly may act as processor on that customer&apos;s behalf, subject to an applicable Data Processing Addendum.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">8. Rights and contact</h2>
-        <p>For privacy requests, contact support@repurly.com. Replace this address before production launch if a dedicated privacy contact is used. Individuals may have rights to access, correct, erase, restrict or object to processing depending on the circumstances.</p>
+        <p>Before public launch, Repurly must publish a verified privacy contact address and an up-to-date subprocessor list. For now, use the support contact provided in the service agreement. Individuals may have rights to access, correct, erase, restrict or object to processing depending on the circumstances.</p>
       </section>
     </article>
   );
