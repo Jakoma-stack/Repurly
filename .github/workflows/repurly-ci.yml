@@ -25,4 +25,9 @@ jobs:
       - run: npm run test:unit
       - run: npm run typecheck
       - run: npm run lint
-      - run: SKIP_ENV_VALIDATION=true npm run build
+      - name: Build with non-production Clerk test hostname
+        run: SKIP_ENV_VALIDATION=true npm run build
+        env:
+          # This decodes to test.clerk.accounts.dev$ and contains no credential.
+          # Never use this value for a running Railway environment.
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dGVzdC5jbGVyay5hY2NvdW50cy5kZXYk
