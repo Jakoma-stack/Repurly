@@ -35,4 +35,24 @@ test('every declared Drizzle table column exists in a journaled SQL migration', 
     }
   }
   assert.deepEqual(missing, []);
+
+  // Obsolete columns may remain for backwards compatibility, but cannot
+  // demand an input field the current application no longer supplies.
+  const expectedColumns = new Map<string, Set<string>>();
+  for (const table of schema.matchAll(/export const \w+ = pgTable\("([^"]+)", \{([\s\S]*?)\}\);/g)) {
+    expectedColumns.set(table[1], new Set([...table[2].matchAll(/^\s*\w+:\s+\w+\("([^"]+)"/gm)].map((m) => m[1])));
+  }
+  const blockers: string[] = [];
+  for (const create of sql.matchAll(/CREATE TABLE(?: IF NOT EXISTS)? "([^"]+)" \(([\s\S]*?)\);/g)) {
+    const declared = expectedColumns.get(create[1]);
+    for (const line of create[2].split('\n')) {
+      const col = line.match(/^\s*"([^"]+)"\s+(.+)$/);
+      if (!col || !declared || declared.has(col[1])) continue;
+      const required = /NOT NULL/.test(col[2]) && !/DEFAULT/.test(col[2]);
+      if (!required) continue;
+      const relaxed = sql.includes('ALTER TABLE "' + create[1] + '" ALTER COLUMN "' + col[1] + '" DROP NOT NULL');
+      if (!relaxed) blockers.push(create[1] + '.' + col[1]);
+    }
+  }
+  assert.deepEqual(blockers, [], 'Retired required columns must be made nullable');
 });

@@ -50,6 +50,13 @@
       "when": 1795470120000,
       "tag": "0006_workspace_billing_schema_alignment",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795470660000,
+      "tag": "0007_legacy_usage_metric_nullable",
+      "breakpoints": true
     }
   ]
 }
