@@ -3,7 +3,7 @@ export type LinkedInAnalyticsImportSummary = {
   mimeType?: string;
   byteSize: number;
   importedAt: string;
-  format: 'csv' | 'xlsx' | 'unknown';
+  format: 'csv' | 'unknown';
   sheetNames: string[];
   rowCount: number;
   columns: string[];
@@ -23,7 +23,6 @@ type ParsedTable = {
 
 const MAX_IMPORT_BYTES = Number(process.env.LINKEDIN_ANALYTICS_IMPORT_MAX_BYTES || 8 * 1024 * 1024);
 const MAX_ROWS_PER_SHEET = 750;
-const MAX_SHEETS = 6;
 
 function normaliseHeader(value: string) {
   return value.replace(/^\uFEFF/, '').trim();
