@@ -91,7 +91,7 @@ Who owns the decision? What needs human approval? What happens when something fa
 
 When those questions are unanswered, even a polished workflow can create new risks.
 
-At Jakoma, we are interested in technology that supports practical delivery and accountable decisions.
+At Jakoma Ltd, we are interested in technology that supports practical delivery and accountable decisions.
 
 Which manual process in your organisation needs clarity before it needs automation?
 
