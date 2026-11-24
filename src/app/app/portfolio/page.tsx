@@ -22,7 +22,7 @@ export default async function PortfolioPage() {
         <div className="eyebrow !text-white/50">Portfolio marketing</div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">One cockpit. Separate marketing plans for every app.</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-white/75">
-          Keep each app's audience, voice, call to action, launch stage and drafts distinct.
+          Keep each app&apos;s audience, voice, call to action, launch stage and drafts distinct.
           Plan here, create content in the studio, and review the destination before scheduling anything.
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
