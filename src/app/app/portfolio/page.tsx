@@ -30,7 +30,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
           <a className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950" href="/app/brands">Add or edit an app</a>
           <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/content">Open content studio</a>
-          <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/portfolio/campaigns">Review the four-week campaigns</a>
+          {canImport ? (
+            <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/portfolio/campaigns">Review the four-week campaigns</a>
+          ) : null}
         </div>
       </section>
 
