@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { AppShell } from '@/components/layout/app-shell';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
+import { canImportPilotPortfolio } from '@/server/actions/portfolio';
 
 export default async function ProductLayout({ children }: { children: React.ReactNode }) {
   const session = await requireWorkspaceSession();
@@ -44,8 +45,17 @@ export default async function ProductLayout({ children }: { children: React.Reac
     });
   }
 
+  let communityEligible = false;
+  if (billingAccess?.hasPaidAccess && ['owner', 'admin'].includes(session.role)) {
+    try {
+      communityEligible = await canImportPilotPortfolio();
+    } catch {
+      // Fail closed without breaking navigation for the rest of the application.
+    }
+  }
+
   return (
-    <AppShell session={session} billingAccess={billingAccess}>
+    <AppShell session={session} billingAccess={billingAccess} communityEligible={communityEligible}>
       {children}
     </AppShell>
   );

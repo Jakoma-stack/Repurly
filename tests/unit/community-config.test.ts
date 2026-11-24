@@ -1,0 +1,5 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {communityConfig} from '../../src/lib/linkedin/community-config';
+const env={COMMUNITY_LINKEDIN_ENABLED:'true',RAILWAY_ENVIRONMENT_NAME:'staging',COMMUNITY_LINKEDIN_CLIENT_ID:'fictional',COMMUNITY_LINKEDIN_CLIENT_SECRET:'fictional-secret',COMMUNITY_LINKEDIN_REDIRECT_URI:'https://example.org/api/community/callback',COMMUNITY_LINKEDIN_ORGANIZATION:'urn:li:organization:123',COMMUNITY_LINKEDIN_VERSION:'202609'};
+test('community activation fails closed outside staging or without explicit approval switch',()=>{assert.ok(communityConfig(env));assert.equal(communityConfig({...env,RAILWAY_ENVIRONMENT_NAME:'production'}),null);assert.equal(communityConfig({...env,COMMUNITY_LINKEDIN_ENABLED:'false'}),null);assert.equal(communityConfig({...env,COMMUNITY_LINKEDIN_ORGANIZATION:'urn:li:person:123'}),null);assert.equal(communityConfig({...env,COMMUNITY_LINKEDIN_REDIRECT_URI:'https://example.org/api/linkedin/callback'}),null);});

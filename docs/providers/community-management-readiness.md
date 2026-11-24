@@ -1,0 +1,5 @@
+# Janeomi Community Management readiness
+
+Application submitted 24 November 2026 (owner-reported screenshot). Development Tier access is pending. The new owner/admin pilot page uses fictional aggregate metrics only, with no LinkedIn requests, external AI processing, CRM writes or publishing. Existing OAuth and publishing are unchanged.
+
+Next phase: verify the approved products/scopes and applicable LinkedIn terms, confirm the new app's separate OAuth callback and encrypted token storage, require explicit workspace and organisation authorisation, use supported API version/endpoints, bound pagination and rate limits, minimise retention and support deletion/disconnection. Do not send API-derived member data to AI or use it for prospect scoring, lead enrichment, or messaging without explicit permitted use. Review privacy notices and data handling before activation. Prefer aggregate page analytics and human-reviewed community actions. Add synthetic transport tests before enabling any live calls.

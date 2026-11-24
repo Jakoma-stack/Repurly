@@ -36,6 +36,7 @@ const fullNav = [
   { href: '/app/marketing-director', label: 'Marketing Director', icon: Sparkles },
   { href: '/app/portfolio', label: 'App Portfolio', icon: Layers3 },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
+  { href: '/app/community', label: 'Community intelligence', icon: BarChart3 },
   { href: '/app/outreach-copilot', label: 'Outreach', icon: UserPlus },
   { href: '/app/brands', label: 'Brand settings', icon: BriefcaseBusiness },
   { href: '/app/pilot-dashboard', label: 'Pilot Dashboard', icon: BarChart3 },
@@ -50,13 +51,15 @@ export function AppShell({
   children,
   session,
   billingAccess,
+  communityEligible = false,
 }: {
   children: React.ReactNode;
   session: WorkspaceSession;
   billingAccess?: BillingAccessState;
+  communityEligible?: boolean;
 }) {
   const paid = billingAccess?.hasPaidAccess ?? true;
-  const nav = paid ? fullNav : unpaidNav;
+  const nav = paid ? fullNav.filter(item => item.href !== '/app/community' || communityEligible) : unpaidNav;
 
   return (
     <div className="min-h-screen text-slate-900">
