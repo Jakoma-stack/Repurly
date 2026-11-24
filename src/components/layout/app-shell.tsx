@@ -5,6 +5,7 @@ import {
   Sparkles,
   Building2,
   BriefcaseBusiness,
+  Layers3,
   MessageSquareQuote,
   Users,
   UserPlus,
@@ -32,6 +33,7 @@ const fullNav = [
   { href: '/app/weekly-plan', label: 'Weekly Plan', icon: CalendarCheck },
   { href: '/app/opportunity-settings', label: 'Opportunity Settings', icon: SlidersHorizontal },
   { href: '/app/content', label: 'Content', icon: PencilLine },
+  { href: '/app/portfolio', label: 'App Portfolio', icon: Layers3 },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
   { href: '/app/outreach-copilot', label: 'Outreach', icon: UserPlus },
   { href: '/app/brands', label: 'Brand settings', icon: BriefcaseBusiness },
@@ -123,6 +125,7 @@ export function AppShell({
                   <a href="/app/daily-agent" className="font-medium text-primary">Daily Agent</a>
                   <a href="/app/relationships" className="font-medium text-primary">Relationships</a>
                   <a href="/app/weekly-plan" className="font-medium text-primary">Weekly Plan</a>
+                  <a href="/app/portfolio" className="font-medium text-primary">Portfolio</a>
                   <a href="/app/opportunity-settings" className="font-medium text-primary">Opportunity Settings</a>
                   <a href="/app/proof-score" className="font-medium text-primary">Proof Score</a>
                 </div>

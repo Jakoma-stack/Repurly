@@ -9,6 +9,7 @@ import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { checkPlanLimit } from '@/lib/billing/enforce-limits';
 import { brands } from '../../../drizzle/schema';
+import { getMarketingStage } from '@/lib/marketing/portfolio';
 
 function requiredString(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
@@ -28,6 +29,7 @@ function parseHashtags(raw: string) {
 async function refreshBrandPages() {
   revalidatePath('/app');
   revalidatePath('/app/brands');
+  revalidatePath('/app/portfolio');
   revalidatePath('/app/content');
   revalidatePath('/app/leads');
   revalidatePath('/app/engagement');
@@ -46,6 +48,17 @@ export async function saveBrand(formData: FormData) {
   }
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
+  const existing = brandId
+    ? await db.select({ metadata: brands.metadata }).from(brands)
+        .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId))).limit(1)
+    : [];
+  if (brandId && !existing[0]) redirect('/app/brands?error=invalid' as Route);
+  const previousMetadata = existing[0]?.metadata ?? {};
+  const requestedStage = requiredString(formData, 'marketingStage');
+  const metadata = requestedStage
+    ? { ...previousMetadata, marketingStage: getMarketingStage({ marketingStage: requestedStage }) }
+    : previousMetadata;
+
   const values = {
     workspaceId,
     name,
@@ -58,6 +71,7 @@ export async function saveBrand(formData: FormData) {
     primaryCta: requiredString(formData, 'primaryCta') || null,
     secondaryCta: requiredString(formData, 'secondaryCta') || null,
     hashtags: parseHashtags(requiredString(formData, 'hashtags')),
+    metadata,
     linkedinProfileUrl: requiredString(formData, 'linkedinProfileUrl') || null,
     linkedinCompanyUrl: requiredString(formData, 'linkedinCompanyUrl') || null,
     updatedAt: new Date(),

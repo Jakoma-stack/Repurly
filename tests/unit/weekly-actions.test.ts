@@ -82,6 +82,31 @@ test('logging a reply closes previous proposals for that person across all sessi
   assert.deepEqual(result.map(x => x.id), ['new-conversation']);
 });
 
+test('brand-specific completed work does not hide a genuinely new action', () => {
+  const signal = { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' };
+  const evidence = new Map([
+    ['original', new Map([['alex sample', signal]])],
+    ['new-jakoma', new Map([['alex sample', signal]])],
+    ['new-edusmart', new Map([['alex sample', signal]])],
+  ]);
+  const result = selectWeeklyNextActions([
+    action('old', { brandId: 'jakoma', sessionId: 'original', createdAt: new Date('2026-11-23T19:00:00Z') }),
+    action('logged', { brandId: 'jakoma', sessionId: 'original', status: 'logged',
+      createdAt: new Date('2026-11-23T19:00:00Z'), updatedAt: new Date('2026-11-23T20:00:00Z') }),
+    action('fresh-jakoma', { brandId: 'jakoma', sessionId: 'new-jakoma', createdAt: new Date('2026-11-23T22:00:00Z') }),
+    action('fresh-edusmart', { brandId: 'edusmart', sessionId: 'new-edusmart', createdAt: new Date('2026-11-23T21:00:00Z') }),
+  ], [{ name: 'Alex Sample', brandId: 'jakoma' }], 5, { sessionEvidence: evidence });
+  assert.deepEqual(result.map(x => x.id), ['fresh-jakoma', 'fresh-edusmart']);
+});
+
+test('tracked relationships do not suppress another brand\'s tracker updates', () => {
+  const result = selectWeeklyNextActions([
+    action('jakoma', { brandId: 'jakoma', actionType: 'tracker_update', recommendedChannel: 'tracker_update' }),
+    action('edusmart', { brandId: 'edusmart', actionType: 'tracker_update', recommendedChannel: 'tracker_update' }),
+  ], [{ name: 'Alex Sample', brandId: 'jakoma' }]);
+  assert.deepEqual(result.map(x => x.id), ['edusmart']);
+});
+
 test('one strong action per person is selected even across different action types', () => {
   const evidence = new Map([
     ['one', new Map([['alex sample', { name: 'Alex Sample', priority: 'high' as const, recommendedChannel: 'public_reply' }]])],

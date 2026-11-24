@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getWeeklyOpportunityPlan } from '@/server/queries/opportunity';
+import { getWorkspaceBrands } from '@/server/queries/brands';
 import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 
 function label(value: string | null | undefined) {
@@ -11,7 +12,8 @@ function label(value: string | null | undefined) {
 export default async function WeeklyPlanPage() {
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
-  const data = await getWeeklyOpportunityPlan(session.workspaceId);
+  const [data, portfolioBrands] = await Promise.all([getWeeklyOpportunityPlan(session.workspaceId), getWorkspaceBrands(session.workspaceId)]);
+  const brandNames = new Map(portfolioBrands.map(brand => [brand.id, brand.name]));
 
   return (
     <div className="space-y-6">
@@ -44,6 +46,7 @@ export default async function WeeklyPlanPage() {
                   <div>
                     <div className="text-sm font-semibold text-slate-500">Action {index + 1} · {label(action.recommendedChannel)}</div>
                     <h3 className="mt-1 font-semibold text-slate-950">{action.personName || 'LinkedIn contact'}</h3>
+                    <p className="mt-1 text-xs text-slate-500">{action.brandId ? brandNames.get(action.brandId) ?? 'Unknown brand' : 'Unassigned brand'}</p>
                   </div>
                   <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-700">{action.priority}</span>
                 </div>
@@ -66,7 +69,7 @@ export default async function WeeklyPlanPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-slate-950">{person.leadName}</div>
-                    <div className="mt-1 text-sm text-slate-500">{label(person.stage)} · estimated commercial interest {person.intentScore}/100</div>
+                    <div className="mt-1 text-sm text-slate-500">{person.brandId ? (brandNames.get(person.brandId) ?? 'Unknown brand') + ' · ' : ''}{label(person.stage)} · estimated commercial interest {person.intentScore}/100</div>
                   </div>
                 </div>
                 <p className="mt-3 text-sm leading-6 text-slate-700">{person.nextAction || 'No next action set.'}</p>

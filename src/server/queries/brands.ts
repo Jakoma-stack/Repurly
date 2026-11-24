@@ -17,6 +17,7 @@ export async function getWorkspaceBrands(workspaceId: string) {
       primaryCta: brands.primaryCta,
       secondaryCta: brands.secondaryCta,
       hashtags: brands.hashtags,
+      metadata: brands.metadata,
       linkedinProfileUrl: brands.linkedinProfileUrl,
       linkedinCompanyUrl: brands.linkedinCompanyUrl,
       createdAt: brands.createdAt,

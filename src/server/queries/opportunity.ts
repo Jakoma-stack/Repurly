@@ -111,7 +111,7 @@ export async function getWeeklyOpportunityPlan(workspaceId: string) {
 
   const nextFive = selectWeeklyNextActions(
     actions,
-    relationships.map(person => person.leadName),
+    relationships.map(person => ({ name: person.leadName, brandId: person.brandId })),
     5,
     { sessionEvidence: sourceEvidence },
   );
