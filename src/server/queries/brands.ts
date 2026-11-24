@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { brands, posts } from '../../../drizzle/schema';
@@ -26,7 +26,7 @@ export async function getWorkspaceBrands(workspaceId: string) {
       totalPosts: sql<number>`count(${posts.id})`,
     })
     .from(brands)
-    .leftJoin(posts, eq(posts.brandId, brands.id))
+    .leftJoin(posts, and(eq(posts.brandId, brands.id), eq(posts.workspaceId, brands.workspaceId)))
     .where(eq(brands.workspaceId, workspaceId))
     .groupBy(brands.id)
     .orderBy(brands.name);

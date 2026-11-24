@@ -1,6 +1,6 @@
 # Repurly growth roadmap
 
-This replaces a feature-count-driven roadmap with a gate-driven path from private pilot to a repeatable paid product. Repurly remains a human-approved LinkedIn opportunity desk for expert-led businesses. Its portfolio capability also supports internal multi-brand marketing. Curated owner-pilot plans must never be exposed as a new workspace's default data.
+This replaces a feature-count-driven roadmap with a gate-driven path from private pilot to a repeatable paid product. Repurly is a standalone commercial AI Marketing Director and human-approved LinkedIn opportunity desk for founders, consultants and expert-led businesses without dedicated marketing teams. The owner's portfolio is the first multi-brand customer, not a separate product or prerequisite for sales. Prioritise reusable capabilities that help both internal and external users, and do not delay paid pilots until full automation. Curated owner-pilot plans must never be exposed as a new workspace's default data.
 
 ## P0 — Prove the private workflow
 - Retest historical recommendations, completed actions, malformed actions, relationship classification, workspace and brand isolation against actual authenticated pilot data.
@@ -16,6 +16,14 @@ Exit: unit tests, typecheck, lint, build and authenticated smoke test succeed; p
 - Add a human-reviewed weekly digest of the few high-value actions; distinguish proposed tasks from real responses and outcomes.
 
 Exit: each active brand has an appropriate stage and CTA; no cross-brand suppression, repeated work or accidental publishing. A private user can manage three shared editorial slots in a single review.
+
+## P1a — AI Marketing Director, parallel with pilot preparation
+- Reuse brand settings and the existing Content Studio, Daily Agent and lead pipeline.
+- Provide an on-demand 30-day AI strategy, four weekly actions, evidence checks and a review-only first draft for any eligible brand. Store the plan against the brand; block stale plans and repeated draft creation. Use capped, audited AI attempts with no live market research claims.
+- Next, consolidate approvals, validate first-party market evidence, create an evidence-led shared weekly briefing and connect consented enquiries to the existing pipeline.
+- Keep the first external paid pilot on the critical path; recruit only when genuine onboarding and support can be offered.
+
+Exit: a founder can prepare a relevant campaign without knowing marketing terminology, and an unrelated customer can do the same without seeing owner-specific data.
 
 ## P2 — Measurable demand and paid pilot
 - Add opt-in enquiry/pilot capture, per-brand source attribution and explicit lead stages: new, qualified, interested, invited, onboarded, paid/lost.

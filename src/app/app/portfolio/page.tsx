@@ -29,7 +29,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           Plan here, create content in the studio, and review the destination before scheduling anything.
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
-          <a className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950" href="/app/brands">Add or edit an app</a>
+          <a className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950" href="/app/marketing-director">Open AI Marketing Director</a>
+          <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/brands">Add or edit an app</a>
           <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/content">Open content studio</a>
           {canImport ? (
             <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/portfolio/campaigns">Review the four-week campaigns</a>
