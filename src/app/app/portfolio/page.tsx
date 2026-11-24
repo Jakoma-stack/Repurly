@@ -35,8 +35,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
 
       {params.setup === 'imported' ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
-          Starter kit checked: {params.brands ?? '0'} new brand profile(s) and {params.drafts ?? '0'} new review-only draft(s) added.
-          Existing brand settings and drafts were preserved. Nothing was scheduled or published.
+          Portfolio checked: {params.renamed ?? '0'} agreed name(s) corrected, {params.refreshed ?? '0'} unedited starter draft(s) updated, {params.brands ?? '0'} new brand(s) and {params.drafts ?? '0'} new draft(s) created.
+          Customised drafts and other saved data were preserved. Nothing was scheduled or published.
         </div>
       ) : null}
 
@@ -44,11 +44,11 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
-              <h2 className="text-lg font-semibold text-slate-950">Prepare your four-app starter portfolio</h2>
+              <h2 className="text-lg font-semibold text-slate-950">Apply the agreed app branding</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                Add Jakoma, Period Close Workbench, EduSmart and Family Support with distinct audiences,
-                launch-stage guidance and three editable LinkedIn drafts each.
-                Existing entries are preserved, and running this again only adds missing items.
+                Apply Lorri-Lou&apos;s Learning Hub, MarbriA and Jakoma Ltd as the agreed display names.
+                Period Close Workbench remains a provisional development name until a commercial name is chosen.
+                This safely corrects the saved brand records and only refreshes unedited starter posts.
               </p>
               <p className="mt-2 text-xs text-indigo-900">
                 Available to the approved private staging pilot only. No external publishing or messaging takes place.
@@ -56,7 +56,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             </div>
             <form action={importPilotPortfolio}>
               <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                Add missing app profiles and draft posts
+                Correct names and refresh starter drafts
               </button>
             </form>
           </div>
@@ -82,12 +82,16 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           const stageInfo = getMarketingStageDetails(stage);
           const missing = missingMarketingBasics(brand);
           const canPlan = brand.status === 'active';
+          const tagline = typeof brand.metadata?.brandTagline === 'string' ? brand.metadata.brandTagline : null;
           return (
             <Card key={brand.id}>
               <CardHeader>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <h2 className="text-xl font-semibold text-slate-950">{brand.name}</h2>
+                    {tagline ? <p className="mt-1 text-sm font-medium text-slate-700">{tagline}</p> : null}
+                    {brand.slug === 'family-support' ? <p className="mt-1 text-xs text-slate-500">Family Care &amp; Home Safety</p> : null}
+                    {brand.slug === 'period-close-workbench' ? <p className="mt-1 text-xs text-amber-800">Working name; commercial brand not yet chosen</p> : null}
                     <p className="mt-1 text-sm text-slate-500">{stageInfo.label} · {brand.status}</p>
                   </div>
                   <div className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
