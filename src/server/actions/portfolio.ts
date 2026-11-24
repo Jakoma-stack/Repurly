@@ -1,6 +1,6 @@
 'use server';
 
-import { currentUser } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { eq } from 'drizzle-orm';
@@ -13,8 +13,10 @@ import { starterPortfolio } from '@/lib/marketing/portfolio-starters';
 import { brands, posts, workspaces } from '../../../drizzle/schema';
 
 /** Special starter setup is restricted to the explicitly approved, signed-in staging pilot. */
-export async function canImportPilotPortfolio(userId: string): Promise<boolean> {
+export async function canImportPilotPortfolio(): Promise<boolean> {
   if (!isPrivatePilotMode()) return false;
+  const { userId } = await auth();
+  if (!userId) return false;
   if (process.env.REPURLY_PILOT_CLERK_USER_ID?.trim()) {
     return isPrivatePilotUserIdAllowed(userId);
   }
@@ -30,7 +32,7 @@ export async function importPilotPortfolio() {
   const session = await requireWorkspaceSession();
   await requireWorkspaceRole(session.workspaceId, ['owner', 'admin', 'editor']);
   await requirePaidWorkspaceAccess(session.workspaceId);
-  if (!(await canImportPilotPortfolio(session.userId))) {
+  if (!(await canImportPilotPortfolio())) {
     redirect('/app/portfolio?setup=unavailable');
   }
 
