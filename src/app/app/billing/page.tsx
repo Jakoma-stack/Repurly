@@ -85,7 +85,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <CardHeader>
           <h2 className="text-2xl font-semibold">Billing and plan usage</h2>
           <p className="text-sm text-muted-foreground">
-            Repurly is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
+            Janeomi is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
           </p>
         </CardHeader>
         <CardContent>
