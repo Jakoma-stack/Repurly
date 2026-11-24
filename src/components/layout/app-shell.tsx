@@ -51,13 +51,15 @@ export function AppShell({
   children,
   session,
   billingAccess,
+  communityEligible = false,
 }: {
   children: React.ReactNode;
   session: WorkspaceSession;
   billingAccess?: BillingAccessState;
+  communityEligible?: boolean;
 }) {
   const paid = billingAccess?.hasPaidAccess ?? true;
-  const nav = paid ? fullNav : unpaidNav;
+  const nav = paid ? fullNav.filter(item => item.href !== '/app/community' || communityEligible) : unpaidNav;
 
   return (
     <div className="min-h-screen text-slate-900">
