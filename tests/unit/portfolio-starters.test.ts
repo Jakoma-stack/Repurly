@@ -5,7 +5,7 @@ import { originalStarterDraftBody, starterPortfolio } from '../../src/lib/market
 
 test('starter portfolio covers the agreed four apps, each with three review-only posts', () => {
   assert.deepEqual(starterPortfolio.map(brand => brand.name), [
-    'Jakoma Ltd', 'Period Close Workbench', "Lorri-Lou's Learning Hub", 'MarbriA',
+    'Jakoma Ltd', 'JP Bookkeeping', "Lorri-Lou's Learning Hub", 'MarbriA',
   ]);
 
   assert.equal(new Set(starterPortfolio.map(brand => brand.slug)).size, 4);
@@ -42,7 +42,10 @@ test('agreed names are distinct from the unchanged internal repository slugs', (
   assert.equal(family?.name, 'MarbriA');
   assert.equal(family?.legacyName, 'Family Support');
   assert.equal(family?.tagline, 'Family & Home, Connected.');
-  assert.equal(bookkeeping?.name, 'Period Close Workbench');
+  assert.equal(bookkeeping?.name, 'JP Bookkeeping');
+  assert.equal(bookkeeping?.legacyName, 'Period Close Workbench');
+  assert.equal(bookkeeping?.slug, 'period-close-workbench');
+  assert.ok(bookkeeping.posts.every(post => post.body.includes('JP Bookkeeping')));
 
   for (const starter of starterPortfolio.filter(brand => brand.legacyName)) {
     for (const draft of starter.posts) {
