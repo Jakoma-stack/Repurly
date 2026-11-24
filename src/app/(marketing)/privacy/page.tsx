@@ -2,19 +2,19 @@ export default function PrivacyPage() {
   return (
     <article className="mx-auto max-w-3xl space-y-6 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-card">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-700">Repurly</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-700">Janeomi</p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Privacy Notice</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">Last updated: 14 May 2026. This is a practical early-stage privacy baseline and should be reviewed before broad public SaaS launch.</p>
       </div>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">1. Roles</h2>
-        <p>Repurly is normally controller for account, billing, support, security and service-usage data. For customer content, lead notes and campaign data uploaded by a business customer, Repurly may act as processor on that customer&apos;s behalf, subject to an applicable Data Processing Addendum.</p>
+        <p>Janeomi is normally controller for account, billing, support, security and service-usage data. For customer content, lead notes and campaign data uploaded by a business customer, Janeomi may act as processor on that customer&apos;s behalf, subject to an applicable Data Processing Addendum.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">2. Data processed</h2>
-        <p>Repurly may process account details, workspace details, brand and offer information, campaign briefs, content drafts, approval notes, lead notes, output-channel settings, billing status, integration metadata, logs and support communications.</p>
+        <p>Janeomi may process account details, workspace details, brand and offer information, campaign briefs, content drafts, approval notes, lead notes, output-channel settings, billing status, integration metadata, logs and support communications.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">5. Third parties and subprocessors</h2>
-        <p>Repurly may use service providers for authentication, billing, hosting, database, email, analytics, AI processing and integrations. Production deployments should maintain an up-to-date subprocessor list and data processing terms.</p>
+        <p>Janeomi may use service providers for authentication, billing, hosting, database, email, analytics, AI processing and integrations. Production deployments should maintain an up-to-date subprocessor list and data processing terms.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">8. Rights and contact</h2>
-        <p>Before public launch, Repurly must publish a verified privacy contact address and an up-to-date subprocessor list. For now, use the support contact provided in the service agreement. Individuals may have rights to access, correct, erase, restrict or object to processing depending on the circumstances.</p>
+        <p>Before public launch, Janeomi must publish a verified privacy contact address and an up-to-date subprocessor list. For now, use the support contact provided in the service agreement. Individuals may have rights to access, correct, erase, restrict or object to processing depending on the circumstances.</p>
       </section>
     </article>
   );
