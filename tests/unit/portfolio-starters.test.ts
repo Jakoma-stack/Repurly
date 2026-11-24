@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
+import { originalStarterDraftBody, starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
 
 test('starter portfolio covers the agreed four apps, each with three review-only posts', () => {
   assert.deepEqual(starterPortfolio.map(brand => brand.name), [
-    'Jakoma', 'Period Close Workbench', 'EduSmart', 'Family Support',
+    'Jakoma Ltd', 'Period Close Workbench', "Lorri-Lou's Learning Hub", 'MarbriA',
   ]);
 
   assert.equal(new Set(starterPortfolio.map(brand => brand.slug)).size, 4);
@@ -29,6 +29,29 @@ test('starter portfolio covers the agreed four apps, each with three review-only
     }
   }
   assert.equal(new Set(keys).size, keys.length);
+});
+
+test('agreed names are distinct from the unchanged internal repository slugs', () => {
+  const edu = starterPortfolio.find(brand => brand.slug === 'edusmart');
+  const family = starterPortfolio.find(brand => brand.slug === 'family-support');
+  const bookkeeping = starterPortfolio.find(brand => brand.slug === 'period-close-workbench');
+
+  assert.equal(edu?.name, "Lorri-Lou's Learning Hub");
+  assert.equal(edu?.legacyName, 'EduSmart');
+  assert.equal(edu?.tagline, 'Little Steps, Big Lightbulbs');
+  assert.equal(family?.name, 'MarbriA');
+  assert.equal(family?.legacyName, 'Family Support');
+  assert.equal(family?.tagline, 'Family & Home, Connected.');
+  assert.equal(bookkeeping?.name, 'Period Close Workbench');
+
+  for (const starter of starterPortfolio.filter(brand => brand.legacyName)) {
+    for (const draft of starter.posts) {
+      assert.notEqual(originalStarterDraftBody(starter, draft), draft.body,
+        'Every renamed brand draft must have a recognisable original version');
+      assert.ok(draft.body.includes(starter.name),
+        'Every refreshed draft must include the correct product identity');
+    }
+  }
 });
 
 test('family care starter posts do not claim a live safety-monitoring service', () => {
