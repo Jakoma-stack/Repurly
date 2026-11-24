@@ -176,7 +176,7 @@ export default function HomePage() {
             <Link href="/sign-up?plan=core" className="inline-flex items-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-medium text-white">
               Join private beta
             </Link>
-            <Link href="mailto:support@repurly.org?subject=Repurly%20Assisted%20Beta" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
+            <Link href="mailto:support@repurly.org?subject=Janeomi%20Assisted%20Beta" className="inline-flex items-center rounded-2xl border border-slate-200 px-5 py-3 text-sm font-medium text-slate-700">
               Ask about assisted beta
             </Link>
           </div>
