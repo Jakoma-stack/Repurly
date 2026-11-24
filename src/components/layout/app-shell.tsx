@@ -3,7 +3,6 @@ import {
   PencilLine,
   Settings,
   Sparkles,
-  Building2,
   BriefcaseBusiness,
   Layers3,
   MessageSquareQuote,
@@ -56,22 +55,21 @@ export function AppShell({
   session: WorkspaceSession;
   billingAccess?: BillingAccessState;
 }) {
-  const brandPreview = process.env.JANEOMI_BRAND_PREVIEW === 'true';
   const paid = billingAccess?.hasPaidAccess ?? true;
   const nav = paid ? fullNav : unpaidNav;
 
   return (
     <div className="min-h-screen text-slate-900">
       <div className="mx-auto flex max-w-[1480px] gap-6 px-4 py-6 lg:px-8">
-        <aside className="premium-dark hidden w-80 shrink-0 p-6 lg:block">
+        <aside className="premium-dark !bg-[#102D32] hidden w-80 shrink-0 p-6 lg:block">
           <div className="mb-8 flex items-center gap-3">
             <div className="rounded-2xl bg-white/10 p-2 text-white ring-1 ring-white/10">
-              {brandPreview ? <Image src="/brand/repurly/mark.svg" width={32} height={32} alt="" unoptimized/> : <Sparkles className="size-5" />}
+              <Image src="/brand/repurly/mark.svg" width={40} height={40} alt="" unoptimized/>
             </div>
             <div>
-              <div className="font-semibold tracking-tight">{brandPreview ? 'janeomi.' : 'Repurly'}</div>
-              {brandPreview ? <div className="text-xs text-white/80">Brand preview · Intelligence with ambition.</div> : null}
-              <div className="text-sm text-white/60">Daily LinkedIn opportunity desk</div>
+              <div className="font-semibold tracking-tight">Janeomi</div>
+              <div className="text-xs text-[#A7E7CC]">Intelligence with ambition.</div>
+              <div className="text-sm text-white/60">AI Marketing &amp; Growth Intelligence</div>
             </div>
           </div>
 
@@ -81,17 +79,17 @@ export function AppShell({
             <div className="mt-1 text-sm text-white/55">{session.role} • {session.workspaceSlug}</div>
           </div>
 
-          <div className="mb-6 rounded-[1.5rem] border border-indigo-400/20 bg-gradient-to-br from-indigo-500/15 to-cyan-400/10 p-4 text-sm text-white/78">
+          <div className="mb-6 rounded-[1.5rem] border border-teal-300/20 bg-gradient-to-br from-teal-500/15 to-emerald-400/10 p-4 text-sm text-white/78">
             <div className="eyebrow !text-white/50">Positioning</div>
-            <div className="mt-2 text-base font-semibold text-white">Daily opportunity desk</div>
+            <div className="mt-2 text-base font-semibold text-white">Your AI marketing director</div>
             <p className="mt-2 text-sm leading-6 text-white/70">
-              Paste LinkedIn activity, approve public replies, avoid weak DMs, log relationships, and decide the next content and follow-up actions.
+              Plan campaigns across your brands, review LinkedIn activity, build relationships and approve content and follow-up actions.
             </p>
           </div>
 
           {!paid ? (
             <div className="mb-6 rounded-[1.5rem] border border-amber-400/30 bg-amber-400/10 p-4 text-sm text-amber-100">
-              Beta access is not enabled for this workspace yet. Ask the Repurly team to switch on private beta access or connect billing.
+              Beta access is not enabled for this workspace yet. Ask the Janeomi team to switch on private beta access or connect billing.
             </div>
           ) : null}
 
@@ -116,7 +114,7 @@ export function AppShell({
           <header className="premium-surface mb-6 flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
               <div className="rounded-2xl bg-slate-100 p-2 text-slate-700">
-                <Building2 className="size-4" />
+                <Image src="/brand/repurly/mark.svg" width={28} height={28} alt="Janeomi" unoptimized/>
               </div>
               <div>
                 <h1 className="text-lg font-semibold tracking-tight text-slate-950">{session.workspaceName}</h1>

@@ -43,7 +43,7 @@ export default async function MarketingDirectorPage({ searchParams }: {
       <section className="rounded-[2rem] bg-gradient-to-br from-slate-950 to-teal-950 p-7 text-white">
         <div className="eyebrow !text-white/60">AI Marketing Director · first version</div>
         <h1 className="mt-3 text-3xl font-semibold">Know what to market next, without being a marketing expert.</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-white/80">Choose a brand. Repurly recommends a 30-day strategy, four practical weekly actions and a first LinkedIn draft based on your saved brand information. You approve every external action.</p>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-white/80">Choose a brand. Janeomi recommends a 30-day strategy, four practical weekly actions and a first LinkedIn draft based on your saved brand information. You approve every external action.</p>
         <div className="mt-4 flex flex-wrap gap-4 text-sm font-medium">
           <a href="/app/portfolio" className="underline">Portfolio</a>
           <a href="/app/weekly-plan" className="underline">Outstanding relationship actions</a>

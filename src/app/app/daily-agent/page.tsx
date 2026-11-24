@@ -65,10 +65,10 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
             <div className="eyebrow !text-white/50">Opportunity desk</div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">Daily LinkedIn Opportunity Desk</h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
-              Paste today’s LinkedIn activity. Repurly explains what changed, who matters, what to reply, what to ignore, what to log, what not to DM, and what to post tomorrow.
+              Paste today’s LinkedIn activity. Janeomi explains what changed, who matters, what to reply, what to ignore, what to log, what not to DM, and what to post tomorrow.
             </p>
             <p className="mt-4 rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-white/82">
-              Repurly drafts. You approve. You post or send. Repurly logs and learns.
+              Janeomi drafts. You approve. You post or send. Janeomi logs and learns.
             </p>
           </div>
           <div className="w-full rounded-3xl border border-white/10 bg-white/8 p-4 text-sm text-white/75 md:w-80">
@@ -153,7 +153,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
                   <input name="analyticsExport" type="file" accept=".csv,text/csv" className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700" />
                 </label>
                 <p className="mt-2 text-xs leading-5 text-emerald-900/80">
-                  Optional. Upload LinkedIn CSV analytics exports for a stronger performance review. Repurly parses metrics and audience/post signals, then feeds the summary into the Daily Agent. Screenshots can still be pasted as text; OCR remains later.
+                  Optional. Upload LinkedIn CSV analytics exports for a stronger performance review. Janeomi parses metrics and audience/post signals, then feeds the summary into the Daily Agent. Screenshots can still be pasted as text; OCR remains later.
                 </p>
               </div>
 
@@ -327,7 +327,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
         <Card>
           <CardHeader>
             <h2 className="text-xl font-semibold">Session history</h2>
-            <p className="text-sm text-muted-foreground">Return to previous daily briefings and see what Repurly generated.</p>
+            <p className="text-sm text-muted-foreground">Return to previous daily briefings and see what Janeomi generated.</p>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -381,7 +381,7 @@ export default async function DailyAgentPage({ searchParams }: { searchParams: S
               <input type="hidden" name="sessionId" value={active.id} />
               <button name="usefulnessRating" value="useful" className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white">Useful</button>
               <button name="usefulnessRating" value="not_useful" className="rounded-2xl bg-rose-600 px-4 py-2 text-sm font-medium text-white">Not useful</button>
-              <input name="feedbackNotes" defaultValue={active.feedbackNotes ?? ''} className="min-w-[280px] flex-1 rounded-2xl border border-border px-4 py-3 text-sm" placeholder="What should Repurly learn from this session?" />
+              <input name="feedbackNotes" defaultValue={active.feedbackNotes ?? ''} className="min-w-[280px] flex-1 rounded-2xl border border-border px-4 py-3 text-sm" placeholder="What should Janeomi learn from this session?" />
             </form>
           </CardContent>
         </Card>

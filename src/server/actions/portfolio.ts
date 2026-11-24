@@ -9,7 +9,7 @@ import { requireWorkspaceRole, requireWorkspaceSession } from '@/lib/auth/worksp
 import { isPrivatePilotEmailAllowed, isPrivatePilotMode, isPrivatePilotUserIdAllowed } from '@/lib/billing/private-pilot';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { db } from '@/lib/db/client';
-import { originalStarterDraftBody, starterPortfolio } from '@/lib/marketing/portfolio-starters';
+import { isLegacyStarterName, isUneditedStarterDraft, starterPortfolio, type StarterPortfolioBrand } from '@/lib/marketing/portfolio-starters';
 import { brands, posts, workspaces } from '../../../drizzle/schema';
 
 /** Special starter setup is restricted to the explicitly approved, signed-in staging pilot. */
@@ -24,11 +24,11 @@ export async function canImportPilotPortfolio(): Promise<boolean> {
   return isPrivatePilotEmailAllowed(user?.primaryEmailAddress?.emailAddress);
 }
 
-function sameBrand(a: { name: string; slug: string | null }, b: { name: string; slug: string; legacyName?: string }) {
+function sameBrand(a: { name: string; slug: string | null }, b: StarterPortfolioBrand) {
   const name = a.name.trim().toLowerCase();
   return a.slug?.trim().toLowerCase() === b.slug ||
     name === b.name.toLowerCase() ||
-    Boolean(b.legacyName && name === b.legacyName.toLowerCase());
+    isLegacyStarterName(b, name);
 }
 
 export async function importPilotPortfolio() {
@@ -72,8 +72,7 @@ export async function importPilotPortfolio() {
         brandStatus = old.status;
         const updates: Partial<typeof brands.$inferInsert> = {};
         // Rename only the known old starter name. Never overwrite a custom brand name.
-        if (starter.legacyName &&
-            old.name.trim().toLowerCase() === starter.legacyName.toLowerCase()) {
+        if (isLegacyStarterName(starter, old.name) && (!old.slug || old.slug.trim().toLowerCase() === starter.slug)) {
           updates.name = starter.name;
           renamedBrands++;
         }
@@ -105,6 +104,14 @@ export async function importPilotPortfolio() {
         if (starter.slug === 'period-close-workbench' &&
             newMetadata.starterPositioning ===
               'An in-development workflow concept for organising period-close documents, review and exceptions.') {
+          newMetadata.starterPositioning = starter.positioning;
+          metadataChanged = true;
+        }
+        if (starter.slug === 'repurly' && newMetadata.starterPositioning === 'Repurly is a LinkedIn opportunity desk in private testing that helps organise engagement, draft replies and follow-ups, and plan content. A public subscription launch has not been verified.') {
+          newMetadata.starterPositioning = starter.positioning;
+          metadataChanged = true;
+        }
+        if (starter.slug === 'period-close-workbench' && newMetadata.starterPositioning === 'JP Bookkeeping is the provisional portfolio identity for the in-development Period Close Workbench (PCWB) software. The final customer-facing software name is still under review.') {
           newMetadata.starterPositioning = starter.positioning;
           metadataChanged = true;
         }
@@ -148,7 +155,7 @@ export async function importPilotPortfolio() {
           // Update only unmodified starter copy, never a draft that the user edited.
           // Published, queued and approved content is never touched.
           if (existing.status === 'draft' &&
-              existing.body === originalStarterDraftBody(starter, draft) &&
+              isUneditedStarterDraft(starter, draft, existing.body) &&
               existing.body !== draft.body) {
             const refreshed = await tx.update(posts).set({ body: draft.body, updatedAt: new Date() })
               .where(and(

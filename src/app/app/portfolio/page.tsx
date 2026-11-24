@@ -51,8 +51,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             <div className="max-w-2xl">
               <h2 className="text-lg font-semibold text-slate-950">Apply the agreed app branding</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                Apply the agreed display names and add Repurly&apos;s own review-only campaign if missing.
-                JP Bookkeeping is the provisional portfolio identity honouring John Potts. PCWB remains the internal software name; the final product brand is still being checked.
+                Apply the agreed display names and add Janeomi&apos;s own review-only campaign if missing.
+                JP Workbench honours John Potts. PCWB remains the internal software identifier; public name clearance is pending.
                 This safely corrects the saved brand records and only refreshes unedited starter posts.
               </p>
               <p className="mt-2 text-xs text-indigo-900">
@@ -61,7 +61,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             </div>
             <form action={importPilotPortfolio}>
               <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                Check portfolio and add missing starter drafts
+                Apply branding and refresh starter drafts
               </button>
             </form>
           </div>
@@ -126,7 +126,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <h2 className="text-xl font-semibold text-slate-950">{brand.name}</h2>
                     {tagline ? <p className="mt-1 text-sm font-medium text-slate-700">{tagline}</p> : null}
                     {brand.slug === 'family-support' ? <p className="mt-1 text-xs text-slate-500">Family Care &amp; Home Safety</p> : null}
-                    {brand.slug === 'period-close-workbench' ? <p className="mt-1 text-xs text-amber-800">JP tribute identity · PCWB internal · final software name pending</p> : null}
+                    {brand.slug === 'period-close-workbench' ? <p className="mt-1 text-xs text-amber-800">JP Workbench · private build · public name clearance pending</p> : null}
                     <p className="mt-1 text-sm text-slate-500">{stageInfo.label} · {brand.status}</p>
                   </div>
                   <div className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
@@ -163,7 +163,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <Card>
           <CardHeader><h2 className="text-xl font-semibold">Start with your first app</h2></CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
-            <p>Create one brand record per app. Choose Private build initially and add an audience, tone and CTA. Repurly will keep each brand&apos;s content plan separate.</p>
+            <p>Create one brand record per app. Choose Private build initially and add an audience, tone and CTA. Janeomi will keep each brand&apos;s content plan separate.</p>
             <a href="/app/brands" className="inline-flex rounded-xl bg-slate-900 px-4 py-2 font-medium text-white">Set up brands</a>
           </CardContent>
         </Card>
