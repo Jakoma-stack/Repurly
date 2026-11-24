@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { LocalDateTimeInput } from '@/components/workflow/local-datetime-input';
 import { TimezoneOffsetField } from '@/components/workflow/timezone-offset-field';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
+import { getMarketingStage, getMarketingStageDetails } from '@/lib/marketing/portfolio';
 import {
   clearRecentDrafts,
   clearSavedCampaign,
@@ -347,40 +348,57 @@ export default async function ContentPage({ searchParams }: { searchParams: Sear
     getWorkspaceApproverOptions(session.workspaceId),
   ]);
 
+  const requestedBrandId = firstParam(params.brandId);
   const selectedBrandId =
     editingPost?.brandId ??
-    savedCampaign?.brandId ??
-    brandOptions.find((brand) => brand.status !== 'archived')?.id ??
+    brandOptions.find(brand => brand.id === requestedBrandId && brand.status !== 'archived')?.id ??
+    brandOptions.find(brand => brand.id === savedCampaign?.brandId && brand.status !== 'archived')?.id ??
+    brandOptions.find(brand => brand.status !== 'archived')?.id ??
     brandOptions[0]?.id ??
     '';
+  const activeBrand = brandOptions.find(brand => brand.id === selectedBrandId) ?? null;
+  const brandCampaign = savedCampaign?.brandId === selectedBrandId ? savedCampaign : null;
 
   const [recentDrafts, generatedBatch] = await Promise.all([
     getRecentDrafts(session.workspaceId, selectedBrandId || null),
     generatedIds.length ? getPostsByIds(session.workspaceId, generatedIds) : Promise.resolve([]),
   ]);
 
-  const plannerBrief = savedCampaign?.brief ?? 'Write three LinkedIn posts for Repurly about why premium B2B teams need tighter approval, scheduling, and recovery workflows.';
-  const plannerGoal = savedCampaign?.commercialGoal ?? 'Drive qualified demo requests';
-  const plannerCount = savedCampaign?.count ?? 3;
-  const plannerFormat = savedCampaign?.postFormat ?? 'auto';
-  const plannerCadence = savedCampaign?.cadence ?? 'weekly';
-  const plannerPreferredTime = savedCampaign?.preferredTimeOfDay ?? 'morning';
-  const plannerWindowDays = savedCampaign?.campaignWindowDays ?? 30;
-  const plannerSourceMaterial = savedCampaign?.sourceMaterial ?? '';
+  const defaultBrief = activeBrand
+    ? 'Write three practical LinkedIn posts for ' + activeBrand.name +
+      ' aimed at ' + (activeBrand.audience || 'its audience') +
+      '. Share useful insight and invite ' + (activeBrand.primaryCta || 'relevant discussion') +
+      '. Never claim a product is launched or available unless explicitly confirmed.'
+    : 'Write three practical LinkedIn posts for this brand without unverified availability claims.';
+  const plannerBrief = brandCampaign?.brief ?? defaultBrief;
+  const plannerGoal = brandCampaign?.commercialGoal ?? 'Build qualified interest';
+  const plannerCount = brandCampaign?.count ?? 3;
+  const plannerFormat = brandCampaign?.postFormat ?? 'auto';
+  const plannerCadence = brandCampaign?.cadence ?? 'weekly';
+  const plannerPreferredTime = brandCampaign?.preferredTimeOfDay ?? 'morning';
+  const plannerWindowDays = brandCampaign?.campaignWindowDays ?? 30;
+  const plannerSourceMaterial = brandCampaign?.sourceMaterial ?? '';
   const canRespondToApproval = ['owner', 'admin', 'approver'].includes(session.role);
-  const companyPageTargets = targets.filter((target) => target.targetType === 'organization' || target.targetType === 'page');
-  const personalTargets = targets.filter((target) => target.targetType === 'member' || target.targetType === 'profile');
+  const companyPageTargets = targets.filter(target => target.targetType === 'organization' || target.targetType === 'page');
+  const personalTargets = targets.filter(target => target.targetType === 'member' || target.targetType === 'profile');
   const selectedApproverValue = editingPost?.approvalOwner ?? approverOptions[0]?.value ?? (canRespondToApproval ? session.userId : 'Client lead');
-  const plannerVoiceNotes = savedCampaign?.voiceNotes ?? '';
-  const plannerBlockedTerms = savedCampaign?.blockedTerms ?? '';
-  const plannerTargetPlatforms = savedCampaign?.targetPlatforms ?? 'linkedin';
+  const plannerVoiceNotes = brandCampaign?.voiceNotes ?? '';
+  const plannerBlockedTerms = brandCampaign?.blockedTerms ?? '';
+  const plannerTargetPlatforms = brandCampaign?.targetPlatforms ?? 'linkedin';
   const notice = getWorkflowNotice(ok, error);
   const defaultTarget = targets.find((target) => target.isDefault) ?? targets[0] ?? null;
-  const activeBrand = brandOptions.find((brand) => brand.id === selectedBrandId) ?? brandOptions[0] ?? null;
+  const activeStage = getMarketingStage(activeBrand?.metadata);
+  const activeStageDetails = getMarketingStageDetails(activeStage);
 
   return (
     <div className="space-y-6">
       {notice ? <FloatingNotice {...notice} /> : null}
+      {activeBrand && activeStage !== 'public_launch' ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong>{activeBrand.name}: {activeStageDetails.label}.</strong> {activeStageDetails.guidance}
+          {' '}Review every draft and confirm the correct LinkedIn destination before publishing.
+        </div>
+      ) : null}
 
       <Card className="border-slate-200/80">
         <CardHeader>
