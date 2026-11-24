@@ -92,7 +92,7 @@ export default async function PortfolioPage() {
         <Card>
           <CardHeader><h2 className="text-xl font-semibold">Start with your first app</h2></CardHeader>
           <CardContent className="space-y-3 text-sm text-slate-700">
-            <p>Create one brand record per app. Choose Private build initially and add an audience, tone and CTA. Repurly will keep each brand's content plan separate.</p>
+            <p>Create one brand record per app. Choose Private build initially and add an audience, tone and CTA. Repurly will keep each brand&apos;s content plan separate.</p>
             <a href="/app/brands" className="inline-flex rounded-xl bg-slate-900 px-4 py-2 font-medium text-white">Set up brands</a>
           </CardContent>
         </Card>
