@@ -1,21 +1,35 @@
 import { requireWorkspaceSession, requireWorkspaceRole } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { canImportPilotPortfolio } from '@/server/actions/portfolio';
+import { communityConfig } from '@/lib/linkedin/community-config';
+import { communitySnapshot } from '@/lib/linkedin/community-connection';
+import { connectCommunity, disconnectCommunity } from '@/server/actions/community';
 import { redirect } from 'next/navigation';
 import { fictionalCommunityMetrics, summariseCommunityMetrics, communityReviewSuggestions } from '@/lib/linkedin/community-demo';
 
-export default async function CommunityPage() {
+export default async function CommunityPage({searchParams}:{searchParams:Promise<Record<string,string|string[]|undefined>>}) {
   const session = await requireWorkspaceSession();
   await requireWorkspaceRole(session.workspaceId, ['owner', 'admin']);
   await requirePaidWorkspaceAccess(session.workspaceId);
   if (!(await canImportPilotPortfolio())) redirect('/app/portfolio');
+  const params=await searchParams;
+  const config=communityConfig();
+  const live=config && params.refresh==='yes' ? await communitySnapshot(session.workspaceId) : null;
   const summary = summariseCommunityMetrics(fictionalCommunityMetrics);
   return <main className="space-y-6">
     <header className="rounded-3xl bg-[#102D32] p-6 text-white">
       <p className="text-sm text-[#A7E7CC]">Janeomi · LinkedIn integration rehearsal</p>
       <h1 className="mt-2 text-3xl font-semibold">Community intelligence</h1>
-      <p className="mt-3 text-sm">Development access application submitted; approval not verified. Live retrieval is disabled. All figures below are fictional and do not describe Jakoma or any actual LinkedIn activity.</p>
+      <p className="mt-3 text-sm">The development integration is disabled until explicitly configured following approval. Example figures below are fictional and do not describe Jakoma.</p>
     </header>
+    <section className="rounded-2xl border bg-white p-5 space-y-3">
+      <h2 className="text-xl font-semibold">Separate LinkedIn connection</h2>
+      <p className="text-sm">{config?'Development connection enabled by administrator.':'Awaiting approved access and configuration.'}</p>
+      {typeof params.connection==='string' ? <p className="text-sm">Connection result: {params.connection}</p> : null}
+      {config ? <><form action={connectCommunity}><button className="rounded-xl bg-teal-800 px-4 py-2 text-white">Authorise Community Management</button></form><a className="underline" href="/app/community?refresh=yes">Retrieve aggregate statistics</a></> : null}
+      <form action={disconnectCommunity}><button className="underline">Disconnect and delete stored community token</button></form>
+      {live ? <div><p>Live retrieval: {live.status}</p>{live.status==='ok' ? <dl>{Object.entries(live.metrics).map(([key,value])=><div key={key}>{key}: {value ?? 'Unavailable'}</div>)}</dl>:null}</div>:null}
+    </section>
     <section className="grid gap-3 sm:grid-cols-3">
       {Object.entries({ Impressions: summary.impressions, Reactions: summary.reactions, Comments: summary.comments }).map(([label,value]) => <article key={label} className="rounded-2xl border bg-white p-5"><p className="text-sm">{label} (fictional)</p><p className="text-3xl font-semibold">{value}</p></article>)}
     </section>

@@ -387,3 +387,13 @@ export const dailyAgentActions = pgTable("daily_agent_actions", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const communityConnections = pgTable("community_connections", {
+  workspaceId: uuid("workspace_id").primaryKey().references(() => workspaces.id, { onDelete: "cascade" }),
+  connectedBy: text("connected_by").notNull(),
+  organization: text("organization").notNull(),
+  encryptedToken: text("encrypted_token").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  scopes: jsonb("scopes").$type<string[]>().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
