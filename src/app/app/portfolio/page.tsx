@@ -4,10 +4,12 @@ import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getMarketingStage, getMarketingStageDetails, missingMarketingBasics } from '@/lib/marketing/portfolio';
 import { getWorkspaceBrands } from '@/server/queries/brands';
 import { getLinkedInTargets } from '@/server/queries/workflow';
+import { canImportPilotPortfolio, importPilotPortfolio } from '@/server/actions/portfolio';
 
-export default async function PortfolioPage() {
+export default async function PortfolioPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
+  const [params, canImport] = await Promise.all([searchParams, canImportPilotPortfolio()]);
   const [brands, destinations] = await Promise.all([
     getWorkspaceBrands(session.workspaceId),
     getLinkedInTargets(session.workspaceId),
@@ -30,6 +32,36 @@ export default async function PortfolioPage() {
           <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/content">Open content studio</a>
         </div>
       </section>
+
+      {params.setup === 'imported' ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          Starter kit checked: {params.brands ?? '0'} new brand profile(s) and {params.drafts ?? '0'} new review-only draft(s) added.
+          Existing brand settings and drafts were preserved. Nothing was scheduled or published.
+        </div>
+      ) : null}
+
+      {canImport ? (
+        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <h2 className="text-lg font-semibold text-slate-950">Prepare your four-app starter portfolio</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-700">
+                Add Jakoma, Period Close Workbench, EduSmart and Family Support with distinct audiences,
+                launch-stage guidance and three editable LinkedIn drafts each.
+                Existing entries are preserved, and running this again only adds missing items.
+              </p>
+              <p className="mt-2 text-xs text-indigo-900">
+                Available to the approved private staging pilot only. No external publishing or messaging takes place.
+              </p>
+            </div>
+            <form action={importPilotPortfolio}>
+              <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
+                Add missing app profiles and draft posts
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Card><CardHeader><div className="text-sm text-muted-foreground">Active brands</div></CardHeader><CardContent><div className="text-3xl font-semibold">{activeBrands.length}</div></CardContent></Card>
