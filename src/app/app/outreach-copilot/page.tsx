@@ -26,6 +26,11 @@ const offers = [
   'General',
 ] as const;
 
+// Preserve the stored legacy offer value; only its display label is rebranded.
+function offerDisplayLabel(offer: string) {
+  return offer === 'Repurly LinkedIn Ops Pilot' ? 'Janeomi LinkedIn Ops Pilot' : offer;
+}
+
 function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -71,7 +76,7 @@ function DraftBox({ label, value }: { label: string; value?: string }) {
         value={value ?? ''}
         className="mt-2 min-h-[110px] w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm text-slate-700"
       />
-      <div className="mt-1 text-xs text-muted-foreground">Copy manually. Repurly does not auto-send or scrape.</div>
+      <div className="mt-1 text-xs text-muted-foreground">Copy manually. Janeomi does not auto-send or scrape.</div>
     </div>
   );
 }
@@ -99,7 +104,7 @@ function ProspectCard({ lead, workspaceId }: { lead: Prospect; workspaceId: stri
             </span>
           </div>
           <div className="mt-1 text-sm text-muted-foreground">
-            {metadata.channel ?? 'manual'} - {metadata.offerFit ?? 'General'} - {lead.intentScore}/100
+            {metadata.channel ?? 'manual'} - {offerDisplayLabel(metadata.offerFit ?? 'General')} - {lead.intentScore}/100
           </div>
           <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-700">{metadata.whyRelevant || lead.notes || 'No relevance note stored yet.'}</p>
           {metadata.sourceUrl ? (
@@ -118,7 +123,7 @@ function ProspectCard({ lead, workspaceId }: { lead: Prospect; workspaceId: stri
       <div className="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <div className="space-y-4 rounded-2xl border border-border bg-slate-50 p-4">
           <div>
-            <div className="text-sm font-semibold text-slate-900">Why Repurly scored it this way</div>
+            <div className="text-sm font-semibold text-slate-900">Why Janeomi scored it this way</div>
             <ul className="mt-2 space-y-1 text-sm text-slate-700">
               {(metadata.scoreBreakdown ?? []).map((item) => <li key={item}>- {item}</li>)}
             </ul>
@@ -187,7 +192,7 @@ export default async function OutreachCopilotPage({ searchParams }: { searchPara
       <section className="premium-dark overflow-hidden p-7">
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-center">
           <div>
-            <div className="eyebrow !text-white/50">Repurly Outreach Copilot</div>
+            <div className="eyebrow !text-white/50">Janeomi Outreach Copilot</div>
             <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight text-white md:text-4xl">
               Human-approved outreach without scraping, auto-DMs, or staring at a blank message box.
             </h2>
@@ -236,7 +241,7 @@ export default async function OutreachCopilotPage({ searchParams }: { searchPara
         <Card>
           <CardHeader>
             <h2 className="text-xl font-semibold">Add a prospect or page</h2>
-            <p className="text-sm text-muted-foreground">Manual capture only. Paste a URL, explain why they fit, and Repurly creates the safe action and drafts.</p>
+            <p className="text-sm text-muted-foreground">Manual capture only. Paste a URL, explain why they fit, and Janeomi creates the safe action and drafts.</p>
           </CardHeader>
           <CardContent>
             <form action={createOutreachProspect} className="space-y-4">
@@ -268,7 +273,7 @@ export default async function OutreachCopilotPage({ searchParams }: { searchPara
                 <div>
                   <label className="text-sm font-medium text-slate-900">Offer fit</label>
                   <select name="offerFit" defaultValue="AI/Data Governance Triage" className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
-                    {offers.map((offer) => <option key={offer} value={offer}>{offer}</option>)}
+                    {offers.map((offer) => <option key={offer} value={offer}>{offerDisplayLabel(offer)}</option>)}
                   </select>
                 </div>
               </div>
@@ -331,7 +336,7 @@ export default async function OutreachCopilotPage({ searchParams }: { searchPara
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">All Outreach Copilot prospects</h2>
-          <p className="text-sm text-muted-foreground">A lightweight manual pipeline using the existing Repurly lead table plus Outreach Copilot metadata.</p>
+          <p className="text-sm text-muted-foreground">A lightweight manual pipeline using the existing Janeomi lead table plus Outreach Copilot metadata.</p>
         </CardHeader>
         <CardContent className="space-y-3">
           {data.prospects.length ? data.prospects.map((lead) => {
@@ -341,7 +346,7 @@ export default async function OutreachCopilotPage({ searchParams }: { searchPara
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="font-medium text-slate-900">{lead.leadName}</div>
-                    <div className="text-sm text-muted-foreground">{metadata.channel} - {metadata.offerFit} - next: {metadata.nextActionDate ?? 'not set'}</div>
+                    <div className="text-sm text-muted-foreground">{metadata.channel} - {offerDisplayLabel(metadata.offerFit ?? 'General')} - next: {metadata.nextActionDate ?? 'not set'}</div>
                   </div>
                   <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${decisionClasses(metadata.decision)}`}>{decisionLabel(metadata.decision)}</span>
                 </div>
