@@ -2,20 +2,20 @@ export default function TermsPage() {
   return (
     <article className="mx-auto max-w-3xl space-y-6 rounded-[2rem] border border-slate-200 bg-white p-8 shadow-card">
       <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-700">Repurly</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-700">Janeomi</p>
         <h1 className="mt-3 text-3xl font-semibold text-slate-950">Terms of Service</h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">Last updated: 14 May 2026. These terms are an early-stage B2B SaaS baseline and should be solicitor-reviewed before broad self-serve launch.</p>
       </div>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">1. Service scope</h2>
-        <p>Repurly provides a LinkedIn-led campaign, content planning, approval, output-channel and lead workflow for consultants, agencies, founders and B2B teams.</p>
-        <p>Repurly supports human-approved marketing operations. It does not guarantee leads, sales, platform reach, impressions, booked calls or account outcomes.</p>
+        <p>Janeomi provides a LinkedIn-led campaign, content planning, approval, output-channel and lead workflow for consultants, agencies, founders and B2B teams.</p>
+        <p>Janeomi supports human-approved marketing operations. It does not guarantee leads, sales, platform reach, impressions, booked calls or account outcomes.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">2. Human-in-the-loop and platform safety</h2>
-        <p>Repurly is designed for human review and approval. It does not provide scraping, automated direct messages, fake engagement, auto-connecting, auto-commenting, account-risk automation, or any workflow intended to bypass platform rules.</p>
+        <p>Janeomi is designed for human review and approval. It does not provide scraping, automated direct messages, fake engagement, auto-connecting, auto-commenting, account-risk automation, or any workflow intended to bypass platform rules.</p>
         <p>Customers remain responsible for complying with LinkedIn and other platform terms, marketing rules, privacy law and their own internal approvals.</p>
       </section>
 
@@ -25,7 +25,7 @@ export default function TermsPage() {
           <li>Review and approve all content before publication or use.</li>
           <li>Ensure claims are accurate, lawful, substantiated and not misleading.</li>
           <li>Ensure outreach, follow-up and lead handling complies with privacy and marketing rules.</li>
-          <li>Use only data you are authorised to upload, process or store in Repurly.</li>
+          <li>Use only data you are authorised to upload, process or store in Janeomi.</li>
           <li>Do not enter unnecessary sensitive personal data into briefs, prompts, campaign notes or lead notes.</li>
         </ul>
       </section>
@@ -39,7 +39,7 @@ export default function TermsPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">5. Acceptable use</h2>
-        <p>Customers must not use Repurly for spam, unlawful marketing, harassment, impersonation, misleading claims, regulated promotions without approval, scraping, fake engagement, unauthorised data collection, malware, infringement, or activity that breaches third-party platform terms.</p>
+        <p>Customers must not use Janeomi for spam, unlawful marketing, harassment, impersonation, misleading claims, regulated promotions without approval, scraping, fake engagement, unauthorised data collection, malware, infringement, or activity that breaches third-party platform terms.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
@@ -49,17 +49,17 @@ export default function TermsPage() {
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">7. Availability and changes</h2>
-        <p>Repurly may change features, limits, integrations and workflows over time. Third-party platform APIs, permissions, policies and outages may affect availability. Repurly will take reasonable steps to maintain service reliability but does not guarantee uninterrupted access.</p>
+        <p>Janeomi may change features, limits, integrations and workflows over time. Third-party platform APIs, permissions, policies and outages may affect availability. Janeomi will take reasonable steps to maintain service reliability but does not guarantee uninterrupted access.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">8. Data, confidentiality and deletion</h2>
-        <p>Repurly will handle customer data as described in the Privacy Notice and, for business customers processing personal data through the service, any applicable Data Processing Addendum. Customers should export important content before closing an account.</p>
+        <p>Janeomi will handle customer data as described in the Privacy Notice and, for business customers processing personal data through the service, any applicable Data Processing Addendum. Customers should export important content before closing an account.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
         <h2 className="text-xl font-semibold text-slate-950">9. Liability</h2>
-        <p>Repurly is not responsible for loss caused by customer content decisions, platform enforcement, account restrictions, unauthorised customer data, third-party outages, or use outside the agreed service scope. Nothing in these terms excludes liability that cannot legally be excluded.</p>
+        <p>Janeomi is not responsible for loss caused by customer content decisions, platform enforcement, account restrictions, unauthorised customer data, third-party outages, or use outside the agreed service scope. Nothing in these terms excludes liability that cannot legally be excluded.</p>
       </section>
 
       <section className="space-y-3 text-sm leading-6 text-slate-700">
