@@ -9,6 +9,8 @@ export type StarterPost = {
 
 export type StarterPortfolioBrand = {
   name: string;
+  legacyName?: string;
+  tagline?: string;
   slug: string;
   website: string | null;
   marketingStage: MarketingStage;
@@ -28,7 +30,8 @@ export type StarterPortfolioBrand = {
  */
 export const starterPortfolio: readonly StarterPortfolioBrand[] = [
   {
-    name: 'Jakoma',
+    name: 'Jakoma Ltd',
+    legacyName: 'Jakoma',
     slug: 'jakoma',
     website: 'https://jakoma.org',
     marketingStage: 'audience_building',
@@ -52,7 +55,7 @@ Start with the evidence trail: clear ownership, staff guidance, approval records
 
 A policy sets the expectation. The day-to-day records help show whether that expectation is being met.
 
-At Jakoma, this is the kind of practical governance question we think organisations should be asking before problems arise.
+At Jakoma Ltd, this is the kind of practical governance question we think organisations should be asking before problems arise.
 
 What is hardest to evidence in your organisation: ownership, decisions or day-to-day use?
 
@@ -70,7 +73,7 @@ Who is using AI? What information is involved? Who approves higher-risk uses? Wh
 
 The answers do not solve every risk, but they help clarify where attention is needed.
 
-Jakoma takes an evidence-led approach to AI, data and operational assurance.
+Jakoma Ltd takes an evidence-led approach to AI, data and operational assurance.
 
 If you are trying to work out where to start, our AI Governance Triage is an entry point for a structured conversation.
 
@@ -160,7 +163,9 @@ If you review financial documents, which safeguard would you want demonstrated f
     ],
   },
   {
-    name: 'EduSmart',
+    name: "Lorri-Lou's Learning Hub",
+    legacyName: 'EduSmart',
+    tagline: 'Little Steps, Big Lightbulbs',
     slug: 'edusmart',
     website: null,
     marketingStage: 'private_build',
@@ -182,7 +187,7 @@ A useful revision routine is simple:
 
 Try a question. Explain your method. Check your working. Then try a similar question without the example beside you.
 
-EduSmart is an in-development idea for bringing structured practice and feedback together, starting with curriculum pathways in Northern Ireland and Norway.
+Lorri-Lou's Learning Hub is an in-development idea for bringing structured practice and feedback together, starting with curriculum pathways in Northern Ireland and Norway.
 
 What helps most when revising: worked examples, short quizzes or feedback on mistakes?
 
@@ -196,7 +201,7 @@ What helps most when revising: worked examples, short quizzes or feedback on mis
 
 An effective practice session should help a learner notice what went wrong and what to try differently next time.
 
-As EduSmart develops, we are exploring how curriculum-aware practice and clearer explanations could support that process.
+As Lorri-Lou's Learning Hub develops, we are exploring how curriculum-aware practice and clearer explanations could support that process.
 
 Parents and teachers: where do learners get stuck most often — starting a question, understanding feedback or remembering methods later?
 
@@ -210,7 +215,7 @@ Parents and teachers: where do learners get stuck most often — starting a ques
 
 Topics, assessment styles and terminology vary across education systems. That matters when building practice questions and explaining answers.
 
-EduSmart is being developed with Northern Ireland and Norway as its first curriculum tracks. It is not an official examination-board service.
+Lorri-Lou's Learning Hub is being developed with Northern Ireland and Norway as its first curriculum tracks. It is not an official examination-board service.
 
 Which topic would you most like to see broken down into a clear, step-by-step practice exercise?
 
@@ -219,7 +224,9 @@ Which topic would you most like to see broken down into a clear, step-by-step pr
     ],
   },
   {
-    name: 'Family Support',
+    name: 'MarbriA',
+    legacyName: 'Family Support',
+    tagline: 'Family & Home, Connected.',
     slug: 'family-support',
     website: null,
     marketingStage: 'private_build',
@@ -229,7 +236,7 @@ Which topic would you most like to see broken down into a clear, step-by-step pr
     secondaryCta: 'Suggest a feature that would simplify a handover',
     hashtags: ['FamilyCarers', 'CareCoordination', 'HomeSafety'],
     campaignGoal: 'Listen to family carers about coordination, handovers and practical home-safety tasks.',
-    positioning: 'Private early-stage development of a family coordination and home-safety planning tool, not a live monitoring service.',
+    positioning: 'MarbriA — Family Care & Home Safety. Private early-stage development of a family coordination and home-safety planning tool, not a live monitoring service.',
     posts: [
       {
         key: 'family-support-handover',
@@ -241,7 +248,7 @@ Has someone eaten? Was a shopping item used? Which appointment needs a lift? Who
 
 A short, shared handover can reduce confusion without replacing anyone's judgement.
 
-We are exploring practical family coordination ideas in an early-stage Family Support app. It is not a care service or emergency monitoring system.
+We are exploring practical family coordination ideas in an early-stage MarbriA app. It is not a care service or emergency monitoring system.
 
 What one detail do you wish was always included when someone hands over?
 
@@ -255,7 +262,7 @@ What one detail do you wish was always included when someone hands over?
 
 That difference matters when several relatives are trying to coordinate visits around work, travel and other commitments.
 
-In our early Family Support development, we are focusing on the distinction between a suggested arrangement and one a person has actually accepted.
+In our early MarbriA development, we are focusing on the distinction between a suggested arrangement and one a person has actually accepted.
 
 This is a planning concept, not verified coverage or a replacement for direct family communication.
 
@@ -273,7 +280,7 @@ Is a walking route clear? Is lighting adequate? Are frequently used items easy t
 
 These are prompts for family discussion, not a professional assessment.
 
-Our Family Support app is in private development, including ideas for shared home-action lists and handovers. It does not currently provide live sensor alerts, emergency response or clinical monitoring.
+Our MarbriA app is in private development, including ideas for shared home-action lists and handovers. It does not currently provide live sensor alerts, emergency response or clinical monitoring.
 
 Which small household task is hardest to coordinate across the family?
 
@@ -282,3 +289,9 @@ Which small household task is hardest to coordinate across the family?
     ],
   },
 ];
+
+/** A prior starter draft can be refreshed only if its body still equals the
+ * exact unedited original text. User-edited drafts are never overwritten. */
+export function originalStarterDraftBody(starter: StarterPortfolioBrand, draft: StarterPost): string {
+  return starter.legacyName ? draft.body.replaceAll(starter.name, starter.legacyName) : draft.body;
+}
