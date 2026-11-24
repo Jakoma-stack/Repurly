@@ -11,7 +11,7 @@ const config: Config = {
         muted: "hsl(220 14% 96%)",
         "muted-foreground": "hsl(220 9% 46%)",
         primary: {
-          DEFAULT: "hsl(258 90% 66%)",
+          DEFAULT: "#186B65",
           foreground: "white",
         },
         secondary: {

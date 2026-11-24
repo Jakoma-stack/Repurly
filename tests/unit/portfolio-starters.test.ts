@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { originalStarterDraftBody, starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
+import { originalStarterDraftBody, isLegacyStarterName, isUneditedStarterDraft, starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
 
 test('starter portfolio covers the five active marketing brands, each with three review-only posts', () => {
   assert.deepEqual(starterPortfolio.map(brand => brand.name), [
-    'Jakoma Ltd', 'JP Bookkeeping', "Lorri-Lou's Learning Hub", 'MarbriA', 'Repurly',
+    'Jakoma Ltd', 'JP Workbench', "Lorri-Lou's Learning Hub", 'MarbriA', 'Janeomi',
   ]);
 
   assert.equal(new Set(starterPortfolio.map(brand => brand.slug)).size, 5);
@@ -42,10 +42,10 @@ test('agreed names are distinct from the unchanged internal repository slugs', (
   assert.equal(family?.name, 'MarbriA');
   assert.equal(family?.legacyName, 'Family Support');
   assert.equal(family?.tagline, 'Family & Home, Connected.');
-  assert.equal(bookkeeping?.name, 'JP Bookkeeping');
+  assert.equal(bookkeeping?.name, 'JP Workbench');
   assert.equal(bookkeeping?.legacyName, 'Period Close Workbench');
   assert.equal(bookkeeping?.slug, 'period-close-workbench');
-  assert.ok(bookkeeping.posts.every(post => post.body.includes('JP Bookkeeping')));
+  assert.ok(bookkeeping.posts.every(post => post.body.includes('JP Workbench')));
 
   for (const starter of starterPortfolio.filter(brand => brand.legacyName)) {
     for (const draft of starter.posts) {
@@ -62,4 +62,18 @@ test('family care starter posts do not claim a live safety-monitoring service', 
   assert.ok(family);
   assert.equal(family.marketingStage, 'private_build');
   assert.ok(family.posts.every(post => /not |does not|early|development|exploring|planning concept/i.test(post.body)));
+});
+
+test('legacy aliases and exact draft matching preserve custom content', () => {
+  const jp = starterPortfolio.find(b => b.slug === 'period-close-workbench')!;
+  const janeomi = starterPortfolio.find(b => b.slug === 'repurly')!;
+  assert.ok(isLegacyStarterName(jp, 'JP Bookkeeping'));
+  assert.ok(isLegacyStarterName(jp, 'Period Close Workbench'));
+  assert.ok(isLegacyStarterName(janeomi, 'Repurly'));
+  assert.equal(isLegacyStarterName(janeomi, 'Custom name'), false);
+  for (const brand of [jp, janeomi]) for (const draft of brand.posts) {
+    assert.ok(isUneditedStarterDraft(brand, draft, originalStarterDraftBody(brand, draft)));
+    assert.equal(isUneditedStarterDraft(brand, draft, originalStarterDraftBody(brand, draft) + ' My edit'), false);
+  }
+  assert.ok(isUneditedStarterDraft(jp, jp.posts[0], jp.posts[0].body.replaceAll('JP Workbench', 'JP Bookkeeping')));
 });

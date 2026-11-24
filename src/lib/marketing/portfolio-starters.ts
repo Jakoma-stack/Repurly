@@ -10,6 +10,7 @@ export type StarterPost = {
 export type StarterPortfolioBrand = {
   name: string;
   legacyName?: string;
+  olderNames?: readonly string[];
   tagline?: string;
   slug: string;
   website: string | null;
@@ -100,8 +101,9 @@ Which manual process in your organisation needs clarity before it needs automati
     ],
   },
   {
-    name: 'JP Bookkeeping',
+    name: 'JP Workbench',
     legacyName: 'Period Close Workbench',
+    olderNames: ['JP Bookkeeping'],
     slug: 'period-close-workbench',
     website: null,
     marketingStage: 'private_build',
@@ -111,7 +113,7 @@ Which manual process in your organisation needs clarity before it needs automati
     secondaryCta: 'Discuss what a useful review checklist should include',
     hashtags: ['Bookkeeping', 'AccountingWorkflow', 'SmallBusiness'],
     campaignGoal: 'Learn how bookkeeping teams currently collect, review and resolve period-close evidence.',
-    positioning: 'JP Bookkeeping is the provisional portfolio identity for the in-development Period Close Workbench (PCWB) software. The final customer-facing software name is still under review.',
+    positioning: 'JP Workbench is intelligent period-close workflow software in private development. Public launch and name clearance are pending.',
     posts: [
       {
         key: 'pcwb-month-end-bottleneck',
@@ -123,7 +125,7 @@ It can mean another email, another reminder and another decision that nobody is 
 
 For small bookkeeping teams, a useful period-close checklist should make three things obvious: what arrived, what still needs attention and who owns the next step.
 
-We are exploring these questions while developing JP Bookkeeping.
+We are exploring these questions while developing JP Workbench.
 
 What is the slowest part of your month-end or quarter-end process: chasing documents, checking transactions or resolving exceptions?
 
@@ -139,7 +141,7 @@ Could they tell which documents were checked, which items were queried and what 
 
 A good handover should not depend on remembering a chain of messages.
 
-We are developing JP Bookkeeping with these workflow questions in mind. The product remains in development, and the focus right now is learning what makes a review genuinely useful.
+We are developing JP Workbench with these workflow questions in mind. The product remains in development, and the focus right now is learning what makes a review genuinely useful.
 
 What is one detail you wish every handover included?
 
@@ -153,7 +155,7 @@ What is one detail you wish every handover included?
 
 Before a new tool touches real client records, it should be possible to check permissions, document handling, review steps and exception reporting using fictional data.
 
-That is the approach we are taking while developing JP Bookkeeping.
+That is the approach we are taking while developing JP Workbench.
 
 It may be less glamorous than a launch announcement, but trustworthy workflow design starts with knowing what has actually been tested.
 
@@ -290,7 +292,9 @@ Which small household task is hardest to coordinate across the family?
     ],
   },
   {
-    name: 'Repurly',
+    name: 'Janeomi',
+    legacyName: 'Repurly',
+    tagline: 'Intelligence with ambition.',
     slug: 'repurly',
     website: null,
     marketingStage: 'private_build',
@@ -300,7 +304,7 @@ Which small household task is hardest to coordinate across the family?
     secondaryCta: 'Express interest in a future supervised pilot',
     hashtags: ['LinkedInStrategy', 'BusinessDevelopment', 'RelationshipManagement'],
     campaignGoal: 'Validate demand for a human-approved opportunity desk and identify suitable pilot conversations.',
-    positioning: 'Repurly is a LinkedIn opportunity desk in private testing that helps organise engagement, draft replies and follow-ups, and plan content. A public subscription launch has not been verified.',
+    positioning: 'Janeomi is an AI marketing and growth intelligence platform in private testing that helps plan campaigns, organise engagement and prepare human-reviewed replies and content. A public subscription launch has not been verified.',
     posts: [
       {
         key: 'repurly-engagement-to-opportunity',
@@ -310,7 +314,7 @@ Which small household task is hardest to coordinate across the family?
 
 The useful question is not simply how much engagement a post receives. It is what that engagement tells you about the relationship, and whether a thoughtful next step is appropriate.
 
-Repurly is in private development around that gap: turning professional engagement into a clearer, human-reviewed follow-up plan.
+Janeomi is in private development around that gap: turning professional engagement into a clearer, human-reviewed follow-up plan.
 
 What is hardest to keep track of after a LinkedIn post: meaningful conversations, follow-ups or what to write next?
 
@@ -324,7 +328,7 @@ What is hardest to keep track of after a LinkedIn post: meaningful conversations
 
 Sometimes a public reply is enough. Sometimes it makes sense to listen, and sometimes there is a genuine reason to follow up.
 
-Repurly is being tested as a way to organise these decisions and prepare drafts for human review, rather than automatically contact people.
+Janeomi is being tested as a way to organise these decisions and prepare drafts for human review, rather than automatically contact people.
 
 What would make an AI-assisted follow-up genuinely useful to you?
 
@@ -338,7 +342,7 @@ What would make an AI-assisted follow-up genuinely useful to you?
 
 Different audiences need different messages, evidence and next steps. A shared plan should keep those distinctions clear.
 
-We are testing this approach in Repurly: separate brand campaigns, a review workflow and a clearer record of meaningful follow-up.
+We are testing this approach in Janeomi: separate brand campaigns, a review workflow and a clearer record of meaningful follow-up.
 
 If you run an expert-led business, what part of that weekly workflow takes most of your time?
 
@@ -352,4 +356,11 @@ If you run an expert-led business, what part of that weekly workflow takes most 
  * exact unedited original text. User-edited drafts are never overwritten. */
 export function originalStarterDraftBody(starter: StarterPortfolioBrand, draft: StarterPost): string {
   return starter.legacyName ? draft.body.replaceAll(starter.name, starter.legacyName) : draft.body;
+}
+
+export function isLegacyStarterName(starter: StarterPortfolioBrand, name: string): boolean {
+  return [starter.legacyName, ...(starter.olderNames ?? [])].some(alias => alias?.toLowerCase() === name.trim().toLowerCase());
+}
+export function isUneditedStarterDraft(starter: StarterPortfolioBrand, draft: StarterPost, body: string): boolean {
+  return [originalStarterDraftBody(starter, draft), ...(starter.olderNames ?? []).map(alias => draft.body.replaceAll(starter.name, alias))].includes(body);
 }

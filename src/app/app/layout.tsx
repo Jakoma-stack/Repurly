@@ -15,7 +15,7 @@ export default async function ProductLayout({ children }: { children: React.Reac
             <h1 className="text-2xl font-semibold tracking-tight">Workspace setup needed</h1>
             <p className="mt-3 text-sm text-muted-foreground">
               You are signed in, but this Clerk user does not have a workspace membership in the database yet.
-              For local development, Repurly is showing this setup screen instead of bouncing you back to the homepage.
+              For local development, Janeomi is showing this setup screen instead of bouncing you back to the homepage.
             </p>
 
             <div className="mt-6 space-y-3 text-sm">

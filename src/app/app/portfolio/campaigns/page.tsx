@@ -87,7 +87,7 @@ export default async function PortfolioCampaignsPage({
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
         <strong>Publishing remains manual.</strong> These plans do not create, schedule, approve or publish posts.
-        Jakoma has a real triage enquiry route. Repurly, JP Bookkeeping, Lorri-Lou&apos;s Learning Hub and MarbriA are in private testing or development:
+        Jakoma has a real triage enquiry route. Janeomi, JP Workbench, Lorri-Lou&apos;s Learning Hub and MarbriA are in private testing or development:
         do not suggest they are available for purchase, live monitoring, or public student access.
       </div>
 
