@@ -35,7 +35,7 @@ export default async function CommunityPage({searchParams}:{searchParams:Promise
     </section>
     <section className="rounded-2xl border bg-white p-5">
       <h2 className="text-xl font-semibold">Example topic performance</h2>
-      <p className="mt-2 text-sm">Interaction rate = reactions plus comments divided by impressions. Not LinkedIn's official engagement metric; zero-impression posts are excluded from ranking.</p>
+      <p className="mt-2 text-sm">Interaction rate = reactions plus comments divided by impressions. Not LinkedIn&apos;s official engagement metric; zero-impression posts are excluded from ranking.</p>
       <ul className="mt-4 space-y-3">{summary.ranked.map(row => <li key={row.id} className="rounded-xl bg-slate-50 p-3">{row.topic}: {row.interactionRate.toFixed(1)}%</li>)}</ul>
     </section>
     <section className="rounded-2xl border bg-white p-5">
