@@ -63,7 +63,7 @@ export default async function OpportunitySettingsPage({ searchParams }: { search
     <div className="space-y-6">
       <section className="rounded-[2rem] bg-gradient-to-br from-slate-950 to-indigo-950 p-6 text-white">
         <div className="eyebrow !text-white/50">Opportunity settings</div>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Teach Repurly who matters, when to reply and when not to DM</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Teach Janeomi who matters, when to reply and when not to DM</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
           These settings are the self-serve quality layer. A 10/10 Daily Agent needs to know the offer, ICP, warm signals, ignore signals, content lanes and DM rules before users judge output quality.
         </p>
@@ -149,7 +149,7 @@ export default async function OpportunitySettingsPage({ searchParams }: { search
           <CardContent className="space-y-3 text-sm text-slate-700">
             {[
               'Define what they sell and what a good commercial signal looks like.',
-              'Define when Repurly should say no DM yet.',
+              'Define when Janeomi should say no DM yet.',
               'Add their top 5 content lanes and no-go topics.',
               'Add known important relationships or partner conversations.',
               'Run one sample Daily Agent session before charging.',
