@@ -186,6 +186,22 @@ export const campaignPlaybooks: readonly CampaignPlaybook[] = [
       },
     ],
   },
+  {
+    brandSlug: 'repurly',
+    focus: 'Validate the opportunity desk with expert-led businesses',
+    goal: 'Find suitable prospective pilot users and test whether human-reviewed follow-up solves a recurring problem.',
+    primaryAudience: 'B2B consultants, fractional leaders, agency founders and expert-led businesses',
+    conversion: 'Relevant conversations and opt-in pilot interest; not a paid conversion until access and billing are verified',
+    guardrail: 'Repurly is in private testing. Do not claim a public launch, a working checkout, autonomous outreach or proven sales results. Obtain explicit approval for every external action.',
+    publicOfferUrl: null,
+    holdProductLaunchClaims: true,
+    weeks: [
+      { week: 1, theme: 'Engagement versus commercial intent', outcome: 'Identify follow-up problems', draftKey: 'repurly-engagement-to-opportunity', reviewNote: 'Ask about real workflow challenges; do not infer buying intent from likes.' },
+      { week: 2, theme: 'Human-approved follow-up', outcome: 'Validate appetite for assisted decisions', draftKey: 'repurly-human-approved-followup', reviewNote: 'Keep the user in control of every reply, direct message and publication.' },
+      { week: 3, theme: 'One workflow for separate brands', outcome: 'Identify suitable supervised pilot users', draftKey: 'repurly-one-marketing-workflow', reviewNote: 'Describe private testing accurately; do not promise an available paid subscription.' },
+      { week: 4, theme: 'Review pilot interest and objections', outcome: 'Decide whether a supported paid pilot is ready', draftKey: null, reviewNote: 'Record genuine feedback and verify onboarding, pricing and billing before making an offer.' },
+    ],
+  },
 ];
 
 export function findPlaybook(slug: string) {

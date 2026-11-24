@@ -4,8 +4,8 @@ import test from 'node:test';
 import { campaignPlaybooks, findPlaybook, findStarterDraftBody, reviewedJakomaTriagePost } from '../../src/lib/marketing/campaign-playbooks';
 import { starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
 
-test('four playbooks match actual saved starter brands and offer three real draft keys each', () => {
-  assert.equal(campaignPlaybooks.length, 4);
+test('five playbooks match actual saved starter brands and offer three real draft keys each', () => {
+  assert.equal(campaignPlaybooks.length, 5);
   assert.deepEqual(new Set(campaignPlaybooks.map(item => item.brandSlug)), new Set(starterPortfolio.map(item => item.slug)));
 
   for (const plan of campaignPlaybooks) {

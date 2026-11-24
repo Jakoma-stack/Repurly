@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getMarketingStage, getMarketingStageDetails, missingMarketingBasics } from '@/lib/marketing/portfolio';
+import { portfolioGrowthPriorities, portfolioWeeklyCadence } from '@/lib/marketing/portfolio-growth';
 import { getWorkspaceBrands } from '@/server/queries/brands';
 import { getLinkedInTargets } from '@/server/queries/workflow';
 import { canImportPilotPortfolio, importPilotPortfolio } from '@/server/actions/portfolio';
@@ -28,7 +29,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           Plan here, create content in the studio, and review the destination before scheduling anything.
         </p>
         <div className="mt-5 flex flex-wrap gap-3 text-sm">
-          <a className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950" href="/app/brands">Add or edit an app</a>
+          <a className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950" href="/app/marketing-director">Open AI Marketing Director</a>
+          <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/brands">Add or edit an app</a>
           <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/content">Open content studio</a>
           {canImport ? (
             <a className="rounded-2xl border border-white/30 px-4 py-2 font-semibold text-white" href="/app/portfolio/campaigns">Review the four-week campaigns</a>
@@ -49,7 +51,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             <div className="max-w-2xl">
               <h2 className="text-lg font-semibold text-slate-950">Apply the agreed app branding</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                Apply Lorri-Lou&apos;s Learning Hub, MarbriA and Jakoma Ltd as the agreed display names.
+                Apply the agreed display names and add Repurly&apos;s own review-only campaign if missing.
                 JP Bookkeeping is the provisional portfolio identity honouring John Potts. PCWB remains the internal software name; the final product brand is still being checked.
                 This safely corrects the saved brand records and only refreshes unedited starter posts.
               </p>
@@ -59,10 +61,40 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             </div>
             <form action={importPilotPortfolio}>
               <button className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-slate-800">
-                Correct names and refresh starter drafts
+                Check portfolio and add missing starter drafts
               </button>
             </form>
           </div>
+        </section>
+      ) : null}
+
+      {canImport ? (
+        <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Commercial priorities and launch gates</h2>
+            <p className="mt-1 text-sm text-slate-600">Private pilot planning only. These are proposed next steps, not verified revenue, product readiness or completed work.</p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {portfolioGrowthPriorities.map(priority => (
+              <div key={priority.slug} className="rounded-xl border border-slate-200 p-4 text-sm">
+                <div className="font-semibold text-slate-950">{priority.name} · {priority.role}</div>
+                <p className="mt-2 text-slate-700">{priority.nextStep}</p>
+                <p className="mt-2 text-xs text-slate-600"><strong>Before advancing:</strong> {priority.gate}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-xl bg-slate-50 p-4">
+            <h3 className="text-sm font-semibold text-slate-950">Suggested shared editorial cadence</h3>
+            <p className="mt-1 text-xs text-slate-600">Three review slots across the whole portfolio per week, not three posts per brand. Slots are editorial intentions, not scheduled posts; choose suitable saved drafts or prepare new ones in Content Studio.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {portfolioWeeklyCadence.map(week => (
+                <div key={week.week} className="rounded-lg bg-white p-3 text-sm text-slate-700">
+                  <strong>Week {week.week}:</strong> {week.slots.map(slot => slot.label).join(' · ')}
+                </div>
+              ))}
+            </div>
+          </div>
+          <a href="/app/portfolio/campaigns" className="inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Review actual campaign drafts</a>
         </section>
       ) : null}
 

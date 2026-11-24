@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
@@ -30,6 +30,7 @@ async function refreshBrandPages() {
   revalidatePath('/app');
   revalidatePath('/app/brands');
   revalidatePath('/app/portfolio');
+  revalidatePath('/app/marketing-director');
   revalidatePath('/app/content');
   revalidatePath('/app/leads');
   revalidatePath('/app/engagement');
@@ -80,7 +81,7 @@ export async function saveBrand(formData: FormData) {
   if (brandId) {
     await db
       .update(brands)
-      .set(values)
+      .set({ ...values, metadata: requestedStage ? sql`coalesce(${brands.metadata}, '{}'::jsonb) || ${JSON.stringify({ marketingStage: getMarketingStage({ marketingStage: requestedStage }) })}::jsonb` : sql`${brands.metadata}` })
       .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)));
   } else {
     const limit = await checkPlanLimit(workspaceId, 'brands');
@@ -148,9 +149,7 @@ export async function saveOpportunitySettings(formData: FormData) {
     redirect('/app/opportunity-settings?error=missing-brand' as Route);
   }
 
-  const previousMetadata = (existing[0].metadata ?? {}) as Record<string, unknown>;
   const metadata = {
-    ...previousMetadata,
     opportunityDesk: {
       offer: requiredString(formData, 'offer'),
       idealCustomers: splitSettingLines(requiredString(formData, 'idealCustomers')),
@@ -166,7 +165,7 @@ export async function saveOpportunitySettings(formData: FormData) {
 
   await db
     .update(brands)
-    .set({ metadata, updatedAt: new Date() })
+    .set({ metadata: sql`coalesce(${brands.metadata}, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb`, updatedAt: new Date() })
     .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)));
 
   revalidatePath('/app/daily-agent');

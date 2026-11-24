@@ -33,6 +33,7 @@ const fullNav = [
   { href: '/app/weekly-plan', label: 'Weekly Plan', icon: CalendarCheck },
   { href: '/app/opportunity-settings', label: 'Opportunity Settings', icon: SlidersHorizontal },
   { href: '/app/content', label: 'Content', icon: PencilLine },
+  { href: '/app/marketing-director', label: 'Marketing Director', icon: Sparkles },
   { href: '/app/portfolio', label: 'App Portfolio', icon: Layers3 },
   { href: '/app/engagement', label: 'Engagement', icon: MessageSquareQuote },
   { href: '/app/outreach-copilot', label: 'Outreach', icon: UserPlus },

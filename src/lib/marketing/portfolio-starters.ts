@@ -289,6 +289,63 @@ Which small household task is hardest to coordinate across the family?
       },
     ],
   },
+  {
+    name: 'Repurly',
+    slug: 'repurly',
+    website: null,
+    marketingStage: 'private_build',
+    audience: 'B2B consultants, fractional leaders, agency founders and expert-led businesses using LinkedIn to build professional relationships.',
+    defaultTone: 'Practical, commercially focused, helpful and evidence-led; no exaggerated outcomes or promises of automatic outreach.',
+    primaryCta: 'Share your biggest LinkedIn follow-up challenge',
+    secondaryCta: 'Express interest in a future supervised pilot',
+    hashtags: ['LinkedInStrategy', 'BusinessDevelopment', 'RelationshipManagement'],
+    campaignGoal: 'Validate demand for a human-approved opportunity desk and identify suitable pilot conversations.',
+    positioning: 'Repurly is a LinkedIn opportunity desk in private testing that helps organise engagement, draft replies and follow-ups, and plan content. A public subscription launch has not been verified.',
+    posts: [
+      {
+        key: 'repurly-engagement-to-opportunity',
+        title: 'LinkedIn engagement is not the same as a sales opportunity',
+        brief: 'Explain the distinction between engagement and commercial intent; invite discussion, not a purchase.',
+        body: `A like, a comment and a commercial enquiry are three different things.
+
+The useful question is not simply how much engagement a post receives. It is what that engagement tells you about the relationship, and whether a thoughtful next step is appropriate.
+
+Repurly is in private development around that gap: turning professional engagement into a clearer, human-reviewed follow-up plan.
+
+What is hardest to keep track of after a LinkedIn post: meaningful conversations, follow-ups or what to write next?
+
+#LinkedInStrategy #BusinessDevelopment #RelationshipManagement`,
+      },
+      {
+        key: 'repurly-human-approved-followup',
+        title: 'A useful AI assistant should know when not to send a message',
+        brief: 'Describe the human-approval approach without promising autonomous posting, scraping or sales results.',
+        body: `Not every interaction calls for a direct message.
+
+Sometimes a public reply is enough. Sometimes it makes sense to listen, and sometimes there is a genuine reason to follow up.
+
+Repurly is being tested as a way to organise these decisions and prepare drafts for human review, rather than automatically contact people.
+
+What would make an AI-assisted follow-up genuinely useful to you?
+
+#ResponsibleAI #LinkedInStrategy #BusinessDevelopment`,
+      },
+      {
+        key: 'repurly-one-marketing-workflow',
+        title: 'Different audiences need different marketing plans',
+        brief: 'Introduce portfolio marketing as a development approach, not a claim of a fully autonomous marketing service.',
+        body: `If you manage more than one product or service, the hardest part of marketing may be deciding what deserves attention this week.
+
+Different audiences need different messages, evidence and next steps. A shared plan should keep those distinctions clear.
+
+We are testing this approach in Repurly: separate brand campaigns, a review workflow and a clearer record of meaningful follow-up.
+
+If you run an expert-led business, what part of that weekly workflow takes most of your time?
+
+#MarketingStrategy #BusinessDevelopment #ResponsibleAI`,
+      },
+    ],
+  },
 ];
 
 /** A prior starter draft can be refreshed only if its body still equals the

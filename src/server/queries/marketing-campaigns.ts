@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { brands, posts } from '../../../drizzle/schema';
@@ -18,7 +18,7 @@ export async function getPortfolioCampaignPosts(workspaceId: string) {
     })
     .from(posts)
     .innerJoin(brands, and(eq(brands.id, posts.brandId), eq(brands.workspaceId, workspaceId)))
-    .where(eq(posts.workspaceId, workspaceId))
+    .where(and(eq(posts.workspaceId, workspaceId), sql`${posts.metadata}->>'source' = 'portfolio_starter'`))
     .orderBy(desc(posts.updatedAt))
     .limit(200);
 

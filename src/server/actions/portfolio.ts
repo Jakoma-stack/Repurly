@@ -150,9 +150,14 @@ export async function importPilotPortfolio() {
           if (existing.status === 'draft' &&
               existing.body === originalStarterDraftBody(starter, draft) &&
               existing.body !== draft.body) {
-            await tx.update(posts).set({ body: draft.body, updatedAt: new Date() })
-              .where(and(eq(posts.id, existing.id), eq(posts.workspaceId, session.workspaceId)));
-            refreshedDrafts++;
+            const refreshed = await tx.update(posts).set({ body: draft.body, updatedAt: new Date() })
+              .where(and(
+                eq(posts.id, existing.id),
+                eq(posts.workspaceId, session.workspaceId),
+                eq(posts.status, 'draft'),
+                eq(posts.body, existing.body),
+              )).returning({ id: posts.id });
+            refreshedDrafts += refreshed.length;
           }
           continue;
         }
@@ -183,6 +188,7 @@ export async function importPilotPortfolio() {
   });
 
   revalidatePath('/app/portfolio');
+  revalidatePath('/app/portfolio/campaigns');
   revalidatePath('/app/brands');
   revalidatePath('/app/content');
   revalidatePath('/app/weekly-plan');
