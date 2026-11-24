@@ -52,11 +52,11 @@ export default async function PortfolioCampaignsPage({
     <div className="space-y-6">
       <section className="rounded-[2rem] bg-gradient-to-br from-slate-950 to-teal-950 p-7 text-white">
         <div className="eyebrow !text-white/50">Portfolio campaign review</div>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Four focused campaigns, one review workflow</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Five focused campaigns, one review workflow</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-white/75">
           Check actual saved posts against editorial priorities and launch-stage safeguards.
           The first three weeks use existing drafts; week four is an evidence-and-feedback review,
-          not an automatically generated post or invented lead count.
+          not an automatically generated post or invented lead count. Choose three total portfolio review slots per week; the playbooks are a draft library, not a publication calendar.
         </p>
         <div className="mt-4 flex flex-wrap gap-3 text-sm">
           <a href="/app/portfolio" className="rounded-2xl bg-white px-4 py-2 font-semibold text-slate-950">Back to App Portfolio</a>
@@ -73,7 +73,7 @@ export default async function PortfolioCampaignsPage({
       <section className="grid gap-4 sm:grid-cols-3">
         <Card>
           <CardHeader><div className="text-sm text-muted-foreground">Campaign playbooks</div></CardHeader>
-          <CardContent><div className="text-3xl font-semibold">4</div><p className="mt-1 text-xs text-slate-500">Human-reviewed editorial plans</p></CardContent>
+          <CardContent><div className="text-3xl font-semibold">{campaignPlaybooks.length}</div><p className="mt-1 text-xs text-slate-500">Human-reviewed editorial plans</p></CardContent>
         </Card>
         <Card>
           <CardHeader><div className="text-sm text-muted-foreground">Saved starter drafts</div></CardHeader>
@@ -87,7 +87,7 @@ export default async function PortfolioCampaignsPage({
 
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
         <strong>Publishing remains manual.</strong> These plans do not create, schedule, approve or publish posts.
-        Jakoma has a real triage enquiry route. JP Bookkeeping, Lorri-Lou&apos;s Learning Hub and MarbriA remain private-build concepts:
+        Jakoma has a real triage enquiry route. Repurly, JP Bookkeeping, Lorri-Lou&apos;s Learning Hub and MarbriA are in private testing or development:
         do not suggest they are available for purchase, live monitoring, or public student access.
       </div>
 

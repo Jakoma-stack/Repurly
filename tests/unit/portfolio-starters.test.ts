@@ -3,13 +3,13 @@ import test from 'node:test';
 
 import { originalStarterDraftBody, starterPortfolio } from '../../src/lib/marketing/portfolio-starters';
 
-test('starter portfolio covers the agreed four apps, each with three review-only posts', () => {
+test('starter portfolio covers the five active marketing brands, each with three review-only posts', () => {
   assert.deepEqual(starterPortfolio.map(brand => brand.name), [
-    'Jakoma Ltd', 'JP Bookkeeping', "Lorri-Lou's Learning Hub", 'MarbriA',
+    'Jakoma Ltd', 'JP Bookkeeping', "Lorri-Lou's Learning Hub", 'MarbriA', 'Repurly',
   ]);
 
-  assert.equal(new Set(starterPortfolio.map(brand => brand.slug)).size, 4);
-  assert.equal(starterPortfolio.reduce((sum, brand) => sum + brand.posts.length, 0), 12);
+  assert.equal(new Set(starterPortfolio.map(brand => brand.slug)).size, 5);
+  assert.equal(starterPortfolio.reduce((sum, brand) => sum + brand.posts.length, 0), 15);
 
   const keys: string[] = [];
   for (const brand of starterPortfolio) {
