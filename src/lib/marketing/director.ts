@@ -50,6 +50,8 @@ export function directorContext(brand: DirectorBrand) {
   const desk = brand.metadata?.opportunityDesk;
   const offer = desk && typeof desk === 'object' && !Array.isArray(desk)
     ? bounded((desk as Record<string, unknown>).offer, 600) : '';
+  const rawKnowledge = brand.metadata?.portfolioMarketingKnowledge;
+  const knowledge = rawKnowledge && typeof rawKnowledge === 'object' && !Array.isArray(rawKnowledge) ? rawKnowledge as Record<string, unknown> : {};
   return {
     brandName: bounded(brand.name, 120),
     stage: getMarketingStage(brand.metadata),
@@ -61,6 +63,10 @@ export function directorContext(brand: DirectorBrand) {
     positioning: bounded(brand.metadata?.starterPositioning, 600),
     objective: bounded(brand.metadata?.starterCampaignGoal, 400),
     offer,
+    portfolioPositioning: bounded(knowledge.positioning, 300),
+    portfolioVoice: bounded(knowledge.voice, 300),
+    portfolioObjective: bounded(knowledge.objective, 500),
+    portfolioGuardrails: bounded(knowledge.guardrails, 800),
   };
 }
 
@@ -81,7 +87,7 @@ export function directorPlanIsCurrent(brand: DirectorBrand, saved: SavedDirector
 
 export function directorBrandEligibility(brand: DirectorBrand, ownerPilot: boolean) {
   if (brand.status !== 'active') return 'Activate the brand before planning.';
-  if (ownerPilot && brand.slug === 'averyquant-one') return 'Research only: no marketing plan until separately cleared.';
+  if (ownerPilot && ['averyquant-one', 'jakoma-risk-intelligence'].includes(brand.slug ?? '')) return 'Research only: no marketing plan until separately cleared.';
   const missing = missingMarketingBasics(brand);
   if (missing.length) return 'Complete brand settings: ' + missing.join(', ') + '.';
   return null;

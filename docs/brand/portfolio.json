@@ -1,0 +1,219 @@
+[
+  {
+    "slug": "jakoma",
+    "name": "Jakoma",
+    "tag": "Intelligence. Integrity. Impact.",
+    "desc": "Advisory, innovation and practical technology",
+    "ink": "#142C37",
+    "primary": "#1E666C",
+    "accent": "#C6DCD8",
+    "surface": "#F4F1EA",
+    "audience": "UK business leaders and organisations seeking evidence-led AI governance, data assurance and practical technology delivery.",
+    "voice": "Credible, clear, evidence-led and pragmatic.",
+    "objective": "Develop qualified service enquiries, using the existing triage request route only after verifying current terms.",
+    "guardrails": "Verify legal identity, offer, price and destination. No invented client results, professional affiliations, endorsements or guaranteed outcomes. Keep service enquiries separate from software availability.",
+    "stage": "audience_building",
+    "domain": "jakoma.org",
+    "handle": "jakoma",
+    "classes": [
+      35,
+      42,
+      9
+    ],
+    "aliases": [
+      "Jakoma",
+      "Jakoma Ltd"
+    ],
+    "version": "2026-11-24",
+    "clearance": "pending",
+    "domainStatus": "existing public website",
+    "handleStatus": "existing public LinkedIn page; other channels unverified",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness."
+  },
+  {
+    "slug": "repurly",
+    "name": "Janeomi",
+    "tag": "Intelligence with ambition.",
+    "desc": "AI marketing and commercial growth intelligence",
+    "ink": "#102D32",
+    "primary": "#186B65",
+    "accent": "#A7E7CC",
+    "surface": "#F4F1EA",
+    "audience": "Founders, consultants, expert-led businesses and agencies without dedicated marketing expertise.",
+    "voice": "Intelligent, ambitious, practical, warm and human; no hype.",
+    "objective": "Validate the human-approved opportunity desk and recruit suitable supported pilot customers when access is verified.",
+    "guardrails": "Private testing. No public subscription or proven sales claims without verification. Use authorised data; no unauthorised scraping, autonomous outreach or sales profiling using restricted LinkedIn data.",
+    "stage": "private_build",
+    "domain": "janeomi.com",
+    "handle": "janeomi",
+    "classes": [
+      9,
+      42,
+      35
+    ],
+    "aliases": [
+      "Repurly",
+      "Janeomi"
+    ],
+    "version": "2026-11-24",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness."
+  },
+  {
+    "name": "JP Workbench",
+    "slug": "period-close-workbench",
+    "tag": "Every figure. Every detail.",
+    "desc": "Intelligent financial workflow software",
+    "ink": "#172B43",
+    "primary": "#233D59",
+    "accent": "#C3A677",
+    "surface": "#F6F3ED",
+    "audience": "UK accountants and bookkeepers; owner-managed businesses through their advisers.",
+    "voice": "Precise, calm, professional, evidence-led.",
+    "objective": "Validate a controlled period-close pilot and obtain consented workflow feedback.",
+    "guardrails": "Private prototype. No customer financial documents in marketing inputs. Do not promise tax or accounting accuracy, automatic filing, savings or production availability. Professional review is required.",
+    "domain": "jpworkbench.com",
+    "handle": "jpworkbench",
+    "classes": [
+      9,
+      42,
+      35
+    ],
+    "stage": "private_build",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "version": "2026-11-24",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness.",
+    "aliases": [
+      "JP Bookkeeping",
+      "Period Close Workbench",
+      "JP Workbench"
+    ]
+  },
+  {
+    "name": "Lorri-Lou’s Learning Hub",
+    "slug": "edusmart",
+    "tag": "Little Steps, Big Lightbulbs.",
+    "desc": "Curriculum-aware learning and revision",
+    "ink": "#3E2D58",
+    "primary": "#72558F",
+    "accent": "#E6B750",
+    "surface": "#FAF8F4",
+    "audience": "Secondary learners in Northern Ireland and Norway; parents, teachers and adult supporters.",
+    "voice": "Encouraging, clear, age-appropriate, respectful; never patronising.",
+    "objective": "Build adult opt-in interest in curriculum-specific practice; validate learning experience before wider access.",
+    "guardrails": "Private build. Do not invite children's personal data, imply exam-board endorsement, guaranteed grades or verified marking accuracy. Use adult feedback and authorised educational materials.",
+    "domain": "lorrilou.com",
+    "handle": "lorriloulearning",
+    "classes": [
+      9,
+      42,
+      41
+    ],
+    "stage": "private_build",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "version": "2026-11-24",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness.",
+    "aliases": [
+      "EduSmart",
+      "Lorri-Lou's Learning Hub",
+      "Lorri-Lou’s Learning Hub"
+    ]
+  },
+  {
+    "name": "MarbriA",
+    "slug": "family-support",
+    "tag": "Family & Home, Connected.",
+    "desc": "Family care coordination and practical home safety",
+    "ink": "#355E49",
+    "primary": "#355E49",
+    "accent": "#D7B88E",
+    "surface": "#FAF8F2",
+    "audience": "Adult family members and unpaid carers sharing practical support and household coordination.",
+    "voice": "Warm, reassuring, concrete, dignified, privacy-conscious.",
+    "objective": "Validate handovers, shared tasks and family usability in a controlled environment.",
+    "guardrails": "Fictional demonstration/private build. No claims of live sensors, emergency response, clinical advice or guaranteed safety. Never solicit identifiable health or care information.",
+    "domain": "marbria.com",
+    "handle": "marbria",
+    "classes": [
+      9,
+      42
+    ],
+    "stage": "private_build",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "version": "2026-11-24",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness.",
+    "aliases": [
+      "Family Support",
+      "MarbriA"
+    ]
+  },
+  {
+    "name": "AveryQuant One",
+    "slug": "averyquant-one",
+    "tag": "Evidence before execution.",
+    "desc": "Quantitative research and market intelligence",
+    "ink": "#101824",
+    "primary": "#244A68",
+    "accent": "#57C5E8",
+    "surface": "#E8F1F7",
+    "audience": "Internal research and engineering only.",
+    "voice": "Analytical, restrained, transparent about uncertainty.",
+    "objective": "Maintain research evidence and risk gates; no customer recruitment.",
+    "guardrails": "Research only. No commercial promotion, live-money trading, investment recommendations, guaranteed returns or claims that simulated results are executable profits.",
+    "domain": "averyquant.com",
+    "handle": "averyquantone",
+    "classes": [
+      9,
+      42,
+      36
+    ],
+    "stage": "research_only",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "version": "2026-11-24",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness.",
+    "aliases": [
+      "AveryQuant One",
+      "AveryQuant-One"
+    ]
+  },
+  {
+    "slug": "jakoma-risk-intelligence",
+    "name": "Jakoma Risk Intelligence",
+    "tag": "From reactive oversight to proactive assurance.",
+    "desc": "Regulatory risk intelligence and decision support",
+    "ink": "#203347",
+    "primary": "#294C65",
+    "accent": "#B6CEDF",
+    "surface": "#E9EEF2",
+    "audience": "Internal concept research for assurance and oversight teams.",
+    "voice": "Measured, neutral, accountable and transparent about uncertainty.",
+    "objective": "Research the governance and risk requirements for a future decision-support concept.",
+    "guardrails": "Concept only. No commercial promotion, real inspection data, regulatory affiliation, deployment claims, or automated enforcement. Require a separate conflict-of-interest, governance and product review.",
+    "stage": "research_only",
+    "domain": "risk.jakoma.org",
+    "handle": "jakomarisk",
+    "classes": [
+      9,
+      42,
+      35
+    ],
+    "aliases": [
+      "Jakoma Risk Intelligence"
+    ],
+    "version": "2026-11-24",
+    "clearance": "pending",
+    "domainStatus": "unverified",
+    "handleStatus": "unverified",
+    "releaseGate": "Review only. Public activation requires name clearance, legal/entity confirmation and product readiness."
+  }
+]

@@ -16,6 +16,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
+import Image from 'next/image';
 
 import type { WorkspaceSession } from '@/lib/auth/workspace';
 import { formatPlanLabel } from '@/lib/billing/plans';
@@ -55,6 +56,7 @@ export function AppShell({
   session: WorkspaceSession;
   billingAccess?: BillingAccessState;
 }) {
+  const brandPreview = process.env.JANEOMI_BRAND_PREVIEW === 'true';
   const paid = billingAccess?.hasPaidAccess ?? true;
   const nav = paid ? fullNav : unpaidNav;
 
@@ -64,10 +66,11 @@ export function AppShell({
         <aside className="premium-dark hidden w-80 shrink-0 p-6 lg:block">
           <div className="mb-8 flex items-center gap-3">
             <div className="rounded-2xl bg-white/10 p-2 text-white ring-1 ring-white/10">
-              <Sparkles className="size-5" />
+              {brandPreview ? <Image src="/brand/repurly/mark.svg" width={32} height={32} alt="" unoptimized/> : <Sparkles className="size-5" />}
             </div>
             <div>
-              <div className="font-semibold tracking-tight">Repurly</div>
+              <div className="font-semibold tracking-tight">{brandPreview ? 'janeomi.' : 'Repurly'}</div>
+              {brandPreview ? <div className="text-xs text-white/80">Brand preview · Intelligence with ambition.</div> : null}
               <div className="text-sm text-white/60">Daily LinkedIn opportunity desk</div>
             </div>
           </div>
