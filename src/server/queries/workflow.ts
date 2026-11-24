@@ -32,6 +32,7 @@ export async function getWorkspaceBrandOptions(workspaceId: string) {
       defaultTone: brands.defaultTone,
       audience: brands.audience,
       primaryCta: brands.primaryCta,
+      metadata: brands.metadata,
       hashtags: brands.hashtags,
       status: brands.status,
     })
