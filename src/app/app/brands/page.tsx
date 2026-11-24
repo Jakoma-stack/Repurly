@@ -3,6 +3,7 @@ import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { archiveBrand, restoreBrand, saveBrand } from '@/server/actions/brands';
 import { getBrandForEditing, getWorkspaceBrands } from '@/server/queries/brands';
+import { getMarketingStage, getMarketingStageDetails, marketingStageOptions } from '@/lib/marketing/portfolio';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -72,6 +73,17 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
+                  <label className="text-sm font-medium text-slate-900">Marketing stage</label>
+                  <select name="marketingStage" defaultValue={getMarketingStage(editingBrand?.metadata)} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm">
+                    {marketingStageOptions.map(stage => <option key={stage.value} value={stage.value}>{stage.label}</option>)}
+                  </select>
+                </div>
+                <div className="rounded-2xl bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+                  Unfinished apps should start at Private build. A brand can be active for planning without being launched.
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
                   <label className="text-sm font-medium text-slate-900">Contact email</label>
                   <input name="contactEmail" type="email" defaultValue={editingBrand?.contactEmail ?? ''} className="mt-2 w-full rounded-2xl border border-border px-4 py-3 text-sm" />
                 </div>
@@ -124,12 +136,12 @@ export default async function BrandsPage({ searchParams }: { searchParams: Searc
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="font-medium text-slate-900">{brand.name}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">{brand.status} · {brand.totalPosts} posts · {brand.scheduledPosts} scheduled</div>
+                    <div className="mt-1 text-sm text-muted-foreground">{brand.status} · {getMarketingStageDetails(getMarketingStage(brand.metadata)).label} · {brand.totalPosts} posts · {brand.scheduledPosts} scheduled</div>
                     <div className="mt-2 text-sm text-muted-foreground">{brand.defaultTone || 'No tone set yet'}</div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <a href={`/app/brands?brandId=${brand.id}`} className="rounded-2xl border border-border px-3 py-2 text-sm">Edit</a>
-                    <a href={`/app/content`} className="rounded-2xl border border-border px-3 py-2 text-sm">Open composer</a>
+                    <a href={`/app/content?brandId=${encodeURIComponent(brand.id)}`} className="rounded-2xl border border-border px-3 py-2 text-sm">Open composer</a>
                     {brand.status === 'archived' ? (
                       <form action={restoreBrand}>
                         <input type="hidden" name="workspaceId" value={session.workspaceId} />
