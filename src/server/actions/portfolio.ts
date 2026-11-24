@@ -102,6 +102,12 @@ export async function importPilotPortfolio() {
           newMetadata.starterPositioning = starter.positioning;
           metadataChanged = true;
         }
+        if (starter.slug === 'period-close-workbench' &&
+            newMetadata.starterPositioning ===
+              'An in-development workflow concept for organising period-close documents, review and exceptions.') {
+          newMetadata.starterPositioning = starter.positioning;
+          metadataChanged = true;
+        }
         if (metadataChanged) updates.metadata = newMetadata;
         if (Object.keys(updates).length) {
           await tx.update(brands).set({ ...updates, updatedAt: new Date() })
