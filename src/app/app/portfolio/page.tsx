@@ -9,7 +9,7 @@ import { canImportPilotPortfolio, importPilotPortfolio } from '@/server/actions/
 export default async function PortfolioPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await requireWorkspaceSession();
   await requirePaidWorkspaceAccess(session.workspaceId);
-  const [params, canImport] = await Promise.all([searchParams, canImportPilotPortfolio(session.userId)]);
+  const [params, canImport] = await Promise.all([searchParams, canImportPilotPortfolio()]);
   const [brands, destinations] = await Promise.all([
     getWorkspaceBrands(session.workspaceId),
     getLinkedInTargets(session.workspaceId),
