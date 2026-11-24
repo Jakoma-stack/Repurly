@@ -47,7 +47,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               <h2 className="text-lg font-semibold text-slate-950">Apply the agreed app branding</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
                 Apply Lorri-Lou&apos;s Learning Hub, MarbriA and Jakoma Ltd as the agreed display names.
-                Period Close Workbench remains a provisional development name until a commercial name is chosen.
+                JP Bookkeeping is the provisional portfolio identity honouring John Potts. PCWB remains the internal software name; the final product brand is still being checked.
                 This safely corrects the saved brand records and only refreshes unedited starter posts.
               </p>
               <p className="mt-2 text-xs text-indigo-900">
@@ -91,7 +91,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                     <h2 className="text-xl font-semibold text-slate-950">{brand.name}</h2>
                     {tagline ? <p className="mt-1 text-sm font-medium text-slate-700">{tagline}</p> : null}
                     {brand.slug === 'family-support' ? <p className="mt-1 text-xs text-slate-500">Family Care &amp; Home Safety</p> : null}
-                    {brand.slug === 'period-close-workbench' ? <p className="mt-1 text-xs text-amber-800">Working name; commercial brand not yet chosen</p> : null}
+                    {brand.slug === 'period-close-workbench' ? <p className="mt-1 text-xs text-amber-800">JP tribute identity · PCWB internal · final software name pending</p> : null}
                     <p className="mt-1 text-sm text-slate-500">{stageInfo.label} · {brand.status}</p>
                   </div>
                   <div className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">

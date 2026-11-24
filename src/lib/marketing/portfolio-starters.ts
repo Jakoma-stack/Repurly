@@ -100,7 +100,8 @@ Which manual process in your organisation needs clarity before it needs automati
     ],
   },
   {
-    name: 'Period Close Workbench',
+    name: 'JP Bookkeeping',
+    legacyName: 'Period Close Workbench',
     slug: 'period-close-workbench',
     website: null,
     marketingStage: 'private_build',
@@ -110,7 +111,7 @@ Which manual process in your organisation needs clarity before it needs automati
     secondaryCta: 'Discuss what a useful review checklist should include',
     hashtags: ['Bookkeeping', 'AccountingWorkflow', 'SmallBusiness'],
     campaignGoal: 'Learn how bookkeeping teams currently collect, review and resolve period-close evidence.',
-    positioning: 'An in-development workflow concept for organising period-close documents, review and exceptions.',
+    positioning: 'JP Bookkeeping is the provisional portfolio identity for the in-development Period Close Workbench (PCWB) software. The final customer-facing software name is still under review.',
     posts: [
       {
         key: 'pcwb-month-end-bottleneck',
@@ -122,7 +123,7 @@ It can mean another email, another reminder and another decision that nobody is 
 
 For small bookkeeping teams, a useful period-close checklist should make three things obvious: what arrived, what still needs attention and who owns the next step.
 
-We are exploring these questions while developing Period Close Workbench.
+We are exploring these questions while developing JP Bookkeeping.
 
 What is the slowest part of your month-end or quarter-end process: chasing documents, checking transactions or resolving exceptions?
 
@@ -138,7 +139,7 @@ Could they tell which documents were checked, which items were queried and what 
 
 A good handover should not depend on remembering a chain of messages.
 
-We are developing Period Close Workbench with these workflow questions in mind. The product remains in development, and the focus right now is learning what makes a review genuinely useful.
+We are developing JP Bookkeeping with these workflow questions in mind. The product remains in development, and the focus right now is learning what makes a review genuinely useful.
 
 What is one detail you wish every handover included?
 
@@ -152,7 +153,7 @@ What is one detail you wish every handover included?
 
 Before a new tool touches real client records, it should be possible to check permissions, document handling, review steps and exception reporting using fictional data.
 
-That is the approach we are taking while developing Period Close Workbench.
+That is the approach we are taking while developing JP Bookkeeping.
 
 It may be less glamorous than a launch announcement, but trustworthy workflow design starts with knowing what has actually been tested.
 
