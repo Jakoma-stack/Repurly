@@ -7,7 +7,7 @@ import type { PlanKey } from '@/lib/billing/plans';
 const features = [
   [
     'Daily Agent intake',
-    'Paste LinkedIn notifications, comments, profile names and context. Upload LinkedIn analytics exports or paste metrics so Repurly turns the noise into a clear daily action plan.',
+    'Paste LinkedIn notifications, comments, profile names and context. Upload LinkedIn analytics exports or paste metrics so Janeomi turns the noise into a clear daily action plan.',
   ],
   [
     'Reply operating system',
@@ -49,7 +49,7 @@ export default function HomePage() {
       <section className="rounded-[2rem] border border-slate-200 bg-white px-8 py-8 shadow-card lg:px-10">
         <div className="max-w-3xl">
           <div className="eyebrow">The wedge</div>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-950">Repurly owns the gap between LinkedIn engagement and commercial follow-up.</h2>
+          <h2 className="mt-2 text-3xl font-semibold text-slate-950">Janeomi owns the gap between LinkedIn engagement and commercial follow-up.</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Consultants and founders do not need another generic scheduling tool. They need to know who is worth replying to, when to avoid a weak DM, what to follow up, which relationship signals should be remembered, and what their LinkedIn analytics are really telling them.
           </p>
@@ -80,7 +80,7 @@ export default function HomePage() {
       <section className="rounded-[2rem] border border-indigo-200 bg-indigo-50 px-8 py-7 shadow-card lg:px-10">
         <div className="max-w-4xl">
           <div className="eyebrow text-indigo-700">Proof-led beta</div>
-          <h2 className="mt-2 text-2xl font-semibold text-indigo-950">Repurly now includes a Proof Score so beta quality is measured, not guessed.</h2>
+          <h2 className="mt-2 text-2xl font-semibold text-indigo-950">Janeomi now includes a Proof Score so beta quality is measured, not guessed.</h2>
           <p className="mt-3 text-sm leading-6 text-indigo-900">
             Inside the app, Pilot Dashboard and Proof Score track the signals that matter: Daily Agent sessions, actions copied or sent manually, relationships logged, no-DM discipline, configured opportunity rules and weekly next actions. That keeps the beta focused on retention and commercial usefulness rather than feature sprawl.
           </p>
@@ -97,7 +97,7 @@ export default function HomePage() {
         <Card className="border-amber-200 bg-amber-50">
           <CardHeader><h3 className="text-xl font-semibold text-amber-950">Safe by design</h3></CardHeader>
           <CardContent className="text-sm leading-6 text-amber-900">
-            Repurly does not auto-send comments, DMs, connection requests or profile actions. The user approves and acts manually; Repurly logs and learns.
+            Janeomi does not auto-send comments, DMs, connection requests or profile actions. The user approves and acts manually; Janeomi logs and learns.
           </CardContent>
         </Card>
         <Card className="border-indigo-200 bg-indigo-50">
@@ -113,7 +113,7 @@ export default function HomePage() {
           <div className="eyebrow">Good-fit only</div>
           <h2 className="mt-2 text-2xl font-semibold text-slate-950">Not for scraping, mass automation or cold DM campaigns.</h2>
           <p className="mt-3 text-sm leading-6 text-slate-600">
-            Repurly is for experts who want a safer daily rhythm for replies, relationships, analytics review and follow-up. It drafts and organises the work; the user approves every reply, comment, DM, connection note and tracker update before taking action.
+            Janeomi is for experts who want a safer daily rhythm for replies, relationships, analytics review and follow-up. It drafts and organises the work; the user approves every reply, comment, DM, connection note and tracker update before taking action.
           </p>
         </div>
       </section>
