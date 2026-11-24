@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
@@ -34,6 +35,9 @@ export default async function PortfolioCampaignsPage({
     getLinkedInTargets(session.workspaceId),
     canImportPilotPortfolio(),
   ]);
+
+  // These curated owner-project campaigns are private-pilot content, not SaaS defaults.
+  if (!canPilotReview) redirect('/app/portfolio');
 
   const reviewNotice = typeof params.review === 'string' ? params.review : null;
   const notices: Record<string, string> = {
