@@ -95,7 +95,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'Approval request created',
-      body: 'Repurly kept the target in view so the reviewer can validate the exact destination, not just the copy.',
+      body: 'Janeomi kept the target in view so the reviewer can validate the exact destination, not just the copy.',
     };
   }
 
@@ -119,7 +119,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'AI image generated',
-      body: 'Repurly saved a publishable image preview to the draft so you can test an image-first workflow before approval or scheduling.',
+      body: 'Janeomi saved a publishable image preview to the draft so you can test an image-first workflow before approval or scheduling.',
     };
   }
 
@@ -127,7 +127,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'success',
       title: 'AI carousel generated',
-      body: 'Repurly saved a full carousel preview to the draft so the selected format is visible, testable, and ready for LinkedIn upload.',
+      body: 'Janeomi saved a full carousel preview to the draft so the selected format is visible, testable, and ready for LinkedIn upload.',
     };
   }
 
@@ -223,7 +223,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'error',
       title: 'Draft generation could not be saved',
-      body: 'Repurly kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check the database connection and brand setup.',
+      body: 'Janeomi kept your campaign brief locally, but the generated drafts could not be written to the database. Retry now, or check the database connection and brand setup.',
     };
   }
 
@@ -239,7 +239,7 @@ function getWorkflowNotice(ok?: string, error?: string): WorkflowNotice | null {
     return {
       kind: 'error',
       title: 'Draft generation failed',
-      body: 'Repurly kept your campaign brief locally so you can retry immediately.',
+      body: 'Janeomi kept your campaign brief locally so you can retry immediately.',
     };
   }
 
