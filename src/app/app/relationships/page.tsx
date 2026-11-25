@@ -17,7 +17,7 @@ export default async function RelationshipsPage() {
         <div className="eyebrow !text-white/50">Relationship intelligence</div>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">Relationship tracker</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-white/72">
-          A lightweight LinkedIn relationship tracker for people Repurly finds in comments, notifications, outreach and Daily Agent sessions.
+          A lightweight LinkedIn relationship tracker for people Janeomi finds in comments, notifications, outreach and Daily Agent sessions.
         </p>
       </section>
 
@@ -39,7 +39,7 @@ export default async function RelationshipsPage() {
       <Card>
         <CardHeader>
           <h2 className="text-xl font-semibold">Tracker updates</h2>
-          <p className="text-sm text-muted-foreground">Repurly suggests changes, but a human approves the relationship state and next action.</p>
+          <p className="text-sm text-muted-foreground">Janeomi suggests changes, but a human approves the relationship state and next action.</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">

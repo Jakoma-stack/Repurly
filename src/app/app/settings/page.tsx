@@ -204,7 +204,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Se
           <CardContent className="space-y-3 text-sm">
             <Link href="/app/channels" className="block font-medium text-primary">Open channels</Link>
             <div className="rounded-2xl border border-border p-4 text-muted-foreground">
-              Repurly can sync LinkedIn member and organization targets. Confirm the default target in Channels before sending a live post.
+              Janeomi can sync LinkedIn member and organization targets. Confirm the default target in Channels before sending a live post.
             </div>
           </CardContent>
         </Card>
