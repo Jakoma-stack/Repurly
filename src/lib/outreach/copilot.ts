@@ -129,7 +129,7 @@ export function scoreOutreachProspect(input: {
 function chooseOffer(offerFit?: string) {
   const offer = offerFit || 'General';
   if (offer.includes('Home') || offer.includes('Property')) return 'home_property';
-  if (offer.includes('Repurly')) return 'repurly';
+  if (offer.includes('Repurly') || offer.includes('Janeomi')) return 'repurly';
   if (offer.includes('Referral')) return 'referral';
   if (offer.includes('AI') || offer.includes('Governance') || offer.includes('Data')) return 'ai_governance';
   return 'general';
@@ -168,10 +168,10 @@ export function buildOutreachDrafts(input: {
   if (fit === 'repurly') {
     return {
       connectionNote: `Hi ${name}, ${relevant} I help B2B teams make LinkedIn content, approval and follow-up workflow more reliable. Thought it would be useful to connect.`,
-      firstMessage: `Hi ${name}, ${relevant}\n\nI am opening a small number of Repurly Managed LinkedIn Ops Pilot places for B2B teams or agencies that need a more reliable draft-to-approval-to-schedule workflow.\n\nIt is LinkedIn-first rather than a broad social suite, and it includes a human-approved outreach/follow-up queue rather than scraping or auto-DMs.\n\nWould seeing the pilot outline be useful?`,
+      firstMessage: `Hi ${name}, ${relevant}\n\nI am opening a small number of Janeomi Managed LinkedIn Ops Pilot places for B2B teams or agencies that need a more reliable draft-to-approval-to-schedule workflow.\n\nIt is LinkedIn-first rather than a broad social suite, and it includes a human-approved outreach/follow-up queue rather than scraping or auto-DMs.\n\nWould seeing the pilot outline be useful?`,
       publicComment: 'Useful point - the hidden work is often not just content creation, but approval rhythm, scheduling confidence and knowing which comments or leads need a human follow-up.',
-      followUp: `Hi ${name}, quick follow-up on the Repurly LinkedIn Ops Pilot. Is LinkedIn content workflow or approval/follow-up discipline something worth looking at, or not a priority right now?`,
-      referralAsk: `Hi ${name}, quick ask. I am opening a few Repurly LinkedIn Ops Pilot places for B2B teams or agencies that need cleaner content approval, scheduling and human-approved follow-up workflow. Who should I speak to?`,
+      followUp: `Hi ${name}, quick follow-up on the Janeomi LinkedIn Ops Pilot. Is LinkedIn content workflow or approval/follow-up discipline something worth looking at, or not a priority right now?`,
+      referralAsk: `Hi ${name}, quick ask. I am opening a few Janeomi LinkedIn Ops Pilot places for B2B teams or agencies that need cleaner content approval, scheduling and human-approved follow-up workflow. Who should I speak to?`,
     };
   }
 
@@ -206,5 +206,5 @@ export function defaultNextActionForDecision(decision: OutreachDecision, channel
 }
 
 export function outreachGuardrailNote() {
-  return 'Human-approved only: no scraping, no auto-DMs, no fake engagement, no bulk sending. Repurly prepares and tracks actions; a person decides and sends.';
+  return 'Human-approved only: no scraping, no auto-DMs, no fake engagement, no bulk sending. Janeomi prepares and tracks actions; a person decides and sends.';
 }
