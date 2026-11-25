@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCheckoutPriceId, isStripeConfigured, plans, stripe } from '@/lib/billing/stripe';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getOrCreateStripeCustomer } from '@/lib/billing/workspace-billing';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 
 export const runtime = 'nodejs';
 
@@ -66,6 +67,10 @@ async function createCheckoutSession(
   request: NextRequest,
   plan: BillingPlan,
 ): Promise<CheckoutSessionResult> {
+  if (isPrivatePilotMode()) {
+    return { error: 'checkout-unavailable', plan, url: null };
+  }
+
   if (!isStripeConfigured()) {
     console.error('[billing.checkout] Stripe is not configured');
     return { error: 'checkout-not-configured', plan, url: null };

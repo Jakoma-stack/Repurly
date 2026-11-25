@@ -7,6 +7,7 @@ import { PLAN_CATALOG, PLAN_ORDER } from '@/lib/billing/catalog';
 import { formatPlanLabel } from '@/lib/billing/plans';
 import type { PlanKey } from '@/lib/billing/plans';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 import { getBillingSnapshot } from '@/server/queries/billing';
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -71,6 +72,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
 
   return (
     <div className="space-y-6">
+      {isPrivatePilotMode() ? <Banner kind="warning">Private pilot access is enabled for your approved test account. No subscription is needed. Billing, automated publishing and media uploads are disabled during this test.</Banner> : null}
       {billingState === 'success' || billingState === 'checkout-created' ? <Banner kind="success">Checkout completed or opened successfully. Your workspace access should update after Stripe confirms the subscription.</Banner> : null}
       {billingState === 'cancelled' ? <Banner kind="warning">Checkout was cancelled. Choose Core or Growth when you are ready to activate the workspace.</Banner> : null}
       {billingState === 'checkout-unavailable' ? <Banner kind="error">Checkout is not available for that plan yet. Check the configured Stripe price IDs.</Banner> : null}
@@ -83,7 +85,7 @@ export default async function BillingPage({ searchParams }: { searchParams?: Sea
         <CardHeader>
           <h2 className="text-2xl font-semibold">Billing and plan usage</h2>
           <p className="text-sm text-muted-foreground">
-            Repurly is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
+            Janeomi is priced for premium LinkedIn-first workflows: clear controls, multi-brand operations, and dependable execution.
           </p>
         </CardHeader>
         <CardContent>

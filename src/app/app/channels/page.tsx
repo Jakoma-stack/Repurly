@@ -54,15 +54,15 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
       {setupState === 'target-confirmed' ? (
         <Banner kind="success">Default LinkedIn target confirmed. The workspace can now move into drafting, approval, and scheduling with the right destination selected.</Banner>
       ) : null}
-      {error === 'missing-workspace' ? <Banner kind="error">Repurly could not tell which workspace should reconnect LinkedIn. Reopen the connection from this screen so the active workspace is passed through correctly.</Banner> : null}
-      {error === 'linkedin-missing-oauth' ? <Banner kind="error">LinkedIn returned without the expected OAuth details. Start the connection again from this workspace so Repurly can finish setup safely.</Banner> : null}
-      {error === 'linkedin-connect-failed' ? <Banner kind="error">LinkedIn authentication completed, but Repurly could not finish syncing the workspace targets. Retry the connection from this screen.</Banner> : null}
+      {error === 'missing-workspace' ? <Banner kind="error">Janeomi could not tell which workspace should reconnect LinkedIn. Reopen the connection from this screen so the active workspace is passed through correctly.</Banner> : null}
+      {error === 'linkedin-missing-oauth' ? <Banner kind="error">LinkedIn returned without the expected OAuth details. Start the connection again from this workspace so Janeomi can finish setup safely.</Banner> : null}
+      {error === 'linkedin-connect-failed' ? <Banner kind="error">LinkedIn authentication completed, but Janeomi could not finish syncing the workspace targets. Retry the connection from this screen.</Banner> : null}
       {linkedInState === 'disconnected' ? <Banner kind="success">LinkedIn was disconnected for this workspace. Reconnect when you are ready to re-test recovery and target sync.</Banner> : null}
-      {error === 'invalid-target' ? <Banner kind="error">Repurly could not confirm that LinkedIn target for this workspace. Pick a visible target below and try again.</Banner> : null}
+      {error === 'invalid-target' ? <Banner kind="error">Janeomi could not confirm that LinkedIn target for this workspace. Pick a visible target below and try again.</Banner> : null}
       {warning === 'linkedin-company-pages-missing-scopes' ? <Banner kind="error">LinkedIn connected the member profile, but company pages could not be synced because the granted scopes do not include organization access. Update the app scopes to include company-page permissions, then reconnect.</Banner> : null}
       {warning === 'linkedin-company-pages-forbidden' ? <Banner kind="error">LinkedIn connected the member profile, but company pages were denied during organization lookup. Confirm this LinkedIn app has approved organization permissions and that the signed-in member is an admin of the company page.</Banner> : null}
       {warning === 'linkedin-company-pages-unauthorized' ? <Banner kind="error">LinkedIn connected the member profile, but organization lookup was not authorised. Reconnect LinkedIn and accept the full company-page permission set for the correct workspace.</Banner> : null}
-      {warning === 'linkedin-company-pages-unavailable' || warning === 'linkedin-company-pages-sync-failed' ? <Banner kind="error">LinkedIn connected the member profile, but Repurly could not sync company pages for this workspace. Reconnect after confirming the LinkedIn app has company-page access and the signed-in account administers the page.</Banner> : null}
+      {warning === 'linkedin-company-pages-unavailable' || warning === 'linkedin-company-pages-sync-failed' ? <Banner kind="error">LinkedIn connected the member profile, but Janeomi could not sync company pages for this workspace. Reconnect after confirming the LinkedIn app has company-page access and the signed-in account administers the page.</Banner> : null}
 
       {showLinkedInOnboarding ? (
         <Card id="linkedin-onboarding" className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
@@ -76,7 +76,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
                 <h2 className="text-2xl font-semibold">Finish the post-connect setup in Channels</h2>
                 <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-medium text-emerald-800">Polish+AI build active</div>
                 <p className="text-sm text-slate-600">
-                  Keep the flow workspace-aware: LinkedIn will not show a company-page picker during sign-in, so Repurly discovers any admin-managed company pages after connect and lets you set the default target here.
+                  Keep the flow workspace-aware: LinkedIn will not show a company-page picker during sign-in, so Janeomi discovers any admin-managed company pages after connect and lets you set the default target here.
                 </p>
               </div>
               <div className="grid min-w-[220px] gap-3 sm:grid-cols-2 lg:grid-cols-1">
@@ -95,7 +95,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
             <div className="grid gap-3 md:grid-cols-3">
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">1. Review discovered destinations</div>
-                <div className="mt-1 text-slate-600">LinkedIn sign-in only handles consent. Check that Repurly discovered the correct personal profile and any company pages you administer.</div>
+                <div className="mt-1 text-slate-600">LinkedIn sign-in only handles consent. Check that Janeomi discovered the correct personal profile and any company pages you administer.</div>
               </div>
               <div className="rounded-2xl border border-emerald-200 bg-white p-4 text-sm">
                 <div className="font-medium text-slate-950">2. Confirm the default target</div>
@@ -153,7 +153,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-6 text-sm text-slate-600">
-                LinkedIn connected, but no publishable destinations were synced yet. LinkedIn does not offer a company-page picker during OAuth, so Repurly has to discover company pages after connect. Reconnect after confirming the app has approved company-page permissions and the signed-in member administers the page.
+                LinkedIn connected, but no publishable destinations were synced yet. LinkedIn does not offer a company-page picker during OAuth, so Janeomi has to discover company pages after connect. Reconnect after confirming the app has approved company-page permissions and the signed-in member administers the page.
               </div>
             )}
           </CardContent>
@@ -255,7 +255,7 @@ export default async function ChannelsPage({ searchParams }: { searchParams?: Se
         <CardContent className="grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
           <div className="rounded-2xl border border-border p-4">Brands live inside the same workspace, so drafting and reporting can stay in one shared operating view.</div>
           <div className="rounded-2xl border border-border p-4">Connected channels are workspace-level today. Pick the correct LinkedIn destination per post, and confirm the workspace default carefully before switching brands.</div>
-          <div className="rounded-2xl border border-border p-4">Repurly is safest when one workspace maps to one LinkedIn permission boundary. If brand two needs a different LinkedIn login, create a separate workspace rather than reconnecting over the top of brand one.</div>
+          <div className="rounded-2xl border border-border p-4">Janeomi is safest when one workspace maps to one LinkedIn permission boundary. If brand two needs a different LinkedIn login, create a separate workspace rather than reconnecting over the top of brand one.</div>
         </CardContent>
       </Card>
 

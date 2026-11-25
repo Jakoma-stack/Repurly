@@ -1,5 +1,15 @@
 import { z } from "zod";
 
+// Empty storage configuration is only permitted in the isolated, non-publishing
+// staging pilot. Upload endpoints are disabled there; normal deployments must
+// continue requiring real S3 configuration.
+const privatePilotStorageDisabled =
+  process.env.REPURLY_PRIVATE_PILOT_MODE === 'true' &&
+  process.env.RAILWAY_ENVIRONMENT_NAME === 'staging';
+const storageField = privatePilotStorageDisabled
+  ? z.string().default('')
+  : z.string().min(1);
+
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url(),
@@ -21,10 +31,10 @@ const envSchema = z.object({
   INNGEST_SIGNING_KEY: z.string().optional(),
   PUBLISH_DUE_BATCH_SIZE: z.string().optional(),
   PUBLISH_DISPATCH_THROTTLE_MS: z.string().optional(),
-  S3_REGION: z.string().min(1),
-  S3_BUCKET: z.string().min(1),
-  S3_ACCESS_KEY_ID: z.string().min(1),
-  S3_SECRET_ACCESS_KEY: z.string().min(1),
+  S3_REGION: storageField,
+  S3_BUCKET: storageField,
+  S3_ACCESS_KEY_ID: storageField,
+  S3_SECRET_ACCESS_KEY: storageField,
   S3_ENDPOINT: z.string().optional(),
   S3_PUBLIC_BASE_URL: z.string().optional(),
   LINKEDIN_CLIENT_ID: z.string().min(1),

@@ -43,7 +43,7 @@ See `pricing_overview.md` and `REPURLY_MARKETABLE_BETA_HANDOFF.md`.
 ## Local/staging setup
 
 ```bash
-npm install
+npm ci
 npm run db:migrate
 npm run seed
 npm run typecheck
@@ -55,15 +55,16 @@ For internal Jakoma testing:
 
 ```bash
 ENABLE_INTERNAL_BETA_ACCESS=true
+INTERNAL_BETA_WORKSPACE_IDS=<your-verified-workspace-uuid>
 DAILY_AGENT_BETA_MONTHLY_LIMIT=40
-DAILY_AGENT_ENFORCE_LIMIT=false
+DAILY_AGENT_ENFORCE_LIMIT=true
 OPENAI_API_KEY=...
 OPENAI_DAILY_AGENT_MODEL=gpt-4.1-mini
 ```
 
 ## Immediate validation path
 
-1. Seed Jakoma.
+1. Configure a test workspace and its explicit beta allowlist (never bypass all tenants).
 2. Open Daily Agent.
 3. Paste real LinkedIn notifications, comments, analytics and names.
 4. Confirm output prioritises AI governance/data assurance and does not pitch from weak signals.
@@ -74,7 +75,7 @@ OPENAI_DAILY_AGENT_MODEL=gpt-4.1-mini
 
 ## LinkedIn analytics export upload
 
-The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv`, `.xlsx` or `.xls` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
+The Daily Agent now supports optional LinkedIn analytics export uploads alongside pasted LinkedIn activity. Users can upload `.csv` exports from LinkedIn analytics. Repurly parses the file server-side, detects common metrics and audience/content signals, stores the parsed summary on the Daily Agent session, and feeds it into the briefing.
 
 This improves analytics review without scraping LinkedIn or automating account actions. Screenshots/OCR, browser extension capture and official LinkedIn analytics API sync remain later-stage features.
 

@@ -23,7 +23,7 @@ export default async function ProofScorePage() {
     <div className="space-y-6">
       <section className="rounded-[2rem] bg-gradient-to-br from-slate-950 via-indigo-950 to-emerald-950 p-6 text-white">
         <div className="eyebrow !text-white/50">Beta proof score</div>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Is Repurly behaving like a 10/10 opportunity desk?</h1>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight">Is Janeomi behaving like a 10/10 opportunity desk?</h1>
         <p className="mt-3 max-w-3xl text-sm leading-6 text-white/72">
           This is the practical readiness view. It measures whether users are forming the habit, acting on recommendations, logging relationship memory, configuring opportunity rules and avoiding weak DMs.
         </p>
@@ -91,7 +91,7 @@ export default async function ProofScorePage() {
             'Each user copies/sends/logs 5+ recommended actions per week.',
             'Bad DM recommendations stay at zero.',
             'Every user completes Opportunity Settings before judging output quality.',
-            'At least one user says they would miss Repurly if it disappeared.',
+            'At least one user says they would miss Janeomi if it disappeared.',
             'Weekly Plan creates at least 3 useful next actions from real data.',
             'Analytics import changes at least one content or follow-up decision.',
           ].map((item) => <div key={item} className="rounded-2xl bg-slate-50 p-4">{item}</div>)}

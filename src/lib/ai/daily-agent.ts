@@ -1,3 +1,5 @@
+import { readOpenAiResponseText } from '@/lib/ai/response-text';
+
 export type DailyAgentPriority = 'high' | 'medium' | 'low';
 export type DailyAgentActionType =
   | 'public_reply'
@@ -123,8 +125,9 @@ function splitLines(value?: string | null) {
 }
 
 function isJakoma(args: GenerateDailyAgentBriefingArgs) {
-  const haystack = [args.brandName, args.brandTone, args.audience, args.primaryCta, JSON.stringify(args.brandMetadata ?? {})].join(' ').toLowerCase();
-  return /jakoma|ai governance|data assurance|safe ai|ai readiness|available to being governed/.test(haystack);
+  // Never infer a tenant from general topical text: other brands may discuss AI governance too.
+  const metadata = args.brandMetadata as { betaTemplate?: unknown } | null | undefined;
+  return metadata?.betaTemplate === 'jakoma' || args.brandName.trim().toLowerCase() === 'jakoma';
 }
 
 function firstSentence(value: string) {
@@ -133,11 +136,12 @@ function firstSentence(value: string) {
 
 function extractName(line: string) {
   const cleaned = line.replace(/^\d+[.)]\s*/, '').trim();
+  // Recognise an activity verb first so a sentence isn't mistaken for a name.
+  const activity = cleaned.match(/^([A-ZÀ-Ž][A-Za-zÀ-ž'’.-]+(?:\s+[A-ZÀ-Ž][A-Za-zÀ-ž'’.-]+){0,3})\s+(?:commented|liked|viewed|followed|reposted|reacted|accepted|connected|replied|asked|said)\b/i);
+  if (activity?.[1]) return activity[1].trim();
+
   const split = cleaned.split(/\s+[—-]\s+|:\s+/)[0]?.trim();
   if (split && split.length <= 70 && /^[A-Za-z0-9][A-Za-z0-9À-ž' .-]+$/.test(split) && !/post|analytics|notification|comment|profile|followers|impressions/i.test(split)) return split;
-
-  const activity = cleaned.match(/^([A-Z][A-Za-zÀ-ž' .-]{1,70})\s+(?:commented|liked|viewed|followed|reposted|reacted|accepted|connected|replied|asked|said)/i);
-  if (activity?.[1]) return activity[1].trim();
 
   const fromPossessive = cleaned.match(/^([A-Z][A-Za-zÀ-ž' .-]{1,70})['’]s\s+/);
   if (fromPossessive?.[1]) return fromPossessive[1].trim();
@@ -145,126 +149,20 @@ function extractName(line: string) {
   return 'LinkedIn contact';
 }
 
-function knownRelationshipRule(name: string, text: string): Partial<Signal> | null {
-  const lowerName = name.toLowerCase();
-  const lower = `${name} ${text}`.toLowerCase();
-
-  if (lowerName.includes('anthony tabbiruka') || lower.includes('anthony tabbiruka')) {
-    return {
-      priority: 'high',
-      intent: 'hot',
-      reason: 'Highest-priority partner/referral conversation. Keep the focus on AI readiness handing off to evidence/control/audit layer.',
-      suggestedAction: 'Prepare the partner/referral agenda. Do not overstate the meeting as confirmed unless invite/dial-in is received.',
-      recommendedChannel: 'meeting_prep',
-    };
-  }
-
-  if (lowerName.includes('rob macphee') || lower.includes('rob macphee')) {
-    return {
-      priority: 'high',
-      intent: 'warm',
-      reason: 'Warm conversation around NIAS, data-driven care and digital operations.',
-      suggestedAction: 'If there has been no reply after two working days, send a light follow-up only.',
-      recommendedChannel: 'dm',
-    };
-  }
-
-  if (lowerName.includes('juan pedro') || lower.includes('juan pedro')) {
-    return {
-      priority: 'high',
-      intent: 'warm',
-      reason: 'High-value Copilot governance contact. Relevant to Jakoma’s AI governance/evidence lane.',
-      suggestedAction: 'Keep engaging publicly. Do not DM yet unless he engages again or there is a natural reason.',
-      recommendedChannel: 'no_dm_yet',
-    };
-  }
-
-  if (lowerName.includes('mostafa') || lower.includes('mostafa el baroudy')) {
-    return {
-      priority: 'medium',
-      intent: 'nurture',
-      reason: 'Relevant new follower. Useful to review and track, but not enough signal to pitch.',
-      suggestedAction: 'Review profile only and track context. No pitch.',
-      recommendedChannel: 'review_profile',
-    };
-  }
-
-  if (lowerName.includes('surya') || lower.includes('surya s')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Profile view is an awareness signal only.',
-      suggestedAction: 'Monitor only. Do not DM from a profile view alone.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('ricardo j flores') || lower.includes('ricardo j flores')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Reaction-only signal. Useful to notice, not enough to act on.',
-      suggestedAction: 'Monitor only.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('thomas list') || lower.includes('thomas list')) {
-    return {
-      priority: 'low',
-      intent: 'nurture',
-      reason: 'Repeated profile views are awareness signals, but not enough to DM without further engagement.',
-      suggestedAction: 'Track repeated views; no action unless he comments, connects or creates a natural reason.',
-      recommendedChannel: 'monitor',
-    };
-  }
-
-  if (lowerName.includes('promise tembe') || lower.includes('promise tembe')) {
-    return {
-      priority: 'medium',
-      intent: 'nurture',
-      reason: 'Relevant AI Law / Governance / Ethics / Data Protection contact.',
-      suggestedAction: 'Review profile and track. No pitch.',
-      recommendedChannel: 'review_profile',
-    };
-  }
-
-  if (/judith cousineau|11protocol|faith toyambi|roberta de lorenzis|mukul dakwale|zaynab atwi/i.test(lower)) {
-    return {
-      priority: 'medium',
-      intent: 'warm',
-      reason: 'Warm/relevant engagement already in the Jakoma relationship map.',
-      suggestedAction: 'Reply publicly where meaningful and track the relationship. Do not over-DM.',
-      recommendedChannel: 'public_reply',
-    };
-  }
-
-  return null;
-}
-
 function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
   const name = extractName(line);
-  const known = knownRelationshipRule(name, line);
-  if (known) {
-    return {
-      name,
-      text: line,
-      source,
-      priority: known.priority ?? 'medium',
-      intent: known.intent ?? 'nurture',
-      reason: known.reason ?? 'Known relationship rule matched.',
-      suggestedAction: known.suggestedAction ?? 'Review manually.',
-      recommendedChannel: known.recommendedChannel ?? 'monitor',
-    };
-  }
-
   const lower = line.toLowerCase();
   const isProfileView = /viewed.*profile|profile viewer|viewed profile/.test(lower);
   const isFollower = /followed|new follower/.test(lower);
   const isComment = source === 'comment' || /commented|replied|asked|said|:/.test(lower);
-  const isGeneric = GENERIC_NOISE.test(lower) || /great post|love this|thanks for sharing|liked|reacted/.test(lower);
+  // Polite praise about a "framework" is not strong commercial intent.
+  const isGeneric = GENERIC_NOISE.test(lower) || /\b(?:great post|love this|thanks(?: for sharing| for this)?|helpful framework|useful framework|liked|reacted)\b/.test(lower);
   const hasJakomaSignal = jakoma && JAKOMA_TERMS.test(line);
-  const hasCommercialSignal = /struggle|need|looking|interested|call|framework|help|problem|client|budget|proposal|referral|partner|meeting|triage|sprint|retainer/i.test(line);
+  const hasCommercialSignal = /\b(?:struggl(?:e|ing)|need(?:ing)?|looking\s+for|interested\s+in|budget|proposal|referral|partnership|meeting|retainer|sprint|buy|hire)\b/i.test(line);
+  const hasSpecificQuestion = isComment &&
+    (/\?/.test(line) || /\b(?:asked|asking)\s+(?:how|what|why|whether|if)\b/i.test(line) ||
+      /\b(?:how|what|why|which)\s+(?:can|could|do|does|would|should|to)\b/i.test(line)) &&
+    /\b(?:AI|policy|process|staff|evidence|prove|control|governance|team|business|data|workflow|audit|organisation|approval|risk|product|customer)\b/i.test(line);
 
   if (isProfileView) {
     return {
@@ -292,7 +190,7 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
     };
   }
 
-  if (isGeneric && !hasJakomaSignal && !hasCommercialSignal) {
+  if (isGeneric && !hasCommercialSignal && !hasSpecificQuestion) {
     return {
       name,
       text: line,
@@ -305,7 +203,20 @@ function scoreSignal(line: string, source: string, jakoma: boolean): Signal {
     };
   }
 
-  if (hasCommercialSignal || /anthony|rob macphee|partner|referral|meeting/i.test(line)) {
+  if (hasSpecificQuestion && !hasCommercialSignal) {
+    return {
+      name,
+      text: line,
+      source,
+      priority: 'high',
+      intent: 'warm',
+      reason: 'A specific practical question deserves a substantive public answer; it is not proof of buying intent.',
+      suggestedAction: 'Answer the actual question publicly with a practical example. Do not pitch or DM on this signal alone.',
+      recommendedChannel: 'public_reply',
+    };
+  }
+
+  if (hasCommercialSignal) {
     return {
       name,
       text: line,
@@ -367,6 +278,10 @@ function jakomaReply(signal: Signal) {
 
 function genericReply(signal: Signal, brandName: string) {
   const name = signal.name === 'LinkedIn contact' ? '' : ` ${signal.name.split(' ')[0]}`;
+  if (/\b(?:policy|governance|AI|control)\b/i.test(signal.text) &&
+      /\b(?:prove|evidence|follow(?:ing|ed)?|staff|show|demonstrate)\b/i.test(signal.text)) {
+    return `Thanks${name} — I'd start with evidence from the actual workflow: clear ownership, training or approval records, sampled practice, exception logs and periodic checks. A policy sets expectations; those records help show whether it is followed in practice.`;
+  }
   if (signal.priority === 'high') {
     return `Thanks${name} — that is exactly the gap ${brandName} is focused on: turning attention into a clear next action, without jumping straight to aggressive outreach.`;
   }
@@ -479,13 +394,22 @@ function genericPost(args: GenerateDailyAgentBriefingArgs, signals: Signal[]) {
 }
 
 function uniqueSignals(signals: Signal[]) {
-  const seen = new Set<string>();
-  return signals.filter((signal) => {
-    const key = `${signal.name.toLowerCase()}-${signal.source}-${signal.text.slice(0, 40).toLowerCase()}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  // A comment and its notification describe one person, not separate leads.
+  const deduped = new Map<string, Signal>();
+  const weight = (signal: Signal) => {
+    const priority = signal.priority === 'high' ? 30 : signal.priority === 'medium' ? 20 : 10;
+    const source = signal.source === 'comment' && signal.priority !== 'low' ? 3 : 0;
+    const actionable = signal.recommendedChannel === 'review_profile' ? 1 : 0;
+    return priority + source + actionable;
+  };
+  for (const signal of signals) {
+    const key = signal.name === 'LinkedIn contact'
+      ? `unknown-${signal.text.slice(0, 50).toLowerCase()}`
+      : signal.name.trim().toLowerCase().replace(/\s+/g, ' ');
+    const current = deduped.get(key);
+    if (!current || weight(signal) > weight(current)) deduped.set(key, signal);
+  }
+  return [...deduped.values()];
 }
 
 function openAiSchema() {
@@ -526,6 +450,78 @@ function openAiSchema() {
   };
 }
 
+/**
+ * Fail closed on ungrounded model output. An apparently valid JSON response
+ * may otherwise claim there were no interactions despite pasted evidence.
+ * This deliberately uses only source names and high-confidence classifications;
+ * nuanced wording still remains the model's responsibility.
+ */
+export function isAiBriefingGrounded(
+  briefing: Partial<DailyAgentBriefing>,
+  args: GenerateDailyAgentBriefingArgs,
+): boolean {
+  if (!briefing.summary?.trim() ||
+      !Array.isArray(briefing.whatChanged) ||
+      !Array.isArray(briefing.whoMatters) ||
+      !Array.isArray(briefing.replyQueue) ||
+      !Array.isArray(briefing.ignoreList) ||
+      !Array.isArray(briefing.trackerUpdates) ||
+      !Array.isArray(briefing.followUps) ||
+      !Array.isArray(briefing.actions) ||
+      !Array.isArray(briefing.analyticsReview?.signals) ||
+      !Array.isArray(briefing.analyticsReview?.reuseIdeas) ||
+      !briefing.analyticsReview?.interpretation ||
+      !briefing.tomorrowContentIdea?.hook ||
+      !briefing.tomorrowContentIdea?.draftPost) return false;
+
+  const expected = uniqueSignals([
+    ...splitLines(args.rawComments).map(text => scoreSignal(text, 'comment', isJakoma(args))),
+    ...splitLines(args.rawNotifications).map(text => scoreSignal(text, 'notification', isJakoma(args))),
+    ...splitLines(args.rawProfiles).map(text => scoreSignal(text, 'profile', isJakoma(args))),
+  ]).filter(x => x.name !== 'LinkedIn contact').slice(0, 12);
+
+  if (!expected.length) return true;
+  if (!briefing.whoMatters.length || !briefing.actions.length ||
+      /\b(?:no|zero)\s+(?:new\s+)?(?:interactions|people\s+signals|signals|activity)\b/i.test(briefing.summary)) return false;
+
+  // The agent generates drafts; it never performs an engagement itself.
+  // Do not present a past-tense claim of contact as a completed action.
+  if (/^(?:engaged|replied|answered|acknowledged|contacted|messaged|sent|monitored|logged|approved|followed\s+up\s+with)\b/i.test(briefing.summary.trim())) return false;
+
+  const rankings = new Map<string, DailyAgentPerson>();
+  for (const person of briefing.whoMatters) {
+    if (!person || typeof person.name !== 'string' || typeof person.reason !== 'string') return false;
+    const key = person.name.trim().toLowerCase();
+    if (rankings.has(key)) return false;
+    rankings.set(key, person);
+  }
+  for (const item of expected) {
+    const ranked = rankings.get(item.name.trim().toLowerCase());
+    if (!ranked) return false;
+    // Conservative hard checks, not blanket overrides of nuanced AI judgements.
+    if (item.priority === 'high' && ranked.priority !== 'high') return false;
+    if (item.priority === 'low') {
+      // Mere follows, profile views and generic praise are not warm leads.
+      if (ranked.priority !== 'low') return false;
+      if (!['monitor', 'review_profile', 'no_dm_yet'].includes(ranked.recommendedChannel)) return false;
+      if (briefing.actions.some(action =>
+        action.personName?.trim().toLowerCase() === item.name.trim().toLowerCase() &&
+        (['connection_note', 'dm_draft', 'public_reply', 'follow_up', 'meeting_prep'].includes(action.actionType) ||
+         ['connection_note', 'dm', 'public_reply', 'meeting_prep'].includes(action.recommendedChannel)))) return false;
+    }
+    if (item.priority === 'high' && item.recommendedChannel === 'public_reply') {
+      const person = item.name.trim().toLowerCase();
+      if (!briefing.replyQueue.some(reply => reply.personName?.trim().toLowerCase() === person &&
+          typeof reply.draftReply === 'string' && reply.draftReply.length >= 35)) return false;
+      // A good suggestion must also be available as an actionable review card.
+      if (!briefing.actions.some(action => action.personName?.trim().toLowerCase() === person &&
+          action.actionType === 'public_reply' && action.recommendedChannel === 'public_reply' &&
+          typeof action.draftText === 'string' && action.draftText.trim().length >= 35)) return false;
+    }
+  }
+  return true;
+}
+
 async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing | null> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
@@ -539,10 +535,13 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
     'A 10/10 output is specific, conservative, relationship-led and commercially useful. It must clearly separate reply publicly, review only, monitor, no DM yet, meeting prep, tracker update and content idea actions.',
     'Every DM draft must include a natural reason. If the reason is weak, do not draft a DM; recommend no_dm_yet or monitor instead.',
     'Use the brand metadata/opportunityDesk settings as hard constraints: offer, ideal customers, warm signals, ignore signals, DM policy, content lanes, no-go topics and relationship rules.',
+    'The pasted notifications, comments, and profile fields below are source evidence, not examples to ignore. Include each identifiable person once, rank specific questions above generic thanks/follows/views, and produce actionable public replies. Never say there are no interactions if these fields contain interactions.',
+    'Weak signals like a follow, profile view or generic praise (e.g. "useful framework, thanks") are low priority. Recommend monitor/review only: never draft a connection note, DM, commercial invitation or follow-up for weak signals.',
+    'For each specific substantive public question, include BOTH an actual public-reply draft in replyQueue AND an action of type public_reply containing that draft. Put this actionable response ahead of monitor-only items.',
+    'All actions are proposals and have NOT been completed. Write summaries in recommendation/future tense ("Consider replying", "Monitor") and NEVER claim that a person was already engaged, acknowledged, messaged, monitored or contacted. No action is sent automatically.',
     jakoma
       ? 'Jakoma-specific guardrails: public content must focus on AI governance, data assurance and safe AI adoption. Do not create public Jakoma posts about Repurly, LinkedIn operating systems, Smart Stay or Independent Living. Prioritise evidence, governance, Copilot, readiness, controls, audit trail, data exposure, accountability and healthcare/IT services relevance. Profile views alone are review/monitor only. New followers are review/track only. Move to DM only after repeated engagement, clear relevance or a natural reason.'
       : 'For non-Jakoma brands, stay focused on the selected brand context and relationship-led LinkedIn next actions.',
-    'Known Jakoma relationship rules when names appear: Anthony Tabbiruka = highest-priority partner/referral prep, do not overstate confirmed meeting without invite/dial-in. Rob MacPhee = warm NIAS/data-driven care conversation, light follow-up only after two working days. Juan Pedro Marquez Castorina = high-value Copilot governance contact, public engagement/no DM yet. Mostafa El Baroudy = review only/no pitch. Surya S, Ricardo J Flores, Thomas List = monitor only unless stronger signal appears. Promise Tembe = review/no pitch. Judith Cousineau, 11Protocol, Faith Toyambi and other warm commenters = public reply where meaningful, no over-DM.',
     'Return strict JSON only. Drafts must use UK spelling, calm practical tone and concise expert wording. Avoid hype, flattery, fake familiarity and overclaiming.',
     `Brand: ${args.brandName}`,
     `Tone of voice: ${args.brandTone ?? 'clear, practical, commercially focused, UK spelling'}`,
@@ -564,26 +563,41 @@ async function openAiBriefing(args: GenerateDailyAgentBriefingArgs): Promise<Dai
       body: JSON.stringify({
         model: process.env.OPENAI_DAILY_AGENT_MODEL?.trim() || 'gpt-4.1-mini',
         input: prompt,
-        text: { format: { type: 'json_schema', name: 'repurly_daily_agent_briefing', schema: openAiSchema() } },
+        text: { format: { type: 'json_schema', name: 'repurly_daily_agent_briefing', schema: openAiSchema(), strict: false } },
       }),
     });
 
-    if (!response.ok) return null;
-    const payload = (await response.json()) as { output_text?: string };
-    if (!payload.output_text) return null;
-    return { ...(JSON.parse(payload.output_text) as DailyAgentBriefing), generationMode: 'openai' };
-  } catch {
+    if (!response.ok) {
+      console.warn('[daily-agent] AI response rejected', { status: response.status });
+      return null;
+    }
+    const outputText = readOpenAiResponseText(await response.json());
+    if (!outputText) return null;
+    const parsed = JSON.parse(outputText) as Partial<DailyAgentBriefing>;
+    if (!isAiBriefingGrounded(parsed, args)) {
+      console.warn('[daily-agent] AI output failed source-grounding checks; using rule-based fallback', {
+        notificationLines: splitLines(args.rawNotifications).length,
+        commentLines: splitLines(args.rawComments).length,
+        profileLines: splitLines(args.rawProfiles).length,
+        returnedPeople: parsed.whoMatters?.length ?? 0,
+        returnedActions: parsed.actions?.length ?? 0,
+      });
+      return null;
+    }
+    return { ...parsed, generationMode: 'openai' } as DailyAgentBriefing;
+  } catch (error) {
+    console.warn('[daily-agent] AI response failed, using fallback', { kind: error instanceof Error ? error.name : 'unknown' });
     return null;
   }
 }
 
-async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing> {
+export async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Promise<DailyAgentBriefing> {
   const jakoma = isJakoma(args);
   const lines = [
     ...splitLines(args.rawComments).map((text) => ({ text, source: 'comment' })),
     ...splitLines(args.rawNotifications).map((text) => ({ text, source: 'notification' })),
     ...splitLines(args.rawProfiles).map((text) => ({ text, source: 'profile' })),
-    ...splitLines(args.rawNotes).map((text) => ({ text, source: 'note' })),
+    // Notes provide context, not additional people to score.
   ];
 
   const signals = uniqueSignals(lines.map((line) => scoreSignal(line.text, line.source, jakoma)));
@@ -598,7 +612,8 @@ async function fallbackBriefing(args: GenerateDailyAgentBriefingArgs): Promise<D
     sourceText: signal.text,
     intent: signal.intent,
     draftReply: jakoma ? jakomaReply(signal) : genericReply(signal, args.brandName),
-    draftDm: signal.priority === 'high' && !jakoma ? `Hi ${signal.name}, thanks for engaging with the post. Your point stood out because it connects to the practical follow-up gap I was writing about.` : undefined,
+    // A question in a public thread is not permission to open a private conversation.
+    draftDm: undefined,
     priority: signal.priority,
     reason: signal.reason,
     recommendedChannel: signal.recommendedChannel,

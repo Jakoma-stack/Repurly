@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { AppShell } from '@/components/layout/app-shell';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { getWorkspaceBillingAccessState } from '@/lib/billing/workspace-billing';
+import { canImportPilotPortfolio } from '@/server/actions/portfolio';
 
 export default async function ProductLayout({ children }: { children: React.ReactNode }) {
   const session = await requireWorkspaceSession();
@@ -15,7 +16,7 @@ export default async function ProductLayout({ children }: { children: React.Reac
             <h1 className="text-2xl font-semibold tracking-tight">Workspace setup needed</h1>
             <p className="mt-3 text-sm text-muted-foreground">
               You are signed in, but this Clerk user does not have a workspace membership in the database yet.
-              For local development, Repurly is showing this setup screen instead of bouncing you back to the homepage.
+              For local development, Janeomi is showing this setup screen instead of bouncing you back to the homepage.
             </p>
 
             <div className="mt-6 space-y-3 text-sm">
@@ -44,8 +45,17 @@ export default async function ProductLayout({ children }: { children: React.Reac
     });
   }
 
+  let communityEligible = false;
+  if (billingAccess?.hasPaidAccess && ['owner', 'admin'].includes(session.role)) {
+    try {
+      communityEligible = await canImportPilotPortfolio();
+    } catch {
+      // Fail closed without breaking navigation for the rest of the application.
+    }
+  }
+
   return (
-    <AppShell session={session} billingAccess={billingAccess}>
+    <AppShell session={session} billingAccess={billingAccess} communityEligible={communityEligible}>
       {children}
     </AppShell>
   );

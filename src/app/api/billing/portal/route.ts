@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { isStripeConfigured, stripe } from '@/lib/billing/stripe';
 import { getWorkspaceStripeCustomerId } from '@/lib/billing/workspace-billing';
+import { isPrivatePilotMode } from '@/lib/billing/private-pilot';
 
 export const runtime = 'nodejs';
 
 const BILLING_ROLES = new Set(['owner', 'admin']);
 
 export async function GET(request: NextRequest) {
+  if (isPrivatePilotMode()) {
+    return NextResponse.redirect(new URL('/app/billing?billing=portal-unavailable', request.url));
+  }
+
   const workspaceSession = await requireWorkspaceSession();
 
   if (!BILLING_ROLES.has(workspaceSession.role)) {

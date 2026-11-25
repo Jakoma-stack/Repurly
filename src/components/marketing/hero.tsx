@@ -14,10 +14,10 @@ export function Hero() {
             Know who to reply to, who to follow up, what to ignore and what to post next.
           </h1>
           <p className="mt-5 max-w-2xl text-lg text-white/75">
-            Repurly turns messy LinkedIn notifications, comments, analytics and profile signals into a daily action plan for consultants, founders and expert-led businesses.
+            Janeomi turns messy LinkedIn notifications, comments, analytics and profile signals into a daily action plan for consultants, founders and expert-led businesses.
           </p>
           <p className="mt-4 max-w-2xl rounded-2xl border border-white/10 bg-white/8 px-4 py-3 text-sm text-white/82">
-            Repurly drafts. You approve. You post or send. Repurly logs and learns. No risky auto-DMs, comments or connection requests.
+            Janeomi drafts. You approve. You post or send. Janeomi logs and learns. No risky auto-DMs, comments or connection requests.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="#pricing" className="inline-flex items-center rounded-2xl bg-white px-5 py-3 font-medium text-slate-950">
@@ -38,7 +38,7 @@ export function Hero() {
             <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
               <div className="text-sm text-white/60">Opportunity desk</div>
               <div className="mt-2 text-2xl font-semibold">Replies, relationships, analytics and next posts</div>
-              <div className="mt-3 text-sm text-white/70">Paste what happened. Repurly ranks the signals, drafts the actions and keeps the tracker updated after you approve.</div>
+              <div className="mt-3 text-sm text-white/70">Paste what happened. Janeomi ranks the signals, drafts the actions and keeps the tracker updated after you approve.</div>
             </div>
           </div>
         </div>

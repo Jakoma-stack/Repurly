@@ -7,8 +7,10 @@ import { and, count, eq, gte } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
+import { isInternalBetaAccessEnabled, requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { generateDailyAgentBriefing, type DailyAgentAction, type DailyAgentBriefing } from '@/lib/ai/daily-agent';
 import { parseLinkedInAnalyticsImport } from '@/lib/analytics/linkedin-import';
+import { classifyRelationshipInterest } from '@/lib/relationships/intent';
 import { brands, dailyAgentActions, dailyAgentSessions, leadPipeline } from '../../../drizzle/schema';
 
 function requiredString(formData: FormData, key: string) {
@@ -40,8 +42,8 @@ function monthStart() {
 }
 
 async function enforceDailyAgentUsageLimit(workspaceId: string) {
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') return;
-  if (process.env.DAILY_AGENT_ENFORCE_LIMIT !== 'true') return;
+  if (isInternalBetaAccessEnabled(workspaceId)) return;
+  if (process.env.DAILY_AGENT_ENFORCE_LIMIT === 'false') return;
   const limit = betaMonthlyLimit();
   const rows = await db
     .select({ value: count() })
@@ -100,21 +102,29 @@ export async function createDailyAgentSession(formData: FormData) {
   const rawNotifications = nullableString(formData, 'rawNotifications');
   const rawComments = nullableString(formData, 'rawComments');
   const manualRawAnalytics = nullableString(formData, 'rawAnalytics');
-  const analyticsFile = formData.get('analyticsExport');
-  const analyticsImport = analyticsFile instanceof File ? await parseLinkedInAnalyticsImport(analyticsFile) : null;
-  const rawAnalytics = [manualRawAnalytics, analyticsImport?.textSummary].filter(Boolean).join('\n\n--- Imported LinkedIn analytics export ---\n\n') || null;
   const rawProfiles = nullableString(formData, 'rawProfiles');
   const rawNotes = nullableString(formData, 'rawNotes');
 
   if (!workspaceId) redirect('/app/daily-agent?error=invalid' as Route);
+  // Notes alone do not constitute LinkedIn activity; reject empty test runs
+  // rather than creating a plausible-looking invented briefing.
+  if (![rawNotifications, rawComments, manualRawAnalytics, rawProfiles].some(value => value?.trim()) &&
+      !(formData.get('analyticsExport') instanceof File &&
+        (formData.get('analyticsExport') as File).size > 0)) {
+    redirect('/app/daily-agent?error=add-signals' as Route);
+  }
   const access = await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
   await enforceDailyAgentUsageLimit(workspaceId);
+  const analyticsFile = formData.get('analyticsExport');
+  const analyticsImport = analyticsFile instanceof File ? await parseLinkedInAnalyticsImport(analyticsFile) : null;
+  const rawAnalytics = [manualRawAnalytics, analyticsImport?.textSummary].filter(Boolean).join('\n\n--- Imported LinkedIn analytics export ---\n\n') || null;
   const brand = await getBrandContext(workspaceId, brandId);
 
   if (brandId && !brand) redirect('/app/daily-agent?error=brand' as Route);
 
   const briefing = await generateDailyAgentBriefing({
-    brandName: brand?.name ?? 'Jakoma',
+    brandName: brand?.name ?? 'Your organisation',
     brandTone: brand?.defaultTone ?? 'clear, useful, commercially focused, UK spelling',
     audience: brand?.audience ?? 'consultants, founders and expert-led businesses',
     primaryCta: brand?.primaryCta ?? 'reply if this would be useful to map out',
@@ -125,6 +135,17 @@ export async function createDailyAgentSession(formData: FormData) {
     rawAnalytics,
     rawProfiles,
     rawNotes,
+  });
+
+  // Diagnostics intentionally contain counts only, never private contact text.
+  console.info('[daily-agent] briefing input/output summary', {
+    notificationLines: rawNotifications?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
+    commentLines: rawComments?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
+    analyticsProvided: Boolean(rawAnalytics?.trim()),
+    profileLines: rawProfiles?.split(/\r?\n/).filter(x => x.trim()).length ?? 0,
+    mode: briefing.generationMode,
+    people: briefing.whoMatters.length,
+    actions: briefing.actions.length,
   });
 
   const [session] = await db
@@ -161,6 +182,7 @@ export async function updateDailyAgentAction(formData: FormData) {
 
   if (!workspaceId || !actionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   const rows = await db
     .select({ id: dailyAgentActions.id, sessionId: dailyAgentActions.sessionId })
@@ -186,6 +208,7 @@ export async function logDailyAgentActionToRelationship(formData: FormData) {
 
   if (!workspaceId || !actionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   const rows = await db
     .select()
@@ -203,8 +226,9 @@ export async function logDailyAgentActionToRelationship(formData: FormData) {
     .where(and(eq(leadPipeline.workspaceId, workspaceId), eq(leadPipeline.leadName, leadName)))
     .limit(1);
 
-  const score = action.priority === 'high' ? 85 : action.priority === 'medium' ? 55 : 25;
-  const relationshipStage = action.recommendedChannel === 'meeting_prep' ? 'partner_referral' : action.recommendedChannel === 'review_profile' ? 'review_only' : action.recommendedChannel === 'monitor' || action.recommendedChannel === 'no_dm_yet' ? 'monitor' : action.priority === 'high' ? 'potential_opportunity' : 'warm_relationship';
+  // Reply priority is not purchase intent. Do not treat a high-priority
+  // public question as an automatically qualified sales opportunity.
+  const { score, relationshipStage } = classifyRelationshipInterest(action);
   const note = [
     `Daily Agent ${action.actionType}: ${action.reason ?? 'Recommended action'}`,
     action.draftText ? `Draft/action: ${action.draftText}` : null,
@@ -263,6 +287,7 @@ export async function updateDailyAgentFeedback(formData: FormData) {
 
   if (!workspaceId || !sessionId) redirect('/app/daily-agent?error=invalid' as Route);
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
+  await requirePaidWorkspaceAccess(workspaceId);
 
   await db
     .update(dailyAgentSessions)

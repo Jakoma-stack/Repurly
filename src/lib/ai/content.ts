@@ -1,3 +1,5 @@
+import { readOpenAiResponseText } from '@/lib/ai/response-text';
+
 export type DraftAssetFormat = 'text' | 'link' | 'image' | 'multi_image' | 'video';
 export type RequestedAssetFormat = DraftAssetFormat | 'auto';
 
@@ -245,21 +247,6 @@ proofPoint: draft?.proofPoint,
 reasoning: draft?.reasoning,
 assetPlan: draft?.assetPlan ?? null,
   };
-}
-
-function readOutputText(payload: unknown) {
-  if (!payload || typeof payload !== 'object') return null;
-  const direct = (payload as { output_text?: unknown }).output_text;
-  if (typeof direct === 'string' && direct.trim()) return direct;
-  const output = (payload as { output?: Array<{ content?: Array<{ text?: string; type?: string }> }> }).output;
-  if (!Array.isArray(output)) return null;
-  const text = output
-    .flatMap((item) => Array.isArray(item.content) ? item.content : [])
-    .filter((item) => item?.type === 'output_text' || typeof item?.text === 'string')
-    .map((item) => item.text?.trim() ?? '')
-    .filter(Boolean)
-    .join('');
-  return text || null;
 }
 
 export function buildSuggestedSchedule(args: GenerateContentDraftsArgs): GeneratedScheduleSlot[] {
@@ -626,7 +613,7 @@ async function generateWithOpenAi(args: GenerateContentDraftsArgs): Promise<Cont
 
     if (!response.ok) return null;
     const payload = await response.json();
-    const outputText = readOutputText(payload);
+    const outputText = readOpenAiResponseText(payload);
     if (!outputText) return null;
     const parsed = JSON.parse(outputText) as { drafts?: Array<Partial<ContentDraft>> };
     if (!parsed.drafts?.length) return null;

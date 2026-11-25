@@ -1,9 +1,12 @@
 import { eq } from 'drizzle-orm';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { stripe } from '@/lib/billing/stripe';
 import { normalizePlanKey, type PlanInput, type PlanKey } from '@/lib/billing/plans';
 import { db } from '@/lib/db/client';
+import { assertWorkspaceAccess } from '@/lib/auth/workspace';
+import { isPrivatePilotEmailAllowed, isPrivatePilotMode, isPrivatePilotUserIdAllowed } from '@/lib/billing/private-pilot';
 import { workspaces } from '../../../drizzle/schema';
 
 export type WorkspaceBillingRecord = {
@@ -20,31 +23,31 @@ type WorkspaceBillingRow = Omit<WorkspaceBillingRecord, 'plan'> & {
   plan: PlanInput;
 };
 
-const PAID_STATUSES = new Set(['active', 'trialing', 'past_due']);
+import { hasPaidWorkspaceAccess } from '@/lib/billing/access-policy';
+export { hasPaidWorkspaceAccess } from '@/lib/billing/access-policy';
 
-function isInternalBetaAccessEnabled() {
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'true') {
-    return true;
-  }
-
-  if (process.env.ENABLE_INTERNAL_BETA_ACCESS === 'false') {
-    return false;
-  }
-
-  // Staging should always be usable for private beta testing, even when Stripe is not wired yet.
-  // Production domains still require billing unless ENABLE_INTERNAL_BETA_ACCESS=true is explicitly set.
-  const appUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''} ${process.env.APP_URL ?? ''}`;
-  return appUrl.includes('staging.repurly.org') || appUrl.includes('.onrender.com');
+export function isInternalBetaAccessEnabled(workspaceId: string) {
+  if (process.env.ENABLE_INTERNAL_BETA_ACCESS !== 'true') return false;
+  // Explicit workspace allowlist, not a domain heuristic. Empty means nobody bypasses billing.
+  return (process.env.INTERNAL_BETA_WORKSPACE_IDS ?? '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .includes(workspaceId);
 }
 
-export function hasPaidWorkspaceAccess(
-  record: Pick<WorkspaceBillingRecord, 'stripeSubscriptionId' | 'stripeSubscriptionStatus'>,
-) {
-  if (record.stripeSubscriptionStatus && PAID_STATUSES.has(record.stripeSubscriptionStatus)) {
-    return true;
+async function hasPrivatePilotWorkspaceAccess(workspaceId: string): Promise<boolean> {
+  if (!isPrivatePilotMode()) return false;
+  const { userId } = await auth();
+  if (!userId) return false;
+  const allowedId = process.env.REPURLY_PILOT_CLERK_USER_ID?.trim();
+  if (allowedId) {
+    if (!isPrivatePilotUserIdAllowed(userId)) return false;
+  } else {
+    const user = await currentUser();
+    if (!isPrivatePilotEmailAllowed(user?.primaryEmailAddress?.emailAddress)) return false;
   }
-
-  return !record.stripeSubscriptionStatus && Boolean(record.stripeSubscriptionId);
+  return assertWorkspaceAccess(userId, workspaceId);
 }
 
 export async function getWorkspaceBillingRecord(workspaceId: string): Promise<WorkspaceBillingRecord | null> {
@@ -86,7 +89,8 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
     return null;
   }
 
-  const hasPaidAccess = isInternalBetaAccessEnabled() || hasPaidWorkspaceAccess(workspace);
+  const hasPaidAccess = isInternalBetaAccessEnabled(workspaceId) ||
+    (await hasPrivatePilotWorkspaceAccess(workspaceId)) || hasPaidWorkspaceAccess(workspace);
 
   return {
     ...workspace,
@@ -98,21 +102,7 @@ export async function getWorkspaceBillingAccessState(workspaceId: string) {
 export async function requirePaidWorkspaceAccess(workspaceId: string) {
   const billingState = await getWorkspaceBillingAccessState(workspaceId);
 
-  if (isInternalBetaAccessEnabled()) {
-    return billingState ?? {
-      id: workspaceId,
-      name: 'Internal beta workspace',
-      slug: 'internal-beta',
-      plan: 'core',
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeSubscriptionStatus: null,
-      hasPaidAccess: true,
-      paymentRequired: false,
-    };
-  }
-
-  if (!billingState?.hasPaidAccess) {
+ if (!billingState?.hasPaidAccess) {
     redirect('/app/billing?billing=payment-required');
   }
 

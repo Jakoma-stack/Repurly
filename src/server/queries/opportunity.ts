@@ -2,7 +2,8 @@ import { and, count, desc, eq, gte, inArray } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { brands, dailyAgentActions, dailyAgentSessions, leadPipeline } from '../../../drizzle/schema';
-import type { DailyAgentBriefing } from '@/lib/ai/daily-agent';
+import { fallbackBriefing, type DailyAgentBriefing } from '@/lib/ai/daily-agent';
+import { selectWeeklyNextActions, type WeeklySourceSignal } from '@/lib/opportunity/weekly-actions';
 
 function daysAgo(days: number) {
   const date = new Date();
@@ -41,6 +42,9 @@ export async function getWeeklyOpportunityPlan(workspaceId: string) {
       brandId: dailyAgentSessions.brandId,
       sessionDate: dailyAgentSessions.sessionDate,
       summary: dailyAgentSessions.summary,
+      rawNotifications: dailyAgentSessions.rawNotifications,
+      rawComments: dailyAgentSessions.rawComments,
+      rawProfiles: dailyAgentSessions.rawProfiles,
       briefingJson: dailyAgentSessions.briefingJson,
       generationMode: dailyAgentSessions.generationMode,
       usefulnessRating: dailyAgentSessions.usefulnessRating,
@@ -49,7 +53,7 @@ export async function getWeeklyOpportunityPlan(workspaceId: string) {
     .from(dailyAgentSessions)
     .where(and(eq(dailyAgentSessions.workspaceId, workspaceId), gte(dailyAgentSessions.createdAt, since)))
     .orderBy(desc(dailyAgentSessions.createdAt))
-    .limit(10);
+    .limit(80);
 
   const actions = await db
     .select()
@@ -84,13 +88,33 @@ export async function getWeeklyOpportunityPlan(workspaceId: string) {
   const analyticsSignals = briefings.flatMap((briefing) => briefing.analyticsReview?.signals ?? []).slice(0, 10);
   const topPeople = relationships.slice(0, 8);
 
-  const nextFive = [
-    ...highPriority,
-    ...followUps.filter((action) => !highPriority.some((item) => item.id === action.id)),
-    ...publicReplies.filter((action) => !highPriority.some((item) => item.id === action.id)),
-  ]
-    .filter((action, index, array) => array.findIndex((item) => item.id === action.id) === index)
-    .slice(0, 5);
+  // Recheck legacy recommendations against their own pasted source data.
+  // The deterministic fallback does not use OpenAI or mutate sessions.
+  const sourceEvidence = new Map<string, ReadonlyMap<string, WeeklySourceSignal>>();
+  await Promise.all(sessions.map(async session => {
+    const source = await fallbackBriefing({
+      brandName: 'LinkedIn account',
+      rawNotifications: session.rawNotifications,
+      rawComments: session.rawComments,
+      rawProfiles: session.rawProfiles,
+    });
+    const names = new Map<string, WeeklySourceSignal>();
+    for (const person of source.whoMatters) {
+      names.set(person.name.trim().toLocaleLowerCase().replace(/\s+/g, ' '), {
+        name: person.name,
+        priority: person.priority,
+        recommendedChannel: person.recommendedChannel,
+      });
+    }
+    sourceEvidence.set(session.id, names);
+  }));
+
+  const nextFive = selectWeeklyNextActions(
+    actions,
+    relationships.map(person => ({ name: person.leadName, brandId: person.brandId })),
+    5,
+    { sessionEvidence: sourceEvidence },
+  );
 
   return {
     sessions,

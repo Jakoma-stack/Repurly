@@ -3,7 +3,7 @@ export type LinkedInAnalyticsImportSummary = {
   mimeType?: string;
   byteSize: number;
   importedAt: string;
-  format: 'csv' | 'xlsx' | 'unknown';
+  format: 'csv' | 'unknown';
   sheetNames: string[];
   rowCount: number;
   columns: string[];
@@ -23,7 +23,6 @@ type ParsedTable = {
 
 const MAX_IMPORT_BYTES = Number(process.env.LINKEDIN_ANALYTICS_IMPORT_MAX_BYTES || 8 * 1024 * 1024);
 const MAX_ROWS_PER_SHEET = 750;
-const MAX_SHEETS = 6;
 
 function normaliseHeader(value: string) {
   return value.replace(/^\uFEFF/, '').trim();
@@ -115,21 +114,9 @@ async function parseCsv(file: File): Promise<ParsedTable[]> {
   return table ? [table] : [];
 }
 
-async function parseXlsx(file: File): Promise<ParsedTable[]> {
-  const XLSX = await import('xlsx');
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
-  return workbook.SheetNames.slice(0, MAX_SHEETS).map((sheetName) => {
-    const sheet = workbook.Sheets[sheetName];
-    const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: false, defval: '' });
-    return tableFromMatrix(sheetName, matrix);
-  }).filter((table): table is ParsedTable => Boolean(table));
-}
-
 function detectFormat(file: File): LinkedInAnalyticsImportSummary['format'] {
   const name = file.name.toLowerCase();
   if (name.endsWith('.csv')) return 'csv';
-  if (name.endsWith('.xlsx') || name.endsWith('.xls')) return 'xlsx';
   return 'unknown';
 }
 
@@ -207,7 +194,7 @@ function summariseTables(file: File, tables: ParsedTable[], format: LinkedInAnal
   ].filter(Boolean) as string[];
 
   if (!tables.length) warnings.push('No usable tabular data was detected in the uploaded file.');
-  if (format === 'unknown') warnings.push('Unknown file format. Accepted formats are .csv, .xlsx and .xls.');
+  if (format === 'unknown') warnings.push('Only CSV analytics exports are accepted while spreadsheet parsing is being replaced.');
 
   const metricLines = Object.entries(metrics).map(([key, value]) => `- ${key}: ${value.toLocaleString('en-GB')}`);
   const topLines = topRows.map((row, index) => `- ${index + 1}. ${row.title ?? 'Untitled row'}${row.date ? ` (${row.date})` : ''}${row.impressions ? ` — ${row.impressions} impressions/views` : ''}${row.comments ? `, ${row.comments} comments` : ''}`);
@@ -250,7 +237,6 @@ export async function parseLinkedInAnalyticsImport(file: File | null | undefined
   let tables: ParsedTable[] = [];
   try {
     if (format === 'csv') tables = await parseCsv(file);
-    if (format === 'xlsx') tables = await parseXlsx(file);
   } catch (error) {
     warnings.push(`Could not parse import: ${error instanceof Error ? error.message : 'unknown error'}`);
   }

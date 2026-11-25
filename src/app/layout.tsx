@@ -3,8 +3,9 @@ import { ClerkProvider } from '@clerk/nextjs';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Repurly',
-  description: 'Premium LinkedIn-first content operations for agencies and B2B teams.',
+  title: 'Janeomi',
+  description: 'AI marketing and growth intelligence with human approval.',
+  icons: { icon: '/brand/repurly/mark.svg' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

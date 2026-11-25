@@ -250,13 +250,20 @@ export async function updateLeadStage(formData: FormData) {
   const nextAction = requiredString(formData, 'nextAction') || null;
   const notes = requiredString(formData, 'notes') || null;
   const returnTo = requiredString(formData, 'returnTo') || '/app/leads';
+  const suppliedInterestScore = formData.get('intentScore');
+  const interestScore = typeof suppliedInterestScore === 'string' && suppliedInterestScore.trim()
+    ? Number(suppliedInterestScore)
+    : null;
 
   if (!workspaceId || !leadId || !stage) redirect('/app/leads?error=invalid' as Route);
+  if (interestScore !== null && (!Number.isInteger(interestScore) || interestScore < 0 || interestScore > 100)) {
+    redirect('/app/relationships?error=invalid-interest-score' as Route);
+  }
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
   await db
     .update(leadPipeline)
-    .set({ stage, nextAction, notes, updatedAt: new Date() })
+    .set({ stage, nextAction, notes, ...(interestScore === null ? {} : { intentScore: interestScore }), updatedAt: new Date() })
     .where(and(eq(leadPipeline.id, leadId), eq(leadPipeline.workspaceId, workspaceId)));
 
   await refreshPages();

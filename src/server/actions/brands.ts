@@ -3,12 +3,13 @@
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import { revalidatePath } from 'next/cache';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/lib/db/client';
 import { requireWorkspaceRole } from '@/lib/auth/workspace';
 import { checkPlanLimit } from '@/lib/billing/enforce-limits';
 import { brands } from '../../../drizzle/schema';
+import { getMarketingStage } from '@/lib/marketing/portfolio';
 
 function requiredString(formData: FormData, key: string) {
   return String(formData.get(key) ?? '').trim();
@@ -28,6 +29,8 @@ function parseHashtags(raw: string) {
 async function refreshBrandPages() {
   revalidatePath('/app');
   revalidatePath('/app/brands');
+  revalidatePath('/app/portfolio');
+  revalidatePath('/app/marketing-director');
   revalidatePath('/app/content');
   revalidatePath('/app/leads');
   revalidatePath('/app/engagement');
@@ -46,6 +49,17 @@ export async function saveBrand(formData: FormData) {
   }
   await requireWorkspaceRole(workspaceId, ['owner', 'admin', 'editor']);
 
+  const existing = brandId
+    ? await db.select({ metadata: brands.metadata }).from(brands)
+        .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId))).limit(1)
+    : [];
+  if (brandId && !existing[0]) redirect('/app/brands?error=invalid' as Route);
+  const previousMetadata = existing[0]?.metadata ?? {};
+  const requestedStage = requiredString(formData, 'marketingStage');
+  const metadata = requestedStage
+    ? { ...previousMetadata, marketingStage: getMarketingStage({ marketingStage: requestedStage }) }
+    : previousMetadata;
+
   const values = {
     workspaceId,
     name,
@@ -58,6 +72,7 @@ export async function saveBrand(formData: FormData) {
     primaryCta: requiredString(formData, 'primaryCta') || null,
     secondaryCta: requiredString(formData, 'secondaryCta') || null,
     hashtags: parseHashtags(requiredString(formData, 'hashtags')),
+    metadata,
     linkedinProfileUrl: requiredString(formData, 'linkedinProfileUrl') || null,
     linkedinCompanyUrl: requiredString(formData, 'linkedinCompanyUrl') || null,
     updatedAt: new Date(),
@@ -66,7 +81,7 @@ export async function saveBrand(formData: FormData) {
   if (brandId) {
     await db
       .update(brands)
-      .set(values)
+      .set({ ...values, metadata: requestedStage ? sql`coalesce(${brands.metadata}, '{}'::jsonb) || ${JSON.stringify({ marketingStage: getMarketingStage({ marketingStage: requestedStage }) })}::jsonb` : sql`${brands.metadata}` })
       .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)));
   } else {
     const limit = await checkPlanLimit(workspaceId, 'brands');
@@ -134,9 +149,7 @@ export async function saveOpportunitySettings(formData: FormData) {
     redirect('/app/opportunity-settings?error=missing-brand' as Route);
   }
 
-  const previousMetadata = (existing[0].metadata ?? {}) as Record<string, unknown>;
   const metadata = {
-    ...previousMetadata,
     opportunityDesk: {
       offer: requiredString(formData, 'offer'),
       idealCustomers: splitSettingLines(requiredString(formData, 'idealCustomers')),
@@ -152,7 +165,7 @@ export async function saveOpportunitySettings(formData: FormData) {
 
   await db
     .update(brands)
-    .set({ metadata, updatedAt: new Date() })
+    .set({ metadata: sql`coalesce(${brands.metadata}, '{}'::jsonb) || ${JSON.stringify(metadata)}::jsonb`, updatedAt: new Date() })
     .where(and(eq(brands.id, brandId), eq(brands.workspaceId, workspaceId)));
 
   revalidatePath('/app/daily-agent');

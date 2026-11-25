@@ -43,6 +43,27 @@
       "when": 1783443600000,
       "tag": "0005_linkedin_analytics_import",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795470120000,
+      "tag": "0006_workspace_billing_schema_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795470660000,
+      "tag": "0007_legacy_usage_metric_nullable",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795536000000,
+      "tag": "0008_community_connection",
+      "breakpoints": true
     }
   ]
 }
