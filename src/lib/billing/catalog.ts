@@ -38,7 +38,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
     eyebrow: 'For people who want product plus weekly support',
     priceLabel: '£250/mo',
     monthlyPriceGbp: 250,
-    summary: 'Repurly access plus a weekly opportunity review so early users get help turning LinkedIn activity into replies, follow-ups, content and pipeline discipline.',
+    summary: 'Janeomi access plus a weekly opportunity review so early users get help turning LinkedIn activity into replies, follow-ups, content and pipeline discipline.',
     bullets: [
       'Everything in Pro Beta',
       'Weekly review of warm relationships and next actions',
@@ -46,7 +46,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
       'Priority feedback loop while the product matures',
     ],
     ctaLabel: 'Apply for Assisted Beta',
-    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Assisted%20Beta',
+    ctaHref: 'mailto:support@repurly.org?subject=Janeomi%20Assisted%20Beta',
     featured: true,
     selfServe: false,
   },
@@ -63,7 +63,7 @@ export const PLAN_CATALOG: Record<PlanKey, PlanCatalogEntry> = {
       'Commercial onboarding support',
     ],
     ctaLabel: 'Discuss agency pilot',
-    ctaHref: 'mailto:support@repurly.org?subject=Repurly%20Founder%20or%20Agency%20Pilot',
+    ctaHref: 'mailto:support@repurly.org?subject=Janeomi%20Founder%20or%20Agency%20Pilot',
     selfServe: false,
   },
 };
