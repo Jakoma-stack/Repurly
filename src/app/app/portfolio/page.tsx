@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { requireWorkspaceSession } from '@/lib/auth/workspace';
 import { requirePaidWorkspaceAccess } from '@/lib/billing/workspace-billing';
 import { getMarketingStage, getMarketingStageDetails, missingMarketingBasics } from '@/lib/marketing/portfolio';
+import { canPreviewCommunityBrands, communityBrandPreflight } from '@/lib/marketing/community-brand-preflight';
 import { portfolioGrowthPriorities, portfolioWeeklyCadence } from '@/lib/marketing/portfolio-growth';
 import { getWorkspaceBrands } from '@/server/queries/brands';
 import { getLinkedInTargets } from '@/server/queries/workflow';
@@ -95,6 +96,32 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             </div>
           </div>
           <a href="/app/portfolio/campaigns" className="inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white">Review actual campaign drafts</a>
+        </section>
+      ) : null}
+
+      {canPreviewCommunityBrands(session.role, canImport) ? (
+        <section className="space-y-4 rounded-2xl border border-teal-200 bg-teal-50 p-5">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Community brands — setup preview</h2>
+            <p className="mt-1 text-sm text-slate-700">Private owner-only planning. Existing records, logos, content and connections are not changed. Confirm any uncertain identity before a future import.</p>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {communityBrandPreflight(brands).map(({ profile, state, existing }) => (
+              <div key={profile.slug} className="rounded-xl border border-teal-200 bg-white p-4 text-sm text-slate-700">
+                <h3 className="font-semibold text-slate-950">{profile.name}</h3>
+                <p className="mt-2">{state === 'preserve-existing'
+                  ? 'Existing record found: ' + existing?.name + ' (' + existing?.status + '). Preserve its settings.'
+                  : state === 'review-conflict' ? 'Conflicting records found — review before linking.'
+                  : 'No matching record found — confirm identity before creating one.'}</p>
+                <p className="mt-2"><strong>Proposed audience:</strong> {profile.audience}</p>
+                <p className="mt-2"><strong>Proposed voice:</strong> {profile.voice}</p>
+                <ul className="mt-3 list-disc space-y-1 pl-5">
+                  {profile.contentIdeas.map(idea => <li key={idea}>{idea}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-700">Facebook Page access is not connected by this preview. Facebook Group content is prepared for manual review and handoff only. No dates, live conditions, scheduling, publishing, API calls or AI spend are generated here.</p>
         </section>
       ) : null}
 
